@@ -43,9 +43,13 @@ const fields = [
 export function DetailsStep({
   draft,
   onChange,
+  onConfirm,
+  pending,
 }: {
   draft: ContactDraft;
   onChange: (draft: Partial<ContactDraft>) => void;
+  onConfirm: () => void;
+  pending: boolean;
 }) {
   const [errors, setErrors] = useState<ContactErrors>({});
   const [checked, setChecked] = useState(false);
@@ -143,9 +147,19 @@ export function DetailsStep({
           ? "Данните са валидни за демонстрацията. Все още няма резервация."
           : ""}
       </output>
+      {checked && (
+        <Button
+          type="button"
+          className="min-h-11 self-start"
+          disabled={pending}
+          onClick={onConfirm}
+        >
+          {pending ? "Потвърждаваме…" : "Потвърди демо резервация"}
+        </Button>
+      )}
       <p className="text-sm text-muted-foreground">
-        Потвърждаването на демо резервация ще бъде добавено в следващата стъпка
-        на прототипа.
+        Това е само демонстрация, не реално записване. Не изпращаме имейл и не
+        създаваме достъп за управление на резервация.
       </p>
     </form>
   );

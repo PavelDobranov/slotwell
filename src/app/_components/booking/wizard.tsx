@@ -6,6 +6,7 @@ import { RadioGroup } from "@base-ui/react/radio-group";
 import { CheckIcon } from "lucide-react";
 import { useEffect, useReducer, useRef, useState } from "react";
 
+import { ConfirmationStep } from "@/app/_components/booking/confirmation-step";
 import { DetailsStep } from "@/app/_components/booking/details-step";
 import { SpecialistStep } from "@/app/_components/booking/specialist-step";
 import { TimeStep } from "@/app/_components/booking/time-step";
@@ -15,6 +16,7 @@ import {
   qualifiedStaff,
 } from "@/app/_lib/booking/availability";
 import { createDemoSalon } from "@/app/_lib/booking/fixtures";
+import { createDemoSession } from "@/app/_lib/booking/session";
 import {
   type BookingAction,
   type BookingStep,
@@ -41,6 +43,11 @@ const euros = new Intl.NumberFormat("bg-BG", {
 });
 
 export function BookingWizard() {
+  const session = useRef<ReturnType<typeof createDemoSession> | null>(null);
+  const submissionLocked = useRef(false);
+  const [pending, setPending] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const [confirmationError, setConfirmationError] = useState("");
   const [referenceTime, setReferenceTime] = useState<number | null>(null);
   const [availabilityTime, setAvailabilityTime] = useState<number | null>(null);
   // The initial render has no live dates; fixtures are created only after mounting.
@@ -51,9 +58,13 @@ export function BookingWizard() {
       current: typeof initialBookingState,
       { action, now }: { action: BookingAction; now: number },
     ) =>
-      salon === null
+      salon === null || (submissionLocked.current && action.type === "refresh")
         ? current
-        : bookingReducer(current, action, { salon, now }),
+        : bookingReducer(current, action, {
+            salon,
+            now,
+            sessionOccupied: session.current?.occupied,
+          }),
     initialBookingState,
   );
   function dispatch(action: BookingAction) {
@@ -61,12 +72,41 @@ export function BookingWizard() {
     setAvailabilityTime(now);
     reduce({ action, now });
   }
+  async function confirm() {
+    if (submissionLocked.current || session.current === null) return;
+    submissionLocked.current = true;
+    setPending(true);
+    setConfirmationError("");
+    try {
+      const result = await session.current.confirm(state);
+      if (result === "success") {
+        setConfirmed(true);
+      } else {
+        submissionLocked.current = false;
+        dispatch({ type: "refresh" });
+        setConfirmationError(
+          "Изборът вече не е валиден. Провери данните, специалиста и часа отново.",
+        );
+      }
+    } catch {
+      submissionLocked.current = false;
+      setConfirmationError(
+        "Демонстрацията не успя да потвърди. Опитай отново.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
   const heading = useRef<HTMLHeadingElement>(null);
   const lastFocusedControl = useRef<HTMLElement | null>(null);
   const previousStep = useRef(state.step);
   const previousPath = useRef(state.path);
   useEffect(() => {
     const now = Date.now();
+    session.current = createDemoSession(
+      createDemoSalon(() => now),
+      () => Date.now(),
+    );
     setReferenceTime(now);
     setAvailabilityTime(now);
     // Keep fixtures anchored to this session, but refresh displayed availability.
@@ -90,6 +130,10 @@ export function BookingWizard() {
     previousPath.current = state.path;
   });
 
+  useEffect(() => {
+    if (confirmed) heading.current?.focus();
+  }, [confirmed]);
+
   const order = stepOrder(state.path);
   const today =
     availabilityTime === null ? null : businessDateAt(availabilityTime);
@@ -103,23 +147,29 @@ export function BookingWizard() {
 
   return (
     <>
-      <nav aria-label="Стъпки на резервацията">
-        <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {order.map((step, index) => (
-            <li
-              key={step}
-              aria-current={step === state.step ? "step" : undefined}
-              className="flex items-center gap-3 rounded-md border p-3 text-sm text-muted-foreground aria-[current=step]:border-primary aria-[current=step]:bg-secondary aria-[current=step]:font-semibold aria-[current=step]:text-foreground"
-            >
-              <span aria-hidden="true" className="font-mono">
-                0{index + 1}
-              </span>
-              {labels[step]}
-            </li>
-          ))}
-        </ol>
-      </nav>
-      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      {!confirmed && (
+        <nav aria-label="Стъпки на резервацията">
+          <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {order.map((step, index) => (
+              <li
+                key={step}
+                aria-current={step === state.step ? "step" : undefined}
+                className="flex items-center gap-3 rounded-md border p-3 text-sm text-muted-foreground aria-[current=step]:border-primary aria-[current=step]:bg-secondary aria-[current=step]:font-semibold aria-[current=step]:text-foreground"
+              >
+                <span aria-hidden="true" className="font-mono">
+                  0{index + 1}
+                </span>
+                {labels[step]}
+              </li>
+            ))}
+          </ol>
+        </nav>
+      )}
+      <fieldset
+        disabled={pending}
+        aria-busy={pending}
+        className="grid min-w-0 items-start gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+      >
         <section
           onFocusCapture={(event) => {
             lastFocusedControl.current = event.target;
@@ -128,7 +178,9 @@ export function BookingWizard() {
           className="flex min-w-0 flex-col gap-4 py-2"
         >
           <p className="text-sm font-medium text-muted-foreground">
-            Стъпка {order.indexOf(state.step) + 1} от 4
+            {confirmed
+              ? "Демонстрацията е завършена"
+              : `Стъпка ${order.indexOf(state.step) + 1} от 4`}
           </p>
           <h2
             id="step-heading"
@@ -136,12 +188,23 @@ export function BookingWizard() {
             tabIndex={-1}
             className="rounded-sm text-2xl font-semibold"
           >
-            {labels[state.step]}
+            {confirmed ? "Демо резервацията е потвърдена" : labels[state.step]}
           </h2>
           <output className="text-sm text-muted-foreground">
             {state.notice}
           </output>
-          {state.step === "services" ? (
+          <p role="alert">{confirmationError}</p>
+          {confirmed ? (
+            <ConfirmationStep
+              contact={state.contact}
+              onNewBooking={() => {
+                submissionLocked.current = false;
+                setConfirmed(false);
+                setConfirmationError("");
+                dispatch({ type: "new-booking" });
+              }}
+            />
+          ) : state.step === "services" ? (
             <fieldset
               className="flex min-w-0 flex-col gap-3"
               disabled={salon === null}
@@ -255,6 +318,7 @@ export function BookingWizard() {
                       ? (availableSlots({
                           salon,
                           now: availabilityTime,
+                          sessionOccupied: session.current?.occupied,
                           serviceIds: state.serviceIds,
                           date:
                             state.start === null
@@ -277,6 +341,7 @@ export function BookingWizard() {
                   availability={{
                     salon,
                     now: availabilityTime,
+                    sessionOccupied: session.current?.occupied,
                     serviceIds: state.serviceIds,
                     staffId:
                       state.path === "staff-first"
@@ -295,6 +360,8 @@ export function BookingWizard() {
               ) : state.step === "details" ? (
                 <DetailsStep
                   draft={state.contact}
+                  pending={pending}
+                  onConfirm={confirm}
                   onChange={(draft) => dispatch({ type: "contact", draft })}
                 />
               ) : (
@@ -365,11 +432,13 @@ export function BookingWizard() {
                   )}
                 </p>
               )}
-              {state.step === "details" && (
+              {(state.step === "details" || confirmed) && (
+                <p className="text-sm">
+                  Място: {salon?.name}, {salon?.address}
+                </p>
+              )}
+              {state.step === "details" && !confirmed && (
                 <>
-                  <p className="text-sm">
-                    Място: {salon?.name}, {salon?.address}
-                  </p>
                   <Button
                     variant="outline"
                     onClick={() => dispatch({ type: "edit", step: "staff" })}
@@ -384,7 +453,7 @@ export function BookingWizard() {
                   </Button>
                 </>
               )}
-              {state.step !== "services" && (
+              {state.step !== "services" && !confirmed && (
                 <Button
                   variant="outline"
                   onClick={() => dispatch({ type: "edit", step: "services" })}
@@ -395,7 +464,7 @@ export function BookingWizard() {
             </>
           )}
         </aside>
-      </div>
+      </fieldset>
     </>
   );
 }
