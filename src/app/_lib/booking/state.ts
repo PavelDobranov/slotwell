@@ -32,7 +32,7 @@ export type BookingAction =
   | { type: "date"; date: string }
   | { type: "contact"; draft: Partial<ContactDraft> }
   | { type: "edit"; step: BookingStep }
-  | { type: "next" | "back" | "refresh" };
+  | { type: "next" | "back" | "refresh" | "new-booking" };
 
 type BookingContext = {
   salon: DemoSalon;
@@ -71,6 +71,11 @@ export function bookingReducer(
   action: BookingAction,
   context: BookingContext,
 ): BookingState {
+  if (action.type === "new-booking")
+    return {
+      ...initialBookingState,
+      contact: { ...initialBookingState.contact },
+    };
   const next = { ...state, notice: "" };
   const notices: string[] = [];
   switch (action.type) {
