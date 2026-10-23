@@ -1,85 +1,142 @@
-# Product brief
+# Slotwell — product brief
 
-We are building slotwell, a local-first single-business scheduling demo.
+**Slotwell** is a scheduling web app for a **single business**. Clients book appointments
+through a self-service wizard; the business manages the calendar, services, and schedules
+through an admin area. This document is for validating scope with the client before build.
 
-Users:
-- Exactly one Owner account. Owner-only administration, enforced server-side.
-- Staff are records of people who perform services, NOT login accounts.
-- Guests book without accounts; there is no client portal/history.
+**Initial version (MVP):** email notifications only. Authentication, staff invitations,
+and role-based access are deferred. The admin area is for a trusted development/demo
+environment; it must not be publicly exposed without access protection.
 
-Owner can:
-- Create/edit/deactivate services: name, duration, optional display price
-  and currency, optional cleanup buffer. Price is display-only; no payments.
-- Create/edit staff records and assign service competencies.
-- Set recurring weekly business and staff hours.
-- View an appointment list and cancel appointments.
+## 1. Who uses it
 
-Guest flow:
-- Choose ONE service → ONE qualified named staff member → available time
-  → required name, phone and email, optional notes → confirm.
-- Auto-confirm immediately; no slot holds. The first valid confirmation
-  wins a conflict; a losing guest gets fresh availability.
-- Receive confirmation email in a local mail sink.
-- View current appointment status and cancel through a protected,
-  appointment-scoped secret link. A phone number alone never authorizes access.
-- Cancellation has no cutoff and releases capacity. States are only
-  Confirmed and Cancelled. Repeated cancellation must behave safely.
+The initial version has a business operator, staff records, and guest clients — no
+user accounts or login.
 
-Availability and data:
-- Intersect weekly business/staff hours, competency, occupied intervals,
-  the service duration/buffer, minimum lead time (default 1 hour), and
-  booking horizon (default 60 days). No settings dashboard is required.
-- One explicit business time zone, no overnight hours. Clarify slot interval,
-  DST treatment and exact boundary rules before implementing availability.
-- Transactionally revalidate capacity at confirmation. Retries must not
-  create duplicate bookings or email intents. Test real SQLite contention.
-- Normalize phone numbers under an agreed region policy. A known phone
-  identifies one client record; changed name/email update that record,
-  but never disclose prior details to a guest. Decide appointment-contact
-  history separately before storing bookings.
-- Keep stable references and snapshots of service/duration/price/buffer
-  captured at booking. Catalog edits affect bookings created afterward,
-  not existing appointments, including ones scheduled in the future.
-- Do not hard-delete referenced records. Before enabling schedule or
-  competency edits that conflict with bookings, agree a narrow explicit
-  policy, preferably reject-and-explain rather than a resolution subsystem.
+- **Business operator (Owner)** — manages the **service catalog**, **staff roster**,
+  **all-staff calendar**, and schedules and appointments for any staff member.
+- **Staff** — a person who performs services, represented by a record rather than a
+  login account. Has **working hours**, **exceptions**, **service competencies**
+  (which catalog services they handle), and **appointments**, managed through the admin
+  area. Separate staff access and owner/staff permissions are deferred.
+- **Client** — books via the wizard as a guest. Identified uniquely by **phone number**;
+  provides name, phone, and **email** (all required).
 
-Email:
-- Persist confirmation intent atomically with the booking. An explicit
-  command in the same codebase delivers to a local mail sink.
-- Delivery failure does not reverse a booking. Show pending/failure state
-  and permit retry; document ambiguous-send limits, not exactly-once claims.
-- Handle delayed processing of already-cancelled bookings without sending
-  a misleading confirmation. No SMS, reminders, or change emails.
+## 2. Core concepts
 
-Out of scope:
-- Staff accounts/invitations, multiple Owners, client accounts, payments,
-  multiple businesses, multiple services/staff per appointment, time-first
-  booking, any-available assignment, load balancing, dated exceptions,
-  blocks, overnight hours, rescheduling, cutoff settings, manual phone-in
-  booking, calendar widgets, Completed/No-show, staff deactivation queues,
-  live messaging providers, hosted workers, and production readiness.
-- Cancelling then booking again is two separate actions, not an atomic move;
-  the new slot is not guaranteed. Do not prebuild deferred features.
+- **Service** — name, typical duration, optional price (shown, not charged), optional
+  cleanup **buffer**.
+- **Staff** — name, the set of services they can perform, a recurring weekly
+  **working-hours** schedule, and dated **exceptions** (time off / holidays / early leave).
+- **Appointment** — one client + one staff member + one or more services, at a date/time.
+  Duration = sum of the services' durations, run as one contiguous block.
+- **Block** — non-client time on a staff member's calendar (lunch, meeting, personal).
 
-Stack:
-- Strict TypeScript; one Next.js App Router application, Node.js runtime.
-- Hono under /api within Next.js, not a separate backend deployment.
-- shadcn/ui + Tailwind; local React state first, Context for shared UI state.
-- TanStack Query for frontend fetching/caching/mutations, NOT backend storage.
-  Do not duplicate server-data caches in Context.
-- SQLite + Drizzle migrations; one app instance, persistent ignored DB file.
-- Vitest, real SQLite integration tests, and Playwright.
+## 3. Client booking wizard
 
-Working boundaries:
-- Synthetic data, local email, no secrets committed. Public source publication,
-  pushing, live sending, deployment and destructive operations need permission.
-- Small iterations, one task at a time, explicit spec/plan/acceptance gates.
-  Resolve blocking questions just in time; propose small approved corrections
-  when design gaps appear. Do not freeze the whole schema in advance.
-- I have performed the initial scaffold by hand using official documentation.
-  Read README and docs/setup-baseline.md, inspect the actual files and lockfile,
-  and verify the recorded baseline. Do not regenerate the application, replace
-  setup configuration from memory, or install/upgrade packages without approval.
-- Plans and task state belong in GitHub Issues through gh. No tasks/plan.md
-  or tasks/todo.md. I will supply the tracker rules before issue operations.
+The wizard always starts with services, then **forks** so the client narrows by
+whichever they care about first — a specialist or a time.
+
+1. **Service(s)** — pick one or more.
+2. **Choose your route:**
+   - **Path A — staff-first:** pick a specific staff member (or **"any available"**).
+   - **Path B — time-first:** pick a date & time.
+3. **Complete the pair (conditional on step 2):**
+   - After Path A → choose a date & time from that staff member's open **slots**.
+   - After Path B → choose from the qualified staff free at that time (or **"any available"**).
+4. **Your details** — name, phone, and email (all required), optional notes.
+5. **Confirm** — appointment is **auto-confirmed** immediately.
+
+Rules:
+
+- A time is a **bookable slot** when it falls within business open hours **and** the
+  chosen staff member's working hours, that staff member handles **all** chosen
+  services, and they are free for the full duration (+ buffers). The same rule applies
+  in both paths — only the order of narrowing differs.
+- **"Any available"** assigns a concrete staff member at confirmation, load-balanced by
+  that day's booking count (ties → first eligible). Offered in both paths.
+- **Booking horizon:** up to **60 days** ahead (configurable).
+- **Minimum lead time:** at least **1 hour** before start (configurable).
+- **Concurrency:** first to confirm wins; a client who loses the race is re-shown live
+  availability. Slots are not held during the wizard.
+- All times are in the business's **single fixed time zone**.
+
+## 4. Client self-service after booking
+
+- Via a link (tied to their phone), a client can **cancel** or **reschedule** their own
+  appointment.
+- An optional client-side **cutoff** can forbid changes within N hours of the start
+  (default: none in the MVP).
+
+## 5. Admin area (authentication deferred)
+
+The initial version has no login or role-based restrictions. The business operator can
+manage all staff through the same admin area. Owner/staff accounts and staff-only access
+to their own records are deferred.
+
+**Business management:**
+
+- **Service catalog** — create/edit services (name, duration, price, buffer).
+- **Staff roster** — add/edit staff records with a name and email. No invitations,
+  passwords, or login accounts in the initial version.
+- **All-staff calendar** — view every staff member's appointments and blocks.
+- **Act for anyone** — create/cancel/reschedule appointments, add blocks, and mark
+  outcomes for any staff member.
+
+**Per-staff management (operator selects a staff member):**
+
+- **Staff calendar** — view the selected staff member's appointments and blocks.
+- **Create** an appointment manually (phone-in bookings).
+- **Cancel / reschedule** appointments (no cutoff for admin changes).
+- **Block** off time.
+- **Mark outcomes** — set a past appointment to **Completed** or **No-show**.
+- **Working hours & exceptions** — edit recurring schedules and dated overrides.
+- **Service competencies** — choose which catalog services the staff member handles.
+
+## 6. Appointment lifecycle
+
+`Confirmed` → **`Completed`** / **`No-show`** / **`Cancelled`**
+
+- New appointments start **Confirmed**.
+- The business operator sets **Completed** or **No-show** after the fact for any staff
+  member; unmarked past appointments stay Confirmed.
+- **Cancelled** may be set by client (via link) or owner.
+
+## 7. Notifications (email only)
+
+Sent to the client's required **email address**. Phone remains required for client
+identity and contact, but no SMS messages are sent; SMS notifications are out of scope
+for the MVP.
+
+- **Confirmation** — at booking.
+- **Reminder** — one, configurable offset, **default 24h** before.
+- **Change notice** — on cancel or reschedule.
+
+Staff invitation emails are deferred along with authentication.
+
+## 8. Editing vs. history
+
+- Changing a service's duration/price affects **future** bookings only; past
+  appointments keep the values they were booked with.
+- Staff and services are **deactivated** (hidden from the wizard), never hard-deleted
+  while referenced. Future appointments under a deactivated staff member are **flagged
+  for the owner** to reassign or cancel.
+- On a known phone with a new name or email, the record is treated as the **same
+  client** and the stored name/email are overwritten (phone is identity; email is
+  contact only).
+
+## 9. Explicitly out of scope for the MVP
+
+- Online payments / deposits (price is display-only).
+- Client accounts / login / self-service history.
+- Multi-tenant / multiple businesses.
+- Multiple staff within one appointment.
+- Authentication: owner/staff accounts, login/logout, passwords, and staff invitations
+  (deferred beyond the initial version).
+- Role-based access and staff-only access to their own records (deferred).
+- Multiple **Owner**-level admins.
+- SMS notifications.
+- Per-client channel preference (email is the only notification channel).
+- Multiple reminders per appointment.
+- Slot-holding / reservation timeouts.
+- Email as a client **identifier** (email is contact only; phone is identity).
