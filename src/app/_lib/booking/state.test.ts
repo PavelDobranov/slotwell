@@ -24,6 +24,119 @@ const booked: BookingState = {
   contact: { name: "Тест", phone: "0888123456", email: "", note: "" },
 };
 
+test("both route orders reach the same explicit service-staff-time combination", () => {
+  for (const path of ["staff-first", "time-first"] as const) {
+    let state = bookingReducer(
+      initialBookingState,
+      { type: "services", ids: ["haircut"] },
+      context,
+    );
+    state = bookingReducer(state, { type: "path", path }, context);
+    const choices =
+      path === "staff-first"
+        ? ([
+            { type: "staff", id: "mila" },
+            { type: "time", start: Number(booked.start) },
+          ] as const)
+        : ([
+            { type: "time", start: Number(booked.start) },
+            { type: "staff", id: "mila" },
+          ] as const);
+    for (const choice of choices) {
+      state = bookingReducer(state, choice, context);
+      if (choice.type === "time" && path === "time-first")
+        assert.equal(state.staffId, null);
+      state = bookingReducer(state, { type: "next" }, context);
+    }
+    assert.equal(state.step, "details");
+    assert.equal(state.start, booked.start);
+    assert.equal(state.staffId, booked.staffId);
+  }
+});
+
+test("time-first changes preserve a valid time and clear staff unavailable for the full occupied interval", () => {
+  const occupied = {
+    ...context,
+    sessionOccupied: [
+      {
+        staffId: "mila",
+        start: Number(booked.start) + 35 * 60_000,
+        end: Number(booked.start) + 40 * 60_000,
+      },
+    ],
+  };
+  // Haircut ends at :30 but cleanup occupies through :40; Ivan is still free.
+  const result = bookingReducer(
+    { ...booked, path: "time-first" },
+    { type: "time", start: Number(booked.start) },
+    occupied,
+  );
+  assert.equal(result.start, booked.start);
+  assert.equal(result.staffId, null);
+  assert.equal(result.step, "staff");
+  assert.match(result.notice, /специалист/);
+  assert.deepEqual(result.contact, booked.contact);
+  const rejected = bookingReducer(
+    result,
+    { type: "staff", id: "mila" },
+    occupied,
+  );
+  assert.equal(rejected.staffId, null);
+  assert.equal(rejected.start, booked.start);
+  assert.equal(
+    bookingReducer(rejected, { type: "next" }, occupied).step,
+    "staff",
+  );
+  const chosen = bookingReducer(
+    rejected,
+    { type: "staff", id: "ivan" },
+    occupied,
+  );
+  assert.equal(
+    bookingReducer(chosen, { type: "next" }, occupied).step,
+    "details",
+  );
+});
+
+test("time-first rejects stale starts and clamps switches and edits to the earliest unresolved step", () => {
+  const expiredContext = { ...context, now: Number(booked.start) };
+  const expired = bookingReducer(
+    { ...booked, path: "time-first" },
+    { type: "next" },
+    expiredContext,
+  );
+  assert.equal(expired.start, null);
+  assert.equal(expired.step, "time");
+  const switched = bookingReducer(
+    booked,
+    { type: "path", path: "time-first" },
+    expiredContext,
+  );
+  assert.equal(switched.start, null);
+  assert.equal(switched.step, "time");
+  const edited = bookingReducer(
+    switched,
+    { type: "edit", step: "staff" },
+    expiredContext,
+  );
+  assert.equal(edited.step, "time");
+  const back = bookingReducer(
+    { ...booked, path: "time-first" },
+    { type: "back" },
+    context,
+  );
+  assert.equal(back.step, "staff");
+  assert.equal(back.start, booked.start);
+  const toStaffFirst = bookingReducer(
+    back,
+    { type: "path", path: "staff-first" },
+    context,
+  );
+  assert.equal(toStaffFirst.step, "staff");
+  assert.equal(toStaffFirst.start, booked.start);
+  assert.equal(toStaffFirst.staffId, booked.staffId);
+});
+
 test("empty services cannot advance; totals treat services as a distinct set", () => {
   assert.equal(
     bookingReducer(initialBookingState, { type: "next" }, context).step,

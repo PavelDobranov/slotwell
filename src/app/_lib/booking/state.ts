@@ -126,12 +126,19 @@ export function bookingReducer(
       ...context,
       serviceIds: next.serviceIds,
       date: businessDateAt(next.start),
-      staffId: next.staffId ?? undefined,
+      staffId:
+        next.path === "staff-first" ? (next.staffId ?? undefined) : undefined,
     });
-    if (!slots.some(({ start }) => start === next.start)) {
+    const slot = slots.find(({ start }) => start === next.start);
+    if (!slot) {
       next.start = null;
       notices.push(
         "Избраният час е премахнат, защото вече не е свободен за тези услуги. Избери час отново.",
+      );
+    } else if (next.staffId !== null && !slot.staffIds.includes(next.staffId)) {
+      next.staffId = null;
+      notices.push(
+        "Избраният специалист не е свободен за цялото посещение в този час. Избери специалист отново.",
       );
     }
   }
