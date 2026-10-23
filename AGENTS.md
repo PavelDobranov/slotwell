@@ -8,6 +8,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-## Task-specific guidance
+## Repository
 
 - [File structure](docs/file-structure.md): Read when adding or moving files, organizing features, or changing frontend/backend boundaries or import aliases. Describes the evolving structure and colocation conventions; unrelated tasks can skip it.
+
+
+## Hono CLI
+
+Run `npx hono --help` first, and use the CLI instead of a dev server.
