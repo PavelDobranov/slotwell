@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+test.use({ timezoneId: "America/New_York" });
+
 test("the home page exposes a visible main landmark", async ({ page }) => {
   await page.goto("/");
 
@@ -194,6 +196,157 @@ test("specialist choices require explicit selection and match every service", as
   await expect(page.getByRole("button", { name: "Продължи" })).toBeDisabled();
 });
 
+test("specialist-first date recovery, horizon, edits and keyboard times reach details", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (["error", "warning"].includes(message.type()))
+      errors.push(message.text());
+  });
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+  await page.goto("/");
+  await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  const date = page.getByLabel("Дата на посещението");
+  await expect(date.locator("option")).toHaveCount(61);
+  await expect(date.locator("option").last()).toHaveAttribute(
+    "value",
+    "2026-07-31",
+  );
+  await date.selectOption("2026-07-31");
+  await expect(
+    page.getByRole("radio", { name: "09:00", exact: true }),
+  ).toBeVisible();
+  await date.selectOption("2026-06-09"); // Salon-wide exception after next Monday.
+  await expect(
+    page.getByText("Няма свободни часове за тази дата."),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Продължи" })).toBeDisabled();
+  await page.getByRole("button", { name: "Следваща свободна дата" }).click();
+  await expect(date).toHaveValue("2026-06-10");
+  const start = page.getByRole("radio", { name: "09:00", exact: true });
+  await start.focus();
+  await page.keyboard.press("Space");
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Данни и преглед", exact: true }),
+  ).toBeFocused();
+  await expect(page.getByRole("complementary")).toContainText("09:00–09:30");
+  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await expect(start).toBeChecked();
+  await date.selectOption("2026-06-11");
+  await expect(page.getByRole("button", { name: "Продължи" })).toBeDisabled();
+  await expect(page.locator("section output").first()).toContainText(
+    "Датата е променена",
+  );
+  await page.getByRole("radio", { name: "09:00", exact: true }).check();
+  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await page.getByRole("radio", { name: /Иван/ }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await expect(
+    page.getByRole("radio", { name: "09:00", exact: true }),
+  ).toBeChecked();
+  await date.selectOption("2026-06-10"); // Ivan is off Wednesdays.
+  await expect(
+    page.getByText("Няма свободни часове за тази дата."),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(360);
+  await page.screenshot({
+    path: "coverage/playwright/time-empty.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Следваща свободна дата" }).click();
+  await expect(date).toHaveValue("2026-06-11");
+  await page.screenshot({
+    path: "coverage/playwright/time-recovered.png",
+    fullPage: true,
+  });
+  expect(errors).toEqual([]);
+});
+
+test("date survives back navigation and a specialist change that clears its start", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+  await page.goto("/");
+  await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  const date = page.getByLabel("Дата на посещението");
+  await date.selectOption("2026-06-10");
+  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await expect(date).toHaveValue("2026-06-10");
+  await page.getByRole("radio", { name: "09:00", exact: true }).check();
+  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await page.getByRole("radio", { name: /Иван/ }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await expect(date).toHaveValue("2026-06-10");
+  await expect(
+    page.getByText("Няма свободни часове за тази дата."),
+  ).toBeVisible();
+});
+
+test("selection and navigation revalidate the clock instead of retaining page-open lead time", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z")); // 08:00 Sofia.
+  await page.goto("/");
+  await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("radio", { name: "09:00", exact: true }).check();
+  await page.clock.setFixedTime(new Date("2026-06-01T05:30:00Z"));
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Дата и час", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Продължи" })).toBeDisabled();
+  await expect(
+    page.getByRole("radio", { name: "09:00", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.locator("section output").first()).toContainText(
+    "час е премахнат",
+  );
+});
+
+test("empty dates at the horizon offer service edits without inventing a later slot", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-06-03T05:00:00Z"));
+  await page.goto("/");
+  await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("radio", { name: /Иван/ }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  const date = page.getByLabel("Дата на посещението");
+  await date.selectOption("2026-08-01"); // Ivan is off Saturday; horizon ends Sunday.
+  await page.getByRole("button", { name: "Следваща свободна дата" }).click();
+  await expect(page.getByText(/Няма по-късна свободна дата/)).toBeVisible();
+  await expect(date).toHaveValue("2026-08-01");
+  await expect(
+    page.getByRole("button", { name: "Следваща свободна дата" }),
+  ).toHaveCount(0);
+  await date.focus();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Tab");
+  await expect(date).toHaveValue("2026-08-02");
+  await expect(page.getByText(/Няма по-късна свободна дата/)).toBeVisible();
+  await page.getByRole("button", { name: "Промени избора на услуги" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Услуги", exact: true }),
+  ).toBeFocused();
+});
+
 for (const width of [320, 360, 768, 1024, 1440]) {
   test(`the shell fits a ${width}px viewport`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
@@ -210,6 +363,18 @@ for (const width of [320, 360, 768, 1024, 1440]) {
     ).toBeInViewport();
     await page.screenshot({
       path: `coverage/playwright/shell-${width}.png`,
+      fullPage: true,
+    });
+    await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("radio", { name: /Мила/ }).check();
+    await page.getByRole("button", { name: "Продължи" }).click();
+    await expect(page.getByLabel("Дата на посещението")).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+    await page.screenshot({
+      path: `coverage/playwright/time-${width}.png`,
       fullPage: true,
     });
   });

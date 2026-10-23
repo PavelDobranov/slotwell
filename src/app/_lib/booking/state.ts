@@ -3,7 +3,7 @@ import {
   qualifiedStaff,
 } from "@/app/_lib/booking/availability";
 import { serviceTotals } from "@/app/_lib/booking/fixtures";
-import { businessDateAt } from "@/app/_lib/booking/time";
+import { addCalendarDays, businessDateAt } from "@/app/_lib/booking/time";
 import type { DemoSalon, OccupiedInterval } from "@/app/_lib/booking/types";
 
 export type BookingPath = "staff-first" | "time-first";
@@ -20,6 +20,7 @@ export type BookingState = {
   step: BookingStep;
   staffId: string | null;
   start: number | null;
+  date: string | null;
   contact: ContactDraft;
   notice: string;
 };
@@ -28,6 +29,7 @@ export type BookingAction =
   | { type: "path"; path: BookingPath }
   | { type: "staff"; id: string }
   | { type: "time"; start: number }
+  | { type: "date"; date: string }
   | { type: "contact"; draft: Partial<ContactDraft> }
   | { type: "edit"; step: BookingStep }
   | { type: "next" | "back" };
@@ -44,6 +46,7 @@ export const initialBookingState: BookingState = {
   step: "services",
   staffId: null,
   start: null,
+  date: null,
   contact: { name: "", phone: "", email: "", note: "" },
   notice: "",
 };
@@ -69,6 +72,7 @@ export function bookingReducer(
   context: BookingContext,
 ): BookingState {
   const next = { ...state, notice: "" };
+  const notices: string[] = [];
   switch (action.type) {
     case "services":
       next.serviceIds = [...new Set(action.ids)].filter((id) =>
@@ -80,6 +84,14 @@ export function bookingReducer(
       break;
     case "time":
       next.start = action.start;
+      next.date = businessDateAt(action.start);
+      break;
+    case "date":
+      next.date = action.date;
+      if (next.start !== null && businessDateAt(next.start) !== action.date) {
+        next.start = null;
+        notices.push("Датата е променена. Избери час за новата дата.");
+      }
       break;
     case "contact":
       return { ...state, contact: { ...state.contact, ...action.draft } };
@@ -88,7 +100,16 @@ export function bookingReducer(
       break;
   }
 
-  const notices: string[] = [];
+  const today = businessDateAt(context.now);
+  if (
+    next.date !== null &&
+    (next.date < today || next.date > addCalendarDays(today, 60))
+  ) {
+    next.date = null;
+    notices.push(
+      "Датата вече е извън периода за записване. Избери дата отново.",
+    );
+  }
   if (
     next.staffId !== null &&
     !qualifiedStaff(context.salon, next.serviceIds).some(

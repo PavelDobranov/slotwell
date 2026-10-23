@@ -20,6 +20,7 @@ const booked: BookingState = {
   step: "details",
   staffId: "mila",
   start: localStart("2026-06-01", 900),
+  date: "2026-06-01",
   contact: { name: "Тест", phone: "0888123456", email: "", note: "" },
 };
 
@@ -122,6 +123,64 @@ test("time-first returns to earliest unresolved choice; empty services clear bot
   assert.equal(empty.step, "services");
   assert.equal(empty.staffId, null);
   assert.equal(empty.start, null);
+});
+
+test("changing dates clears only starts from a different date and explains why", () => {
+  const same = bookingReducer(
+    booked,
+    { type: "date", date: "2026-06-01" },
+    context,
+  );
+  assert.equal(same.start, booked.start);
+  const changed = bookingReducer(
+    booked,
+    { type: "date", date: "2026-06-02" },
+    context,
+  );
+  assert.equal(changed.start, null);
+  assert.equal(changed.staffId, "mila");
+  assert.equal(changed.date, "2026-06-02");
+  assert.deepEqual(changed.contact, booked.contact);
+  assert.equal(changed.step, "time");
+  assert.match(changed.notice, /дата/);
+});
+
+test("changing specialists preserves a shared start but clears an unavailable one", () => {
+  const shared = bookingReducer(booked, { type: "staff", id: "ivan" }, context);
+  assert.equal(shared.staffId, "ivan");
+  assert.equal(shared.start, booked.start);
+  const occupied = {
+    ...context,
+    sessionOccupied: [
+      {
+        staffId: "ivan",
+        start: Number(booked.start),
+        end: Number(booked.start) + 60_000,
+      },
+    ],
+  };
+  const changed = bookingReducer(
+    booked,
+    { type: "staff", id: "ivan" },
+    occupied,
+  );
+  assert.equal(changed.staffId, "ivan");
+  assert.equal(changed.start, null);
+  assert.equal(changed.date, booked.date);
+  assert.equal(changed.step, "time");
+  assert.match(changed.notice, /час/);
+});
+
+test("a date outside the moving horizon is cleared on navigation", () => {
+  const result = bookingReducer(
+    booked,
+    { type: "next" },
+    { ...context, now: Date.parse("2026-06-02T05:00:00Z") },
+  );
+  assert.equal(result.date, null);
+  assert.equal(result.start, null);
+  assert.equal(result.step, "time");
+  assert.match(result.notice, /Датата/);
 });
 
 test("current occupancy and lead time invalidate choices on navigation", () => {

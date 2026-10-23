@@ -7,17 +7,23 @@ import { CheckIcon } from "lucide-react";
 import { useEffect, useReducer, useRef, useState } from "react";
 
 import { SpecialistStep } from "@/app/_components/booking/specialist-step";
+import { TimeStep } from "@/app/_components/booking/time-step";
 import { Button } from "@/app/_components/button";
 import { qualifiedStaff } from "@/app/_lib/booking/availability";
 import { createDemoSalon } from "@/app/_lib/booking/fixtures";
 import {
+  type BookingAction,
   type BookingStep,
   bookingReducer,
   initialBookingState,
   selectedTotals,
   stepOrder,
 } from "@/app/_lib/booking/state";
-import { businessDateAt, formatBusinessDate } from "@/app/_lib/booking/time";
+import {
+  businessDateAt,
+  formatBusinessDate,
+  formatBusinessTime,
+} from "@/app/_lib/booking/time";
 
 const labels: Record<BookingStep, string> = {
   services: "Услуги",
@@ -32,23 +38,37 @@ const euros = new Intl.NumberFormat("bg-BG", {
 
 export function BookingWizard() {
   const [referenceTime, setReferenceTime] = useState<number | null>(null);
+  const [availabilityTime, setAvailabilityTime] = useState<number | null>(null);
   // The initial render has no live dates; fixtures are created only after mounting.
   const salon =
     referenceTime === null ? null : createDemoSalon(() => referenceTime);
-  const [state, dispatch] = useReducer(
+  const [state, reduce] = useReducer(
     (
       current: typeof initialBookingState,
-      action: Parameters<typeof bookingReducer>[1],
+      { action, now }: { action: BookingAction; now: number },
     ) =>
       salon === null
         ? current
-        : bookingReducer(current, action, { salon, now: referenceTime ?? 0 }),
+        : bookingReducer(current, action, { salon, now }),
     initialBookingState,
   );
+  function dispatch(action: BookingAction) {
+    const now = Date.now();
+    setAvailabilityTime(now);
+    reduce({ action, now });
+  }
   const heading = useRef<HTMLHeadingElement>(null);
   const previousStep = useRef(state.step);
   useEffect(() => {
-    setReferenceTime(Date.now());
+    const now = Date.now();
+    setReferenceTime(now);
+    setAvailabilityTime(now);
+    // Keep fixtures anchored to this session, but refresh displayed availability.
+    const timer = window.setInterval(
+      () => setAvailabilityTime(Date.now()),
+      60_000,
+    );
+    return () => window.clearInterval(timer);
   }, []);
   useEffect(() => {
     if (previousStep.current !== state.step) heading.current?.focus();
@@ -56,7 +76,8 @@ export function BookingWizard() {
   }, [state.step]);
 
   const order = stepOrder(state.path);
-  const today = referenceTime === null ? null : businessDateAt(referenceTime);
+  const today =
+    availabilityTime === null ? null : businessDateAt(availabilityTime);
   const selected =
     salon?.services.filter(({ id }) => state.serviceIds.includes(id)) ?? [];
   const totals = salon === null ? null : selectedTotals(state, salon);
@@ -165,45 +186,47 @@ export function BookingWizard() {
             </fieldset>
           ) : (
             <>
-              <fieldset className="flex min-w-0 flex-col gap-3">
-                <legend id="path-label" className="mb-3 font-medium">
-                  Как предпочиташ да избереш?
-                </legend>
-                <RadioGroup
-                  aria-labelledby="path-label"
-                  value={state.path}
-                  onValueChange={(path) => {
-                    if (path === "staff-first" || path === "time-first")
-                      dispatch({ type: "path", path });
-                  }}
-                  className="flex flex-col gap-3 sm:flex-row"
-                >
-                  {(
-                    [
-                      ["staff-first", "Първо специалист"],
-                      ["time-first", "Първо дата и час"],
-                    ] as const
-                  ).map(([path, label]) => (
-                    <div
-                      key={path}
-                      className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3"
-                    >
-                      <Radio.Root
-                        id={path}
-                        nativeButton
-                        render={<button type="button" />}
-                        value={path}
-                        className="flex size-5 shrink-0 items-center justify-center rounded-full border border-input bg-background text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              {state.step === order[1] && (
+                <fieldset className="flex min-w-0 flex-col gap-3">
+                  <legend id="path-label" className="mb-3 font-medium">
+                    Как предпочиташ да избереш?
+                  </legend>
+                  <RadioGroup
+                    aria-labelledby="path-label"
+                    value={state.path}
+                    onValueChange={(path) => {
+                      if (path === "staff-first" || path === "time-first")
+                        dispatch({ type: "path", path });
+                    }}
+                    className="flex flex-col gap-3 sm:flex-row"
+                  >
+                    {(
+                      [
+                        ["staff-first", "Първо специалист"],
+                        ["time-first", "Първо дата и час"],
+                      ] as const
+                    ).map(([path, label]) => (
+                      <div
+                        key={path}
+                        className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3"
                       >
-                        <Radio.Indicator className="size-2.5 rounded-full bg-current" />
-                      </Radio.Root>
-                      <label htmlFor={path} className="cursor-pointer">
-                        {label}
-                      </label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </fieldset>
+                        <Radio.Root
+                          id={path}
+                          nativeButton
+                          render={<button type="button" />}
+                          value={path}
+                          className="flex size-5 shrink-0 items-center justify-center rounded-full border border-input bg-background text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        >
+                          <Radio.Indicator className="size-2.5 rounded-full bg-current" />
+                        </Radio.Root>
+                        <label htmlFor={path} className="cursor-pointer">
+                          {label}
+                        </label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </fieldset>
+              )}
               {salon !== null &&
               state.step === "staff" &&
               state.path === "staff-first" ? (
@@ -217,6 +240,33 @@ export function BookingWizard() {
                     dispatch({ type: "edit", step: "services" })
                   }
                 />
+              ) : state.step === "time" &&
+                state.path === "staff-first" &&
+                salon !== null &&
+                availabilityTime !== null &&
+                state.staffId !== null ? (
+                <TimeStep
+                  availability={{
+                    salon,
+                    now: availabilityTime,
+                    serviceIds: state.serviceIds,
+                    staffId: state.staffId,
+                  }}
+                  start={state.start}
+                  selectedDate={state.date}
+                  onDate={(date) => dispatch({ type: "date", date })}
+                  onSelect={(start) => dispatch({ type: "time", start })}
+                  onNext={() => dispatch({ type: "next" })}
+                  onEditServices={() =>
+                    dispatch({ type: "edit", step: "services" })
+                  }
+                />
+              ) : state.step === "details" ? (
+                <p className="text-muted-foreground">
+                  Избра специалист и час. Въвеждането на данни и прегледът ще
+                  бъдат добавени в следваща стъпка на прототипа. Все още няма
+                  резервация.
+                </p>
               ) : (
                 <p className="text-muted-foreground">
                   {noSpecialist
@@ -243,7 +293,7 @@ export function BookingWizard() {
             )}
           </p>
           <p className="text-sm text-muted-foreground">
-            Всички часове са местни за салона в София.
+            Всички часове са местни за салона в София (Europe/Sofia).
           </p>
           <noscript>
             За избор на услуги е необходимо да включиш JavaScript.
@@ -271,6 +321,20 @@ export function BookingWizard() {
                 Общо: {totals?.durationMinutes} мин ·{" "}
                 {euros.format((totals?.priceCents ?? 0) / 100)}
               </p>
+              {state.staffId !== null && (
+                <p className="text-sm">
+                  {salon?.staff.find(({ id }) => id === state.staffId)?.name}
+                </p>
+              )}
+              {state.start !== null && (
+                <p className="text-sm">
+                  {formatBusinessDate(businessDateAt(state.start))} ·{" "}
+                  {formatBusinessTime(state.start)}–
+                  {formatBusinessTime(
+                    state.start + (totals?.durationMinutes ?? 0) * 60_000,
+                  )}
+                </p>
+              )}
               {state.step !== "services" && (
                 <Button
                   variant="outline"
