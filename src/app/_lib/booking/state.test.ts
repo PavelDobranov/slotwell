@@ -137,6 +137,25 @@ test("time-first rejects stale starts and clamps switches and edits to the earli
   assert.equal(toStaffFirst.staffId, booked.staffId);
 });
 
+test("clock refresh revalidates choices without navigating or erasing recovery notices", () => {
+  assert.deepEqual(
+    bookingReducer(booked, { type: "refresh" }, context),
+    booked,
+  );
+  const expired = bookingReducer(
+    { ...booked, path: "time-first", step: "staff" },
+    { type: "refresh" },
+    { ...context, now: Number(booked.start) },
+  );
+  assert.equal(expired.step, "time");
+  assert.equal(expired.start, null);
+  assert.match(expired.notice, /час е премахнат/);
+  assert.equal(
+    bookingReducer(expired, { type: "refresh" }, context).notice,
+    expired.notice,
+  );
+});
+
 test("empty services cannot advance; totals treat services as a distinct set", () => {
   assert.equal(
     bookingReducer(initialBookingState, { type: "next" }, context).step,

@@ -9,7 +9,10 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import { SpecialistStep } from "@/app/_components/booking/specialist-step";
 import { TimeStep } from "@/app/_components/booking/time-step";
 import { Button } from "@/app/_components/button";
-import { qualifiedStaff } from "@/app/_lib/booking/availability";
+import {
+  availableSlots,
+  qualifiedStaff,
+} from "@/app/_lib/booking/availability";
 import { createDemoSalon } from "@/app/_lib/booking/fixtures";
 import {
   type BookingAction,
@@ -59,21 +62,28 @@ export function BookingWizard() {
   }
   const heading = useRef<HTMLHeadingElement>(null);
   const previousStep = useRef(state.step);
+  const previousPath = useRef(state.path);
   useEffect(() => {
     const now = Date.now();
     setReferenceTime(now);
     setAvailabilityTime(now);
     // Keep fixtures anchored to this session, but refresh displayed availability.
-    const timer = window.setInterval(
-      () => setAvailabilityTime(Date.now()),
-      60_000,
-    );
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      setAvailabilityTime(now);
+      reduce({ action: { type: "refresh" }, now });
+    }, 60_000);
     return () => window.clearInterval(timer);
   }, []);
   useEffect(() => {
-    if (previousStep.current !== state.step) heading.current?.focus();
+    if (
+      previousStep.current !== state.step ||
+      previousPath.current !== state.path
+    )
+      heading.current?.focus();
     previousStep.current = state.step;
-  }, [state.step]);
+    previousPath.current = state.path;
+  }, [state.step, state.path]);
 
   const order = stepOrder(state.path);
   const today =
@@ -186,54 +196,66 @@ export function BookingWizard() {
             </fieldset>
           ) : (
             <>
-              {state.step === order[1] && (
-                <fieldset className="flex min-w-0 flex-col gap-3">
-                  <legend id="path-label" className="mb-3 font-medium">
-                    Как предпочиташ да избереш?
-                  </legend>
-                  <RadioGroup
-                    aria-labelledby="path-label"
-                    value={state.path}
-                    onValueChange={(path) => {
-                      if (path === "staff-first" || path === "time-first")
-                        dispatch({ type: "path", path });
-                    }}
-                    className="flex flex-col gap-3 sm:flex-row"
-                  >
-                    {(
-                      [
-                        ["staff-first", "Първо специалист"],
-                        ["time-first", "Първо дата и час"],
-                      ] as const
-                    ).map(([path, label]) => (
-                      <div
-                        key={path}
-                        className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3"
+              <fieldset className="flex min-w-0 flex-col gap-3">
+                <legend id="path-label" className="mb-3 font-medium">
+                  Как предпочиташ да избереш?
+                </legend>
+                <RadioGroup
+                  aria-labelledby="path-label"
+                  value={state.path}
+                  onValueChange={(path) => {
+                    if (path === "staff-first" || path === "time-first")
+                      dispatch({ type: "path", path });
+                  }}
+                  className="flex flex-col gap-3 sm:flex-row"
+                >
+                  {(
+                    [
+                      ["staff-first", "Първо специалист"],
+                      ["time-first", "Първо дата и час"],
+                    ] as const
+                  ).map(([path, label]) => (
+                    <div
+                      key={path}
+                      className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3"
+                    >
+                      <Radio.Root
+                        id={path}
+                        nativeButton
+                        render={<button type="button" />}
+                        value={path}
+                        className="flex size-5 shrink-0 items-center justify-center rounded-full border border-input bg-background text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                       >
-                        <Radio.Root
-                          id={path}
-                          nativeButton
-                          render={<button type="button" />}
-                          value={path}
-                          className="flex size-5 shrink-0 items-center justify-center rounded-full border border-input bg-background text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                        >
-                          <Radio.Indicator className="size-2.5 rounded-full bg-current" />
-                        </Radio.Root>
-                        <label htmlFor={path} className="cursor-pointer">
-                          {label}
-                        </label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </fieldset>
-              )}
+                        <Radio.Indicator className="size-2.5 rounded-full bg-current" />
+                      </Radio.Root>
+                      <label htmlFor={path} className="cursor-pointer">
+                        {label}
+                      </label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </fieldset>
               {salon !== null &&
-              state.step === "staff" &&
-              state.path === "staff-first" ? (
+              availabilityTime !== null &&
+              state.step === "staff" ? (
                 <SpecialistStep
                   salon={salon}
                   serviceIds={state.serviceIds}
                   staffId={state.staffId}
+                  availableStaffIds={
+                    state.path === "time-first"
+                      ? (availableSlots({
+                          salon,
+                          now: availabilityTime,
+                          serviceIds: state.serviceIds,
+                          date:
+                            state.start === null
+                              ? businessDateAt(availabilityTime)
+                              : businessDateAt(state.start),
+                        }).find(({ start }) => start === state.start)
+                          ?.staffIds ?? [])
+                      : undefined
+                  }
                   onSelect={(id) => dispatch({ type: "staff", id })}
                   onNext={() => dispatch({ type: "next" })}
                   onEditServices={() =>
@@ -241,16 +263,17 @@ export function BookingWizard() {
                   }
                 />
               ) : state.step === "time" &&
-                state.path === "staff-first" &&
                 salon !== null &&
-                availabilityTime !== null &&
-                state.staffId !== null ? (
+                availabilityTime !== null ? (
                 <TimeStep
                   availability={{
                     salon,
                     now: availabilityTime,
                     serviceIds: state.serviceIds,
-                    staffId: state.staffId,
+                    staffId:
+                      state.path === "staff-first"
+                        ? (state.staffId ?? undefined)
+                        : undefined,
                   }}
                   start={state.start}
                   selectedDate={state.date}

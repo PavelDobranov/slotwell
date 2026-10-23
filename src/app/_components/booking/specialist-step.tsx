@@ -6,6 +6,7 @@ export function SpecialistStep({
   salon,
   serviceIds,
   staffId,
+  availableStaffIds,
   onSelect,
   onNext,
   onEditServices,
@@ -13,13 +14,24 @@ export function SpecialistStep({
   salon: DemoSalon;
   serviceIds: readonly string[];
   staffId: string | null;
+  availableStaffIds?: readonly string[];
   onSelect: (id: string) => void;
   onNext: () => void;
   onEditServices: () => void;
 }) {
-  const staff = qualifiedStaff(salon, serviceIds);
+  const staff = qualifiedStaff(salon, serviceIds).filter(
+    ({ id }) =>
+      availableStaffIds === undefined || availableStaffIds.includes(id),
+  );
   return (
     <>
+      {availableStaffIds !== undefined && (
+        <p className="text-sm text-muted-foreground">
+          Избери специалист, свободен за цялото посещение в избрания час,
+          включително времето за подготовка след услугите. Изборът е
+          задължителен дори когато има само един специалист.
+        </p>
+      )}
       <fieldset className="flex min-w-0 flex-col gap-3">
         <legend className="mb-3 font-medium">Избери специалист</legend>
         {staff.map((member) => (
@@ -47,8 +59,9 @@ export function SpecialistStep({
       {staff.length === 0 && (
         <>
           <output>
-            Няма специалист за тази комбинация от услуги. Промени услугите, за
-            да продължиш.
+            {availableStaffIds === undefined
+              ? "Няма специалист за тази комбинация от услуги. Промени услугите, за да продължиш."
+              : "Няма свободен специалист за избрания час. Върни се към дата и час или промени услугите."}
           </output>
           <Button
             variant="outline"

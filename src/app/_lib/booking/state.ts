@@ -32,7 +32,7 @@ export type BookingAction =
   | { type: "date"; date: string }
   | { type: "contact"; draft: Partial<ContactDraft> }
   | { type: "edit"; step: BookingStep }
-  | { type: "next" | "back" };
+  | { type: "next" | "back" | "refresh" };
 
 type BookingContext = {
   salon: DemoSalon;
@@ -142,7 +142,10 @@ export function bookingReducer(
       );
     }
   }
-  next.notice = notices.join(" ");
+  next.notice =
+    notices.length === 0 && action.type === "refresh"
+      ? state.notice
+      : notices.join(" ");
   const order = stepOrder(next.path);
   const unresolved =
     order.find(

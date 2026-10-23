@@ -347,6 +347,153 @@ test("empty dates at the horizon offer service edits without inventing a later s
   ).toBeFocused();
 });
 
+test("time-first deduplicates shared starts, requires explicit staff, and switches paths without restarting", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (["error", "warning"].includes(message.type()))
+      errors.push(message.text());
+  });
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+  await page.goto("/");
+  await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+  const next = page.getByRole("button", { name: "Продължи" });
+  await next.click();
+  await page.getByRole("radio", { name: "Първо дата и час" }).check();
+  const start = page.getByRole("radio", { name: "15:00", exact: true });
+  await expect(start).toHaveCount(1);
+  await expect(start).not.toBeChecked();
+  await expect(next).toBeDisabled();
+  await start.focus();
+  await page.keyboard.press("Space");
+  await next.click();
+  await expect(
+    page.getByRole("heading", { name: "Специалист", exact: true }),
+  ).toBeFocused();
+  const specialists = page.getByRole("group", { name: "Избери специалист" });
+  await expect(specialists.getByRole("radio")).toHaveCount(2);
+  await expect(next).toBeDisabled();
+  await specialists.getByRole("radio", { name: /Мила/ }).check();
+  await next.click();
+  await expect(
+    page.getByRole("heading", { name: "Данни и преглед", exact: true }),
+  ).toBeFocused();
+  const summary = page.getByRole("complementary");
+  await expect(summary).toContainText("Мила");
+  await expect(summary).toContainText("15:00–15:30");
+  await page.getByRole("radio", { name: "Първо специалист" }).check();
+  await expect(
+    page.getByRole("heading", { name: "Специалист", exact: true }),
+  ).toBeFocused();
+  await expect(specialists.getByRole("radio", { name: /Мила/ })).toBeChecked();
+  await next.click();
+  await expect(start).toBeChecked();
+  await page.getByRole("radio", { name: "Първо дата и час" }).check();
+  await expect(
+    page.getByRole("heading", { name: "Дата и час", exact: true }),
+  ).toBeFocused();
+  await expect(start).toBeChecked();
+  // The service ends at 10:00, but Mila's cleanup would overlap her occupancy.
+  await page.getByLabel("Дата на посещението").selectOption("2026-06-08");
+  await page.getByRole("radio", { name: "09:30", exact: true }).check();
+  await next.click();
+  await expect(specialists.getByRole("radio")).toHaveCount(1);
+  await expect(specialists.getByRole("radio", { name: /Мила/ })).toHaveCount(0);
+  await expect(next).toBeDisabled();
+  await specialists.getByRole("radio", { name: /Иван/ }).check();
+  // Wednesday has only Mila; changing time must clear retained Ivan, not the time.
+  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await page.getByLabel("Дата на посещението").selectOption("2026-06-10");
+  await page.getByRole("radio", { name: "09:00", exact: true }).check();
+  await next.click();
+  await expect(specialists.getByRole("radio")).toHaveCount(1);
+  await expect(
+    specialists.getByRole("radio", { name: /Мила/ }),
+  ).not.toBeChecked();
+  await expect(next).toBeDisabled();
+  await expect(summary).toContainText("09:00–09:30");
+  await expect(summary).not.toContainText("Иван");
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(360);
+  await page.screenshot({
+    path: "coverage/playwright/time-first-single-staff.png",
+    fullPage: true,
+  });
+  await specialists.getByRole("radio", { name: /Мила/ }).focus();
+  await page.keyboard.press("Space");
+  await next.click();
+  await expect(
+    page.getByRole("heading", { name: "Данни и преглед", exact: true }),
+  ).toBeFocused();
+  expect(errors).toEqual([]);
+});
+
+test("time-first filters competencies and rejects a start that becomes stale on the staff step", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+  await page.goto("/");
+  await page.getByRole("checkbox", { name: /Боядисване/ }).check();
+  const next = page.getByRole("button", { name: "Продължи" });
+  await next.click();
+  await page.getByRole("radio", { name: "Първо дата и час" }).check();
+  await page.getByRole("radio", { name: "10:00", exact: true }).check();
+  await next.click();
+  const specialists = page.getByRole("group", { name: "Избери специалист" });
+  await expect(specialists.getByRole("radio")).toHaveCount(1);
+  const elena = specialists.getByRole("radio", { name: /Елена/ });
+  await expect(elena).not.toBeChecked();
+  await expect(next).toBeDisabled();
+  await elena.check();
+  await page.clock.setFixedTime(new Date("2026-06-01T06:30:00Z"));
+  await next.click();
+  await expect(
+    page.getByRole("heading", { name: "Дата и час", exact: true }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("radio", { name: "10:00", exact: true }),
+  ).toHaveCount(0);
+  await expect(next).toBeDisabled();
+  await expect(page.locator("section output").first()).toContainText(
+    "час е премахнат",
+  );
+  // Valid staff survives the stale start; replacing the time can still complete the route.
+  await page.getByRole("radio", { name: "11:00", exact: true }).check();
+  await next.click();
+  await expect(elena).toBeChecked();
+  await next.click();
+  await expect(
+    page.getByRole("heading", { name: "Данни и преглед", exact: true }),
+  ).toBeFocused();
+});
+
+test("time-first clock refresh returns expired candidates to time selection without losing focus", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date("2026-06-01T05:00:00Z") });
+  await page.goto("/");
+  await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+  const next = page.getByRole("button", { name: "Продължи" });
+  await next.click();
+  await page.getByRole("radio", { name: "Първо дата и час" }).check();
+  // :15 remains valid until the clock passes 08:15 Sofia.
+  await page.getByRole("radio", { name: "09:15", exact: true }).check();
+  await next.click();
+  await page.getByRole("radio", { name: /Мила/ }).focus();
+  await page.clock.fastForward(16 * 60_000);
+  await expect(
+    page.getByRole("heading", { name: "Дата и час", exact: true }),
+  ).toBeFocused();
+  await expect(page.locator("section output").first()).toContainText(
+    "час е премахнат",
+  );
+  await expect(next).toBeDisabled();
+});
+
 for (const width of [320, 360, 768, 1024, 1440]) {
   test(`the shell fits a ${width}px viewport`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
@@ -375,6 +522,15 @@ for (const width of [320, 360, 768, 1024, 1440]) {
     ).toBeLessThanOrEqual(width);
     await page.screenshot({
       path: `coverage/playwright/time-${width}.png`,
+      fullPage: true,
+    });
+    await page.getByRole("radio", { name: "Първо дата и час" }).check();
+    await expect(page.getByLabel("Дата на посещението")).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+    await page.screenshot({
+      path: `coverage/playwright/time-first-${width}.png`,
       fullPage: true,
     });
   });
