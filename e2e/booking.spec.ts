@@ -101,6 +101,70 @@ for (const [instant, date, label] of [
   });
 }
 
+test("keyboard service selection updates totals, navigation and focus without a route screen", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (["error", "warning"].includes(message.type()))
+      errors.push(message.text());
+  });
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto("/");
+  const next = page.getByRole("button", { name: "Продължи" });
+  await expect(next).toBeDisabled();
+  const haircut = page.getByRole("checkbox", { name: /Подстригване/ });
+  await haircut.focus();
+  await page.keyboard.press("Space");
+  await expect(haircut).toBeChecked();
+  await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
+  const summary = page.getByRole("complementary", { name: "Твоят избор" });
+  await expect(summary).toContainText("50 мин");
+  await expect(summary).toContainText(/35,00\s*€/);
+  await page.screenshot({
+    path: "coverage/playwright/services-selected.png",
+    fullPage: true,
+  });
+  await next.click();
+  await expect(
+    page.getByRole("heading", { name: "Специалист", exact: true }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("radio", { name: "Първо специалист" }),
+  ).toBeChecked();
+  await page.getByRole("radio", { name: "Първо дата и час" }).check();
+  await expect(
+    page.getByRole("heading", { name: "Дата и час", exact: true }),
+  ).toBeFocused();
+  await expect(page.locator('[aria-current="step"]')).toContainText(
+    "Дата и час",
+  );
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(360);
+  await page.screenshot({
+    path: "coverage/playwright/route-choice.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Назад" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Услуги", exact: true }),
+  ).toBeFocused();
+  await expect(haircut).toBeChecked();
+  await next.click();
+  await page.getByRole("button", { name: "Промени услугите" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Услуги", exact: true }),
+  ).toBeFocused();
+  await haircut.uncheck();
+  await page.getByRole("checkbox", { name: /Оформяне на брада/ }).uncheck();
+  await expect(next).toBeDisabled();
+  await page.reload();
+  await expect(haircut).not.toBeChecked();
+  expect(errors).toEqual([]);
+});
+
 for (const width of [320, 360, 768, 1024, 1440]) {
   test(`the shell fits a ${width}px viewport`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });

@@ -1,12 +1,5 @@
 import { BookingWizard } from "@/app/_components/booking/wizard";
 
-const steps = [
-  { id: "services", label: "Услуги" },
-  { id: "specialist", label: "Специалист" },
-  { id: "date-time", label: "Дата и час" },
-  { id: "details", label: "Данни и преглед" },
-];
-
 export default function Home() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 py-6 sm:px-8 sm:py-10">
@@ -42,39 +35,7 @@ export default function Home() {
             Първо услугите, после специалистът и удобното време.
           </p>
         </div>
-        <nav aria-label="Стъпки на резервацията">
-          <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {steps.map((step, index) => (
-              <li
-                key={step.id}
-                aria-current={step.id === "services" ? "step" : undefined}
-                className="flex items-center gap-3 rounded-md border p-3 text-sm text-muted-foreground aria-[current=step]:border-primary aria-[current=step]:bg-secondary aria-[current=step]:font-semibold aria-[current=step]:text-foreground"
-              >
-                <span aria-hidden="true" className="font-mono">
-                  0{index + 1}
-                </span>
-                {step.label}
-              </li>
-            ))}
-          </ol>
-        </nav>
-        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <BookingWizard />
-          <aside
-            aria-labelledby="summary-heading"
-            className="flex flex-col gap-4 rounded-lg border bg-muted p-6"
-          >
-            <h2 id="summary-heading" className="text-lg font-semibold">
-              Твоят избор
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Все още няма избрани услуги.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Тук ще виждаш услугите, продължителността и общата цена.
-            </p>
-          </aside>
-        </div>
+        <BookingWizard />
       </main>
       <footer className="border-t pt-5 text-sm text-muted-foreground">
         Измислен салон и примерни услуги. Без реално записване и плащане.
