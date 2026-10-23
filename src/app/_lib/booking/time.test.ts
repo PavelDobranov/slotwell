@@ -31,6 +31,7 @@ test("calendar arithmetic crosses months, leap days, years and both DST changes"
   ] as const) {
     assert.equal(addCalendarDays(date, days), expected);
   }
+
   assert.equal(businessWeekday("2026-03-29"), 0);
   assert.equal(businessWeekday("2026-03-30"), 1);
 });
@@ -52,6 +53,7 @@ test("DST gaps and repeated local starts are rejected, while adjacent times reso
     assert.equal(localStart("2026-03-29", minute), null);
     assert.equal(localStart("2026-10-25", minute), null);
   }
+
   assert.equal(
     localStart("2026-03-29", 179),
     Date.parse("2026-03-29T00:59:00Z"),
@@ -75,8 +77,10 @@ test("invalid calendar dates and minute values fail instead of rolling over", ()
     assert.throws(() => addCalendarDays(date, 1), RangeError);
     assert.throws(() => localStart(date, 600), RangeError);
   }
+
   for (const minute of [-1, 1440, 10.5, Number.NaN]) {
     assert.throws(() => localStart("2026-01-01", minute), RangeError);
   }
+
   assert.throws(() => addCalendarDays("2026-01-01", 0.5), RangeError);
 });

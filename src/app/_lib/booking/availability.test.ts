@@ -14,10 +14,12 @@ const now = Date.parse("2026-01-05T06:00:00Z"); // 08:00 Sofia
 function instant(minute: number, day = date): number {
   const value = localStart(day, minute);
   assert.notEqual(value, null);
+
   return value as number;
 }
 function salon(): DemoSalon {
   const demo = createDemoSalon(() => now);
+
   return {
     ...demo,
     hours: { ...demo.hours, 1: [{ startMinute: 540, endMinute: 660 }] },
@@ -36,6 +38,7 @@ test("competency requires every distinct known service, including before choosin
     qualifiedStaff(demo, ["wash", "haircut", "wash"]).map(({ id }) => id),
     ["mila"],
   );
+
   for (const serviceIds of [
     [],
     ["unknown"],
@@ -293,6 +296,7 @@ test("unresolvable working boundaries fail closed; midnight closing resolves on 
   const day = "2026-03-29";
   const reference = Date.parse("2026-03-28T00:00:00Z");
   const demo = createDemoSalon(() => reference);
+
   for (const hours of [
     [{ startMinute: 180, endMinute: 360 }],
     [{ startMinute: 120, endMinute: 210 }],
@@ -313,6 +317,7 @@ test("unresolvable working boundaries fail closed; midnight closing resolves on 
       [],
     );
   }
+
   const hours = [{ startMinute: 1380, endMinute: 1440 }];
   const slots = availableSlots({
     salon: {
@@ -336,8 +341,11 @@ test("unresolvable working boundaries fail closed; midnight closing resolves on 
 test("selectors do not mutate even deeply frozen fixtures, selections, or session occupancy", () => {
   function freeze(value: object) {
     for (const child of Object.values(value)) {
-      if (child !== null && typeof child === "object") freeze(child);
+      if (child !== null && typeof child === "object") {
+        freeze(child);
+      }
     }
+
     Object.freeze(value);
   }
   const input = {
@@ -358,6 +366,7 @@ test("selectors do not mutate even deeply frozen fixtures, selections, or sessio
 
 test("specialist-first is exactly the matching subset of time-first slots", () => {
   const demo = createDemoSalon(() => now);
+
   for (const day of [date, "2026-01-12", "2026-01-13", "2026-01-14"]) {
     for (const serviceIds of [
       ["haircut"],
@@ -370,6 +379,7 @@ test("specialist-first is exactly the matching subset of time-first slots", () =
         new Set(combined.map(({ start }) => start)).size,
         combined.length,
       );
+
       for (const { id } of demo.staff) {
         assert.deepEqual(
           availableSlots({ ...input, staffId: id }),
@@ -378,6 +388,7 @@ test("specialist-first is exactly the matching subset of time-first slots", () =
             .map((slot) => ({ ...slot, staffIds: [id] })),
         );
       }
+
       assert.deepEqual(availableSlots({ ...input, staffId: "unknown" }), []);
     }
   }

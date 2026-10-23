@@ -40,6 +40,7 @@ function localParts(instant: number) {
 // A UTC date is only a calendar arithmetic carrier, never a salon-local instant.
 function calendarCarrier(date: string): Date {
   const carrier = new Date(`${date}T00:00:00Z`);
+
   if (
     !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
     !Number.isFinite(carrier.getTime()) ||
@@ -47,19 +48,24 @@ function calendarCarrier(date: string): Date {
   ) {
     throw new RangeError("Expected an ISO calendar date (YYYY-MM-DD)");
   }
+
   return carrier;
 }
 
 export function businessDateAt(instant: number): string {
   const { year, month, day } = localParts(instant);
+
   return `${year}-${month}-${day}`;
 }
 
 export function addCalendarDays(date: string, days: number): string {
-  if (!Number.isInteger(days))
+  if (!Number.isInteger(days)) {
     throw new RangeError("Expected whole calendar days");
+  }
+
   const carrier = calendarCarrier(date);
   carrier.setUTCDate(carrier.getUTCDate() + days);
+
   return carrier.toISOString().slice(0, 10);
 }
 
@@ -73,9 +79,11 @@ export function businessWeekday(date: string): number {
  */
 export function localStart(date: string, minute: number): number | null {
   const midnight = calendarCarrier(date).getTime();
+
   if (!Number.isInteger(minute) || minute < 0 || minute >= 1440) {
     throw new RangeError("Expected minutes within a calendar day");
   }
+
   const wallTime = midnight + minute * MINUTE_MS;
   // Sample either side of the day to capture both Sofia transition offsets.
   const offsets = new Set(
@@ -88,6 +96,7 @@ export function localStart(date: string, minute: number): number | null {
         hour,
         minute: localMinute,
       } = localParts(probe);
+
       return (
         Date.parse(`${year}-${month}-${localDay}T${hour}:${localMinute}:00Z`) -
         probe
@@ -98,11 +107,13 @@ export function localStart(date: string, minute: number): number | null {
     .map((offset) => wallTime - offset)
     .filter((instant) => {
       const parts = localParts(instant);
+
       return (
         businessDateAt(instant) === date &&
         Number(parts.hour) * 60 + Number(parts.minute) === minute
       );
     });
+
   return matches.length === 1 ? matches[0] : null;
 }
 
@@ -115,7 +126,9 @@ export function formatBusinessTime(instant: number): string {
 }
 
 export function formatEuro(cents: number): string {
-  if (!Number.isSafeInteger(cents))
+  if (!Number.isSafeInteger(cents)) {
     throw new RangeError("Expected integer euro cents");
+  }
+
   return euroFormatter.format(cents / 100);
 }

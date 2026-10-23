@@ -42,8 +42,10 @@ export function qualifiedStaff(
     serviceIds.some(
       (id) => !salon.services.some((service) => service.id === id),
     )
-  )
+  ) {
     return [];
+  }
+
   return salon.staff.filter((staff) =>
     serviceIds.every((id) => staff.serviceIds.includes(id)),
   );
@@ -56,6 +58,7 @@ function instantHours(date: string, hours: readonly WorkingHours[]) {
       endMinute === 1440
         ? localStart(addCalendarDays(date, 1), 0)
         : localStart(date, endMinute);
+
     return start === null || end === null ? [] : [{ start, end }];
   });
 }
@@ -67,7 +70,11 @@ export function availableSlots(input: AvailabilityInput): AvailableSlot[] {
   const { salon, serviceIds, date, staffId, now } = input;
   const weekday = businessWeekday(date) as keyof DemoSalon["hours"];
   const today = businessDateAt(now);
-  if (date < today || date > addCalendarDays(today, 60)) return [];
+
+  if (date < today || date > addCalendarDays(today, 60)) {
+    return [];
+  }
+
   const hoursFor = (weekly: readonly WorkingHours[], id?: string) =>
     salon.exceptions.find(
       (exception) => exception.date === date && exception.staffId === id,
@@ -80,19 +87,32 @@ export function availableSlots(input: AvailabilityInput): AvailableSlot[] {
       ...member,
       windows: instantHours(date, hoursFor(member.hours[weekday], member.id)),
     }));
-  if (staff.length === 0 || businessHours.length === 0) return [];
+
+  if (staff.length === 0 || businessHours.length === 0) {
+    return [];
+  }
+
   const totals = serviceTotals(
     salon.services.filter(({ id }) => serviceIds.includes(id)),
   );
   const slots: AvailableSlot[] = [];
+
   for (let minute = 0; minute < 1440; minute += 15) {
     const start = localStart(date, minute);
-    if (start === null || start < now + 60 * MINUTE_MS) continue;
+
+    if (start === null || start < now + 60 * MINUTE_MS) {
+      continue;
+    }
+
     const end = start + totals.durationMinutes * MINUTE_MS;
     const occupiedEnd = end + totals.cleanupMinutes * MINUTE_MS;
     const fits = (window: { start: number; end: number }) =>
       start >= window.start && occupiedEnd <= window.end;
-    if (!businessHours.some(fits)) continue;
+
+    if (!businessHours.some(fits)) {
+      continue;
+    }
+
     const staffIds = staff
       .filter(
         ({ id, windows }) =>
@@ -105,7 +125,11 @@ export function availableSlots(input: AvailabilityInput): AvailableSlot[] {
           ),
       )
       .map(({ id }) => id);
-    if (staffIds.length > 0) slots.push({ start, end, occupiedEnd, staffIds });
+
+    if (staffIds.length > 0) {
+      slots.push({ start, end, occupiedEnd, staffIds });
+    }
   }
+
   return slots;
 }

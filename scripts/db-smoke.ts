@@ -6,7 +6,11 @@ import { openDatabase } from "@/db/open";
 import { scaffoldChecks } from "@/db/schema";
 
 const filename = process.env.DB_FILE_NAME;
-if (!filename) throw new Error("DB_FILE_NAME is required");
+
+if (!filename) {
+  throw new Error("DB_FILE_NAME is required");
+}
+
 const { sqlite, db } = openDatabase(filename);
 try {
   const inserted = db

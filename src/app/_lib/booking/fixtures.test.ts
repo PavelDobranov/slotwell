@@ -17,6 +17,7 @@ test("the fictional catalog has distinct competencies, integer prices and traili
     new Set(salon.staff.map((staff) => staff.id)).size,
     salon.staff.length,
   );
+
   for (const service of salon.services) {
     assert.ok(
       Number.isSafeInteger(service.priceCents) && service.priceCents > 0,
@@ -27,6 +28,7 @@ test("the fictional catalog has distinct competencies, integer prices and traili
       salon.staff.some((staff) => staff.serviceIds.includes(service.id)),
     );
   }
+
   for (const staff of salon.staff) {
     assert.ok(
       staff.serviceIds.every((id) =>
@@ -34,6 +36,7 @@ test("the fictional catalog has distinct competencies, integer prices and traili
       ),
     );
   }
+
   assert.ok(
     salon.staff.some(
       (staff) =>
@@ -79,6 +82,7 @@ test("walkthrough occupancy and dated closure follow the injected Sofia date, no
     let clockReads = 0;
     const salon = createDemoSalon(() => {
       clockReads += 1;
+
       return Date.parse(now);
     });
     assert.equal(clockReads, 1);
@@ -104,11 +108,13 @@ test("weekly business and staff schedules include shorter shifts and closed days
   const salon = createDemoSalon(() => 0);
   assert.deepEqual(salon.hours[0], []);
   assert.notDeepEqual(salon.staff[0].hours, salon.staff[1].hours);
+
   for (const hours of [
     salon.hours,
     ...salon.staff.map((staff) => staff.hours),
   ]) {
     assert.equal(Object.keys(hours).length, 7);
+
     for (const intervals of Object.values(hours)) {
       for (const interval of intervals) {
         assert.ok(interval.startMinute >= 0 && interval.endMinute <= 1440);

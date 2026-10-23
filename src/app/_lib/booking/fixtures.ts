@@ -59,8 +59,11 @@ export function createDemoSalon(clock: Clock): DemoSalon {
   // Monday working hours avoid DST transitions. Still fail closed at the timezone boundary.
   const start = localStart(monday, 600);
   const end = localStart(monday, 660);
-  if (start === null || end === null)
+
+  if (start === null || end === null) {
     throw new RangeError("Unresolvable demo hours");
+  }
+
   return {
     name: "Студио Искра — демо салон",
     address: "София, ул. „Демо“ № 1 (измислен адрес)",
@@ -101,6 +104,7 @@ export function createDemoSalon(clock: Clock): DemoSalon {
 /** Selected services are a set: order and accidental duplicate IDs do not change totals. */
 export function serviceTotals(selected: readonly Service[]) {
   const distinct = new Map(selected.map((service) => [service.id, service]));
+
   return [...distinct.values()].reduce(
     (total, service) => ({
       priceCents: total.priceCents + service.priceCents,
