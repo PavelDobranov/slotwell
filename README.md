@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Slotwell
 
-## Getting Started
+Next.js frontend and Hono API in one project, served by one process.
 
-First, run the development server:
+## Structure
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```text
+src/
+  app/                       Next.js frontend
+    _components/             Frontend UI components (non-routing)
+    _lib/                    Frontend utilities (non-routing)
+    api/[[...route]]/route.ts Thin adapter exposing Hono at /api/*
+    layout.tsx
+    page.tsx
+    globals.css
+  server/app.ts              Hono app and API routes
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Keep frontend pages and support code in `src/app/`, and backend logic in `src/server/`.
+The `_components/` and `_lib/` folders are private Next.js folders, excluded from routing.
+Use `src/app/_components/` and `src/app/_lib/` for shared frontend code.
+Colocate route-specific components and utilities in that route's own `_components/` and `_lib/` folders as needed.
+Keep shared components directly in `_components/`, without an extra `ui/` folder.
+Keep all Next.js routes under `src/app/`; do not create a root `app/` directory.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Development
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```sh
+npm install
+npm run dev
+```
 
-## Learn More
+- Frontend: http://localhost:3000
+- API health: http://localhost:3000/api/health → `{"status":"ok"}`
 
-To learn more about Next.js, take a look at the following resources:
+## Checks and production
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```sh
+npm run lint
+npm run build
+npm start
+```
