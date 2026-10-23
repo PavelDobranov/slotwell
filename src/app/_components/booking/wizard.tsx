@@ -6,6 +6,7 @@ import { RadioGroup } from "@base-ui/react/radio-group";
 import { CheckIcon } from "lucide-react";
 import { useEffect, useReducer, useRef, useState } from "react";
 
+import { DetailsStep } from "@/app/_components/booking/details-step";
 import { SpecialistStep } from "@/app/_components/booking/specialist-step";
 import { TimeStep } from "@/app/_components/booking/time-step";
 import { Button } from "@/app/_components/button";
@@ -292,11 +293,10 @@ export function BookingWizard() {
                   }
                 />
               ) : state.step === "details" ? (
-                <p className="text-muted-foreground">
-                  Избра специалист и час. Въвеждането на данни и прегледът ще
-                  бъдат добавени в следваща стъпка на прототипа. Все още няма
-                  резервация.
-                </p>
+                <DetailsStep
+                  draft={state.contact}
+                  onChange={(draft) => dispatch({ type: "contact", draft })}
+                />
               ) : (
                 <p className="text-muted-foreground">
                   {noSpecialist
@@ -364,6 +364,25 @@ export function BookingWizard() {
                     state.start + (totals?.durationMinutes ?? 0) * 60_000,
                   )}
                 </p>
+              )}
+              {state.step === "details" && (
+                <>
+                  <p className="text-sm">
+                    Място: {salon?.name}, {salon?.address}
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => dispatch({ type: "edit", step: "staff" })}
+                  >
+                    Промени специалиста
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => dispatch({ type: "edit", step: "time" })}
+                  >
+                    Промени датата и часа
+                  </Button>
+                </>
               )}
               {state.step !== "services" && (
                 <Button
