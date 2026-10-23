@@ -10,7 +10,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Repository
 
-- [File structure](docs/file-structure.md): Read when adding or moving files, organizing features, or changing frontend/backend boundaries or import aliases. Describes the evolving structure and colocation conventions; unrelated tasks can skip it.
+- [File structure](docs/agents/file-structure.md): Read when adding or moving files, organizing features, or changing frontend/backend boundaries or import aliases. Describes the evolving structure and colocation conventions; unrelated tasks can skip it.
+- [Issue tracker](docs/agents/issue-tracker.md): Read when publishing or managing issues, specifications, or tickets. Use GitHub Issues through the GitHub CLI (`gh`).
 
 
 ## Hono CLI
