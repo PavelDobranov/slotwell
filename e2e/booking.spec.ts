@@ -494,6 +494,38 @@ test("time-first clock refresh returns expired candidates to time selection with
   await expect(next).toBeDisabled();
 });
 
+for (const path of ["staff-first", "time-first"] as const) {
+  test(`${path} restores focus when a time option expires without a step change`, async ({
+    page,
+  }) => {
+    await page.clock.install({ time: new Date("2026-06-01T05:00:00Z") });
+    await page.goto("/");
+    await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+    const next = page.getByRole("button", { name: "Продължи" });
+    await next.click();
+    if (path === "time-first") {
+      await page.getByRole("radio", { name: "Първо дата и час" }).check();
+    } else {
+      await page.getByRole("radio", { name: /Мила/ }).check();
+      await next.click();
+    }
+    const start = page.getByRole("radio", { name: "09:15", exact: true });
+    await start.focus();
+    await page.keyboard.press("Space");
+    await page.clock.fastForward(16 * 60_000);
+    await expect(start).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Дата и час", exact: true }),
+    ).toBeFocused();
+    await expect(next).toBeDisabled();
+    // A further refresh must not steal focus from a still-present control.
+    const date = page.getByLabel("Дата на посещението");
+    await date.focus();
+    await page.clock.fastForward(60_000);
+    await expect(date).toBeFocused();
+  });
+}
+
 for (const width of [320, 360, 768, 1024, 1440]) {
   test(`the shell fits a ${width}px viewport`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });

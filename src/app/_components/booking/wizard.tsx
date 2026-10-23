@@ -61,6 +61,7 @@ export function BookingWizard() {
     reduce({ action, now });
   }
   const heading = useRef<HTMLHeadingElement>(null);
+  const lastFocusedControl = useRef<HTMLElement | null>(null);
   const previousStep = useRef(state.step);
   const previousPath = useRef(state.path);
   useEffect(() => {
@@ -78,12 +79,15 @@ export function BookingWizard() {
   useEffect(() => {
     if (
       previousStep.current !== state.step ||
-      previousPath.current !== state.path
+      previousPath.current !== state.path ||
+      (lastFocusedControl.current !== null &&
+        !lastFocusedControl.current.isConnected &&
+        document.activeElement === document.body)
     )
       heading.current?.focus();
     previousStep.current = state.step;
     previousPath.current = state.path;
-  }, [state.step, state.path]);
+  });
 
   const order = stepOrder(state.path);
   const today =
@@ -116,6 +120,9 @@ export function BookingWizard() {
       </nav>
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <section
+          onFocusCapture={(event) => {
+            lastFocusedControl.current = event.target;
+          }}
           aria-labelledby="step-heading"
           className="flex min-w-0 flex-col gap-4 py-2"
         >
