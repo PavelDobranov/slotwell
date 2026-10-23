@@ -6,6 +6,7 @@ import { RadioGroup } from "@base-ui/react/radio-group";
 import { CheckIcon } from "lucide-react";
 import { useEffect, useReducer, useRef, useState } from "react";
 
+import { SpecialistStep } from "@/app/_components/booking/specialist-step";
 import { Button } from "@/app/_components/button";
 import { qualifiedStaff } from "@/app/_lib/booking/availability";
 import { createDemoSalon } from "@/app/_lib/booking/fixtures";
@@ -203,11 +204,26 @@ export function BookingWizard() {
                   ))}
                 </RadioGroup>
               </fieldset>
-              <p className="text-muted-foreground">
-                {noSpecialist
-                  ? "Няма специалист за тази комбинация от услуги. Върни се и промени избора си."
-                  : "Изборът на конкретен специалист и свободен час ще бъде добавен в следващите стъпки на прототипа."}
-              </p>
+              {salon !== null &&
+              state.step === "staff" &&
+              state.path === "staff-first" ? (
+                <SpecialistStep
+                  salon={salon}
+                  serviceIds={state.serviceIds}
+                  staffId={state.staffId}
+                  onSelect={(id) => dispatch({ type: "staff", id })}
+                  onNext={() => dispatch({ type: "next" })}
+                  onEditServices={() =>
+                    dispatch({ type: "edit", step: "services" })
+                  }
+                />
+              ) : (
+                <p className="text-muted-foreground">
+                  {noSpecialist
+                    ? "Няма специалист за тази комбинация от услуги. Върни се и промени избора си."
+                    : "Изборът на конкретен специалист и свободен час ще бъде добавен в следващите стъпки на прототипа."}
+                </p>
+              )}
               <Button
                 variant="outline"
                 className="self-start"

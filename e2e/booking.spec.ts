@@ -165,6 +165,35 @@ test("keyboard service selection updates totals, navigation and focus without a 
   expect(errors).toEqual([]);
 });
 
+test("specialist choices require explicit selection and match every service", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+  await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  const specialists = page.getByRole("group", { name: "Избери специалист" });
+  await expect(specialists.getByRole("radio")).toHaveCount(1);
+  const ivan = specialists.getByRole("radio", { name: /Иван/ });
+  await expect(ivan).not.toBeChecked();
+  await expect(page.getByRole("button", { name: "Продължи" })).toBeDisabled();
+  await ivan.focus();
+  await page.keyboard.press("Space");
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Дата и час", exact: true }),
+  ).toBeFocused();
+  await page.getByRole("button", { name: "Промени услугите" }).click();
+  await page.getByRole("checkbox", { name: /Боядисване/ }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await expect(
+    page.getByText(
+      "Няма специалист за тази комбинация от услуги. Промени услугите, за да продължиш.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Продължи" })).toBeDisabled();
+});
+
 for (const width of [320, 360, 768, 1024, 1440]) {
   test(`the shell fits a ${width}px viewport`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
