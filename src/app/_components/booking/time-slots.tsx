@@ -65,11 +65,11 @@ export function TimeSlots({
                     {group.length} свободни
                   </span>
                 </p>
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
                   {group.map((slot) => (
                     <label
                       key={slot.start}
-                      className="relative flex h-10 cursor-pointer items-center justify-center gap-1 rounded-lg border border-input bg-background text-sm font-medium tabular-nums has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
+                      className="relative flex min-h-11 cursor-pointer items-center justify-center gap-1 rounded-lg border border-input bg-background text-sm font-medium tabular-nums has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
                     >
                       <input
                         type="radio"

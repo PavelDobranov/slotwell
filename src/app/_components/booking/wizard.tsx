@@ -294,7 +294,10 @@ export function BookingWizard() {
                       >
                         <Radio.Indicator className="size-2.5 rounded-full bg-current" />
                       </Radio.Root>
-                      <label htmlFor={path} className="cursor-pointer">
+                      <label
+                        htmlFor={path}
+                        className="flex min-h-11 cursor-pointer items-center"
+                      >
                         {label}
                       </label>
                     </div>
@@ -395,18 +398,23 @@ export function BookingWizard() {
               </Button>
             </>
           )}
-          <p className="text-sm text-muted-foreground" aria-live="polite">
-            {today === null ? (
-              "Подготвяме датата на салона…"
-            ) : (
-              <>
-                Днес: <time dateTime={today}>{formatBusinessDate(today)}</time>
-              </>
-            )}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Всички часове са местни за салона в София (Europe/Sofia).
-          </p>
+          {!confirmed && (
+            <>
+              <p className="text-sm text-muted-foreground" aria-live="polite">
+                {today === null ? (
+                  "Подготвяме датата на салона…"
+                ) : (
+                  <>
+                    Днес:{" "}
+                    <time dateTime={today}>{formatBusinessDate(today)}</time>
+                  </>
+                )}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Всички часове са местни за салона в София (Europe/Sofia).
+              </p>
+            </>
+          )}
           <noscript>
             За избор на услуги е необходимо да включиш JavaScript.
           </noscript>

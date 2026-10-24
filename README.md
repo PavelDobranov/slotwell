@@ -18,6 +18,12 @@ The date/time step follows D3 and S1/S2/S6 in `docs/booking-wizard-design.html`:
 - Empty dates offer the next available day, specialist changes, and service edits. Paging alone never changes the booking.
 - Availability is synchronous in this demo. `TimeStep` accepts `loading` for the S1 slot skeleton; no artificial loading delay is introduced.
 
+Success and recovery follow D6/M6 and S4/S5:
+- Confirmation includes visit and contact details, demo limitations, and a new-booking action; focus moves to the success heading. Contact notes remain visible on mobile rather than being dropped from the compact specimen.
+- Invalidation displays the reducer's explanation and retains contact data. Switching routes explains when the existing choice is preserved; it never invents a replacement.
+- Below the desktop breakpoint, “Виж избора” opens a modal summary sheet. Escape restores focus to its trigger; editing closes it and focuses the destination step. Scroll padding keeps keyboard focus above the fixed summary dock.
+- Mobile e2e checks cover 360/390px layouts, 44px hit areas (including calendar and validation links), text contrast, focus, and horizontal overflow.
+
 ## Checks and production
 
 ```sh

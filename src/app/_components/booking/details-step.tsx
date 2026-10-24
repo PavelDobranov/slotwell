@@ -165,7 +165,7 @@ export function DetailsStep({
                         <li key={key}>
                           <a
                             href={`#contact-${key}`}
-                            className="underline underline-offset-4"
+                            className="inline-flex min-h-11 items-center underline underline-offset-4"
                             onClick={(event) => {
                               event.preventDefault();
                               if (key === "note") setNoteOpen(true);

@@ -1,8 +1,8 @@
 import type { Page } from "@playwright/test";
 
 // Targeted checks for this opaque, solid-background UI, not WCAG certification.
-export async function auditRenderedControls(page: Page) {
-  return page.locator("main").evaluate((main) => {
+export async function auditRenderedControls(page: Page, selector = "main") {
+  return page.locator(selector).evaluate((main) => {
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = 1;
     const context = canvas.getContext("2d", { willReadFrequently: true });
@@ -77,7 +77,7 @@ export async function auditRenderedControls(page: Page) {
     });
     const targets = Array.from(
       main.querySelectorAll<HTMLElement>(
-        "button, input:not([type=hidden]):not([aria-hidden=true]), select, textarea, summary",
+        "a[href], button, input:not([type=hidden]):not([aria-hidden=true]), select, textarea, summary",
       ),
     ).flatMap((element) => {
       if (!element.getClientRects().length || element.matches(":disabled"))
@@ -96,6 +96,9 @@ export async function auditRenderedControls(page: Page) {
             element.tagName,
           minimum24: areas.some(
             (area) => area.width >= 24 && area.height >= 24,
+          ),
+          minimum44: areas.some(
+            (area) => area.width >= 44 && area.height >= 44,
           ),
           height: rect.height,
         },

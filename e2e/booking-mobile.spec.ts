@@ -1,7 +1,98 @@
 import { expect, test } from "@playwright/test";
 
+import { auditRenderedControls } from "./rendered-audit";
+
 for (const width of [360, 390]) {
-  test(`${width}px mobile summary sheet traps focus, closes with Escape and edits without losing choices`, async ({ page }) => {
+  test(`${width}px M1–M6 fit without horizontal scroll and expose 44px targets`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("console", (message) => {
+      if (["error", "warning"].includes(message.type()))
+        errors.push(message.text());
+    });
+    await page.goto("/");
+    async function verify(screen: string) {
+      const audit = await auditRenderedControls(page);
+      await testInfo.attach(screen, {
+        body: JSON.stringify(audit),
+        contentType: "application/json",
+      });
+      expect(audit.targets.filter(({ minimum44 }) => !minimum44)).toEqual([]);
+      expect(audit.contrasts.filter(({ ratio }) => ratio < 4.5)).toEqual([]);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(width);
+      await page.screenshot({
+        path: `coverage/playwright/mobile-${width}-${screen}.png`,
+        fullPage: true,
+      });
+    }
+    await expect(page.getByRole("button", { name: "Продължи" })).toBeEnabled();
+    await verify("M1-services");
+    await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("radio", { name: "Първо дата и час" }).check();
+    await verify("M2-time");
+    await page.getByRole("button", { name: "Календар", exact: true }).click();
+    // The popup scales in; measure settled hit areas rather than an animation frame.
+    await expect
+      .poll(async () =>
+        (
+          await auditRenderedControls(page, '[data-slot="popover-content"]')
+        ).targets.filter(({ minimum44 }) => !minimum44),
+      )
+      .toEqual([]);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+    await page.screenshot({
+      path: `coverage/playwright/mobile-calendar-${width}.png`,
+    });
+    await page.keyboard.press("Escape");
+    await page.getByRole("radio", { name: "15:00", exact: true }).check();
+    await page.getByRole("button", { name: "Продължи" }).click();
+    await verify("M4-staff");
+    await page.getByRole("radio", { name: /Мила/ }).check();
+    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("button", { name: "Провери данните" }).click();
+    await verify("M5-details-errors");
+    for (const [name, value] of [
+      ["Име", "Демо Клиент"],
+      ["Телефон", "0888123456"],
+      ["Имейл", "demo@example.com"],
+    ])
+      await page.getByRole("textbox", { name, exact: true }).fill(value);
+    await page.getByRole("button", { name: "Провери данните" }).click();
+    await verify("review");
+    await page
+      .getByRole("button", { name: "Потвърди демо резервация", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Демо резервацията е потвърдена",
+        exact: true,
+      }),
+    ).toBeFocused();
+    await expect(
+      page
+        .getByRole("region", { name: "Твоето посещение" })
+        .getByText("Специалист", { exact: true }),
+    ).toBeHidden();
+    await expect(
+      page
+        .getByRole("region", { name: "Твоето посещение" })
+        .getByText("Дата и час", { exact: true }),
+    ).toBeHidden();
+    await verify("M6-success");
+    expect(errors).toEqual([]);
+  });
+  test(`${width}px mobile summary sheet traps focus, closes with Escape and edits without losing choices`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
     await page.goto("/");
@@ -17,17 +108,34 @@ for (const width of [360, 390]) {
     await expect(sheet).toContainText("Предстои — стъпка 3");
     for (let index = 0; index < 8; index++) {
       await page.keyboard.press("Tab");
-      expect(await sheet.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+      expect(
+        await sheet.evaluate((element) =>
+          element.contains(document.activeElement),
+        ),
+      ).toBe(true);
     }
-    await page.screenshot({ path: `coverage/playwright/mobile-summary-${width}.png`, fullPage: true });
+    const audit = await auditRenderedControls(page, '[role="dialog"]');
+    expect(audit.targets.filter(({ minimum44 }) => !minimum44)).toEqual([]);
+    expect(audit.contrasts.filter(({ ratio }) => ratio < 4.5)).toEqual([]);
+    await page.screenshot({
+      path: `coverage/playwright/mobile-summary-${width}.png`,
+    });
     await page.keyboard.press("Escape");
     await expect(sheet).not.toBeVisible();
     await expect(trigger).toBeFocused();
     await trigger.click();
-    await sheet.getByRole("button", { name: "Промени услугите", exact: true }).click();
+    await sheet
+      .getByRole("button", { name: "Промени услугите", exact: true })
+      .click();
     await expect(sheet).not.toBeVisible();
-    await expect(page.getByRole("heading", { name: "Услуги", exact: true })).toBeFocused();
-    await expect(page.getByRole("checkbox", { name: /Подстригване/ })).toBeChecked();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await expect(
+      page.getByRole("heading", { name: "Услуги", exact: true }),
+    ).toBeFocused();
+    await expect(
+      page.getByRole("checkbox", { name: /Подстригване/ }),
+    ).toBeChecked();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
   });
 }

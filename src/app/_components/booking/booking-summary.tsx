@@ -72,7 +72,7 @@ export function BookingSummary({
   }
   const card = (
     <Card className="[--card-spacing:--spacing(5)]">
-      <CardHeader>
+      <CardHeader className="hidden lg:grid">
         <h2 className="text-base font-semibold">Твоят избор</h2>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -181,7 +181,7 @@ export function BookingSummary({
             editing.current ? document.getElementById("step-heading") : true
           }
         >
-          <SheetHeader>
+          <SheetHeader className="pr-16">
             <SheetTitle>Твоят избор</SheetTitle>
             <SheetDescription>
               Всички часове са местни за салона в София (Europe/Sofia).

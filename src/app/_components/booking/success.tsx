@@ -17,6 +17,7 @@ import {
   formatBusinessTime,
 } from "@/app/_lib/booking/time";
 import type { DemoSalon } from "@/app/_lib/booking/types";
+import { cn } from "@/app/_lib/utils";
 
 export function Success({
   salon,
@@ -38,7 +39,7 @@ export function Success({
         при {staffName}
       </p>
       <Card className="[--card-spacing:--spacing(4)] sm:[--card-spacing:--spacing(5)]">
-        <CardHeader>
+        <CardHeader className="hidden sm:grid">
           <CardTitle>
             <h3>Твоето посещение</h3>
           </CardTitle>
@@ -63,7 +64,14 @@ export function Success({
                   ["Дата и час", `${date} · ${time} (Europe/Sofia)`],
                   ["Място", `${salon.name}, ${salon.address}`],
                 ].map(([label, value]) => (
-                  <div key={label} className="contents">
+                  <div
+                    key={label}
+                    className={cn(
+                      "contents",
+                      (label === "Специалист" || label === "Дата и час") &&
+                        "hidden sm:contents",
+                    )}
+                  >
                     <dt className="text-muted-foreground">{label}</dt>
                     <dd className="wrap-anywhere">{value}</dd>
                   </div>
@@ -72,7 +80,7 @@ export function Success({
             </aside>
           </section>
           <Separator />
-          <h3 className="font-medium">Данни за контакт</h3>
+          <h3 className="hidden font-medium sm:block">Данни за контакт</h3>
           <dl className="grid grid-cols-[6rem_minmax(0,1fr)] gap-x-3 gap-y-3 text-sm sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:gap-x-4">
             {[
               ["Име", state.contact.name],
@@ -94,10 +102,14 @@ export function Success({
           <h3>Какво означава „демо“?</h3>
         </AlertTitle>
         <AlertDescription>
-          Това не е реална резервация. Часът е зает само в тази демонстрация,
-          докато страницата е отворена. Не изпращаме имейл или SMS, няма достъп
-          за управление на резервация и при презареждане всичко се изтрива.
-          Запиши си данните, ако ти трябват.
+          Това не е реална резервация. Не изпращаме имейл или SMS и всичко се
+          изтрива при презареждане.
+          <span className="hidden sm:inline">
+            {" "}
+            Часът е зает само в тази демонстрация, докато страницата е отворена.
+            Няма достъп за управление на резервация. Запиши си данните, ако ти
+            трябват.
+          </span>
         </AlertDescription>
       </Alert>
       <Button

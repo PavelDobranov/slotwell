@@ -170,6 +170,13 @@
   }
 }
 
+/* Keep keyboard-focused controls above the fixed mobile summary dock. */
+@media (width < 64rem) {
+  html:has([data-slot="sheet-trigger"]) {
+    scroll-padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+  }
+}
+
 /* Hidden until keyboard navigation; never covered by mobile actions. */
 .skip-link {
   position: absolute;
