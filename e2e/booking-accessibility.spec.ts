@@ -182,6 +182,8 @@ for (const width of [360, 1440]) {
         await page.keyboard.type(value);
       }
       await expectNoPersistence(page);
+      const summaryTrigger = page.getByRole("button", { name: "Виж избора" });
+      if (await summaryTrigger.isVisible()) await activate(page, summaryTrigger);
       await activate(page, button("Промени датата и часа"));
       await verifyStep("Дата и час");
       await activate(page, button("Назад"));

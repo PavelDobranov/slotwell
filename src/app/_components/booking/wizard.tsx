@@ -182,7 +182,7 @@ export function BookingWizard() {
           "grid min-w-0 items-start gap-8",
           confirmed
             ? "mx-auto max-w-170"
-            : "lg:grid-cols-[minmax(0,1fr)_22.5rem]",
+            : "pb-24 lg:grid-cols-[minmax(0,1fr)_22.5rem] lg:pb-0",
         )}
       >
         <section

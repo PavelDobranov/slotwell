@@ -22,6 +22,7 @@ test("path switches preserve valid choices and service edits explain only invali
   await page.getByRole("button", { name: "Продължи" }).click();
   await expect(page.getByRole("radio", { name: /Мила/ })).toBeChecked();
   await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: "Виж избора" }).click();
   await page.getByRole("button", { name: "Промени услугите", exact: true }).click();
   await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
   const invalidated = page.getByRole("alert").filter({ hasText: "Изборът е променен" });

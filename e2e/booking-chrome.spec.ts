@@ -51,13 +51,14 @@ for (const width of [360, 1440]) {
       await page
         .getByRole("textbox", { name: "Име", exact: true })
         .fill("Demo Chrome");
-      const summary = page.getByRole("complementary", { name: "Твоят избор" });
       for (const [label, heading] of [
         ["Промени специалиста", "Специалист"],
         ["Промени датата и часа", "Дата и час"],
         ["Промени услугите", "Услуги"],
       ]) {
-        await summary.getByRole("button", { name: label, exact: true }).click();
+        const trigger = page.getByRole("button", { name: "Виж избора" });
+        if (await trigger.isVisible()) await trigger.click();
+        await page.getByRole("button", { name: label, exact: true }).click();
         await expect(
           page.getByRole("heading", { name: heading, exact: true }),
         ).toBeFocused();

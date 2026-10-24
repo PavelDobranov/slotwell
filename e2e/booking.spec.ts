@@ -227,6 +227,7 @@ test("keyboard service selection updates totals, navigation and focus without a 
   ).toBeFocused();
   await expect(haircut).toBeChecked();
   await next.click();
+  await page.getByRole("button", { name: "Виж избора" }).click();
   await page.getByRole("button", { name: "Промени услугите" }).click();
   await expect(
     page.getByRole("heading", { name: "Услуги", exact: true }),
@@ -253,6 +254,7 @@ test("services route toggle uses the chosen path and cannot clear the route", as
   await expect(
     route.getByRole("button", { name: "Първо специалист" }),
   ).toHaveAttribute("aria-pressed", "true");
+  await expect(timeFirst).toBeEnabled();
   await timeFirst.focus();
   await page.keyboard.press("Space");
   await expect(timeFirst).toHaveAttribute("aria-pressed", "true");

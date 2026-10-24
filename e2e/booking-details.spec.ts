@@ -162,7 +162,9 @@ for (const path of ["staff-first", "time-first"] as const) {
       ["Промени специалиста", "Специалист"],
       ["Промени датата и часа", "Дата и час"],
     ]) {
-      await summary.getByRole("button", { name: action, exact: true }).click();
+      const trigger = page.getByRole("button", { name: "Виж избора" });
+      if (await trigger.isVisible()) await trigger.click();
+      await page.getByRole("button", { name: action, exact: true }).click();
       await expect(
         page.getByRole("heading", { name: heading, exact: true }),
       ).toBeFocused();
