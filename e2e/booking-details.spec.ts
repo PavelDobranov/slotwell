@@ -63,6 +63,16 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(name).toBeFocused();
     await expect(name).toHaveAccessibleDescription("Въведи име.");
     await expect(phone).toHaveAccessibleDescription(/Например 0888 123 456/);
+    await page.screenshot({
+      path: `coverage/playwright/details-errors-${path}-mobile.png`,
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.screenshot({
+      path: `coverage/playwright/details-errors-${path}-desktop.png`,
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 360, height: 800 });
     await page.keyboard.type("  Демо Посетител  ");
     await page.keyboard.press("Tab");
     await expect(phone).toBeFocused();
@@ -104,6 +114,46 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(summary).toContainText(/23,00\s*€/);
     await expect(summary).toContainText("измислен адрес");
     await expect(summary).not.toContainText("15:40");
+    const review = page.getByRole("region", {
+      name: "Преглед и потвърждение",
+      exact: true,
+    });
+    await expect(
+      review.getByRole("heading", { name: "Провери и потвърди" }),
+    ).toBeFocused();
+    await expect(review).toContainText("fictional-visitor@example.com");
+    await expect(review).toContainText(/Общо 30 мин · 23,00\s*€/);
+    await expect(review).toContainText("Часът не е задържан");
+    for (const width of [320, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 1000 });
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(width);
+      await page.screenshot({
+        path: `coverage/playwright/review-${path}-${width}.png`,
+        fullPage: true,
+      });
+    }
+    await page.setViewportSize({ width: 360, height: 800 });
+    await review
+      .getByRole("button", { name: "Редактирай данните за контакт" })
+      .click();
+    await expect(name).toBeFocused();
+    await expect(note).toHaveValue("Само демонстрационна бележка.");
+    await name.fill("");
+    await check.click();
+    await expect(name).toBeFocused();
+    await expect(name).toHaveAttribute("aria-invalid", "true");
+    await expect(
+      page.getByRole("button", {
+        name: "Потвърди демо резервация",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await name.fill("  Демо Посетител  ");
+    await check.click();
+    await review.getByRole("button", { name: "Назад към данните" }).click();
+    await expect(name).toBeFocused();
     await page.getByRole("button", { name: "Назад", exact: true }).click();
     await page.getByRole("button", { name: "Продължи" }).click();
     await expect(name).toHaveValue("  Демо Посетител  ");

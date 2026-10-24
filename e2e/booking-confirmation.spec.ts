@@ -71,9 +71,18 @@ for (const path of ["staff-first", "time-first"] as const) {
             .getByRole("alert"),
         ).toContainText("Опитай отново");
         await expect(summary).toContainText("15:00–15:30");
+        const review = page.getByRole("region", {
+          name: "Преглед и потвърждение",
+          exact: true,
+        });
+        await expect(review).toContainText("Демо Възстановяване");
+        await expect(review).toContainText("Запази бележката.");
         await expect(
-          page.getByRole("textbox", { name: "Име", exact: true }),
-        ).toHaveValue("Демо Възстановяване");
+          review.getByRole("button", {
+            name: "Потвърди демо резервация",
+            exact: true,
+          }),
+        ).toHaveCount(0);
         await page.screenshot({
           path: `coverage/playwright/recovery-${path}-${scenario}.png`,
           fullPage: true,
@@ -208,6 +217,17 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(
       page.getByRole("button", { name: "Потвърждаваме…" }),
     ).toBeDisabled();
+    const review = page.getByRole("region", {
+      name: "Преглед и потвърждение",
+      exact: true,
+    });
+    await expect(
+      review.getByRole("status").filter({ hasText: "Проверяваме дали часът" }),
+    ).toBeVisible();
+    await expect(
+      review.getByRole("button", { name: "Редактирай данните за контакт" }),
+    ).toBeDisabled();
+    await expect(review).toContainText("Демо Посетител");
     const heading = page.getByRole("heading", {
       name: "Демо резервацията е потвърдена",
       exact: true,

@@ -2,7 +2,10 @@
 
 import { Radio } from "@base-ui/react/radio";
 import { RadioGroup } from "@base-ui/react/radio-group";
+import { CircleAlert } from "lucide-react";
 import { useEffect, useReducer, useRef, useState } from "react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 
 import { BookingSummary } from "@/app/_components/booking/booking-summary";
 import { ConfirmationStep } from "@/app/_components/booking/confirmation-step";
@@ -22,9 +25,14 @@ import {
   type BookingAction,
   bookingReducer,
   initialBookingState,
+  selectedTotals,
   stepOrder,
 } from "@/app/_lib/booking/state";
-import { businessDateAt, formatBusinessDate } from "@/app/_lib/booking/time";
+import {
+  businessDateAt,
+  formatBusinessDate,
+  formatBusinessTime,
+} from "@/app/_lib/booking/time";
 
 export function BookingWizard() {
   const session = useRef<ReturnType<typeof createDemoSession> | null>(null);
@@ -69,19 +77,21 @@ export function BookingWizard() {
       } else if (result === "retryable") {
         submissionLocked.current = false;
         setConfirmationError(
-          "Демонстрацията не успя да потвърди. Опитай отново.",
+          "Нещо прекъсна заявката. Демо резервация не е направена и нищо не е загубено. Опитай отново.",
         );
       } else {
         submissionLocked.current = false;
         dispatch({ type: result === "unavailable" ? "conflict" : "refresh" });
         setConfirmationError(
-          "Изборът вече не е валиден. Провери данните, специалиста и часа отново.",
+          result === "unavailable"
+            ? `${state.start === null ? "Избраният час" : formatBusinessTime(state.start)} вече е зает. Демо резервация не е направена. Услугите и данните ти за контакт са запазени. Избери нов час.`
+            : "Изборът вече не е валиден. Демо резервация не е направена. Данните ти за контакт са запазени. Провери специалиста и часа отново.",
         );
       }
     } catch {
       submissionLocked.current = false;
       setConfirmationError(
-        "Демонстрацията не успя да потвърди. Опитай отново.",
+        "Нещо прекъсна заявката. Демо резервация не е направена и нищо не е загубено. Опитай отново.",
       );
     } finally {
       setPending(false);
@@ -177,7 +187,11 @@ export function BookingWizard() {
             id="step-heading"
             ref={heading}
             tabIndex={-1}
-            className="rounded-sm text-xl font-semibold"
+            className={
+              state.step === "details" && !confirmed
+                ? "sr-only"
+                : "rounded-sm text-xl font-semibold"
+            }
           >
             {confirmed
               ? "Демо резервацията е потвърдена"
@@ -186,13 +200,16 @@ export function BookingWizard() {
           <output className="text-sm text-muted-foreground empty:hidden">
             {state.notice}
           </output>
-          <p role="alert" className="empty:hidden">
-            {confirmationError}
-          </p>
-          {confirmationError && state.step === "details" && !confirmed && (
-            <Button className="self-start" disabled={pending} onClick={confirm}>
-              Опитай отново
-            </Button>
+          {confirmationError && !confirmed && (
+            <Alert variant="destructive" className="px-4 py-3">
+              <CircleAlert aria-hidden="true" />
+              <AlertTitle>
+                {state.step === "details"
+                  ? "Не успяхме да потвърдим"
+                  : "Избери нов час"}
+              </AlertTitle>
+              <AlertDescription>{confirmationError}</AlertDescription>
+            </Alert>
           )}
           {confirmed ? (
             <ConfirmationStep
@@ -316,10 +333,21 @@ export function BookingWizard() {
                     dispatch({ type: "edit", step: "services" })
                   }
                 />
-              ) : state.step === "details" ? (
+              ) : state.step === "details" &&
+                salon !== null &&
+                state.start !== null ? (
                 <DetailsStep
                   draft={state.contact}
                   pending={pending}
+                  retryable={Boolean(confirmationError)}
+                  appointment={{
+                    start: state.start,
+                    staffName:
+                      salon.staff.find(({ id }) => id === state.staffId)
+                        ?.name ?? "",
+                    ...selectedTotals(state, salon),
+                  }}
+                  onBack={() => dispatch({ type: "back" })}
                   onConfirm={confirm}
                   onChange={(draft) => dispatch({ type: "contact", draft })}
                 />
@@ -331,6 +359,7 @@ export function BookingWizard() {
                 </p>
               )}
               <Button
+                hidden={state.step === "details"}
                 variant="outline"
                 className="self-start"
                 onClick={() => dispatch({ type: "back" })}
