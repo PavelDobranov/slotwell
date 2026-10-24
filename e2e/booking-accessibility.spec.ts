@@ -1,5 +1,34 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
+import { auditRenderedControls } from "./rendered-audit";
+
+async function expectUnobscured(target: Locator) {
+  await expect(target).toBeInViewport();
+  expect(
+    await target.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const top = document.elementFromPoint(
+        rect.x + rect.width / 2,
+        rect.y + rect.height / 2,
+      );
+      return top !== null && (element.contains(top) || top.contains(element));
+    }),
+  ).toBe(true);
+}
+
+async function expectNoPersistence(page: Page) {
+  expect(new URL(page.url()).search).toBe("");
+  expect(new URL(page.url()).hash).toBe("");
+  expect(
+    await page.evaluate(async () => ({
+      local: localStorage.length,
+      session: sessionStorage.length,
+      databases: (await indexedDB.databases()).map(({ name }) => name),
+    })),
+  ).toEqual({ local: 0, session: 0, databases: [] });
+  expect(await page.context().cookies()).toEqual([]);
+}
+
 // Reach controls through the real tab order, never locator.focus()/click().
 async function tabTo(page: Page, target: Locator) {
   for (let index = 0; index < 100; index++) {
@@ -7,20 +36,7 @@ async function tabTo(page: Page, target: Locator) {
     if (
       await target.evaluate((element) => element === document.activeElement)
     ) {
-      await expect(target).toBeInViewport();
-      // The focused control must not be clipped or covered at its centre.
-      expect(
-        await target.evaluate((element) => {
-          const rect = element.getBoundingClientRect();
-          const top = document.elementFromPoint(
-            rect.x + rect.width / 2,
-            rect.y + rect.height / 2,
-          );
-          return (
-            top !== null && (element.contains(top) || top.contains(element))
-          );
-        }),
-      ).toBe(true);
+      await expectUnobscured(target);
       return;
     }
   }
@@ -48,6 +64,7 @@ async function chooseTime(page: Page, time: string) {
     ) {
       await page.keyboard.press("Space");
       await expect(target).toBeChecked();
+      await expectUnobscured(target);
       return;
     }
     await page.keyboard.press("ArrowRight");
@@ -61,7 +78,7 @@ for (const width of [360, 1440]) {
   for (const path of ["staff-first", "time-first"] as const) {
     test(`${width}px ${path}: keyboard-only multi-service booking, edits, validation and reset`, async ({
       page,
-    }) => {
+    }, testInfo) => {
       await page.setViewportSize({ width, height: 900 });
       await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
       const consoleMessages: string[] = [];
@@ -81,8 +98,15 @@ for (const width of [360, 1440]) {
         page.getByRole("button", { name, exact: true });
       const heading = (name: string) =>
         page.getByRole("heading", { name, exact: true });
-      async function verifyStep(name: string) {
-        await expect(heading(name)).toBeFocused();
+      async function verifyRendered(name: string) {
+        const audit = await auditRenderedControls(page);
+        await testInfo.attach(`rendered-audit-${name}`, {
+          body: JSON.stringify(audit, null, 2),
+          contentType: "application/json",
+        });
+        expect(audit.contrasts.length).toBeGreaterThan(0);
+        expect(audit.contrasts.filter(({ ratio }) => ratio < 4.5)).toEqual([]);
+        expect(audit.targets.filter(({ minimum24 }) => !minimum24)).toEqual([]);
         expect(
           await page.evaluate(() => document.documentElement.scrollWidth),
         ).toBeLessThanOrEqual(width);
@@ -90,6 +114,10 @@ for (const width of [360, 1440]) {
           path: `coverage/playwright/keyboard-${width}-${path}-${name}.png`,
           fullPage: true,
         });
+      }
+      async function verifyStep(name: string) {
+        await expect(heading(name)).toBeFocused();
+        await verifyRendered(name);
       }
       await expect(page.locator("html")).toHaveAttribute("lang", "bg");
       for (const name of [/Подстригване/, /Оформяне на брада/]) {
@@ -99,6 +127,7 @@ for (const width of [360, 1440]) {
         // Visible check icon supplements the selected background colour.
         await expect(checkbox.locator("svg")).toBeVisible();
       }
+      await verifyRendered("Избрани услуги");
       await activate(page, button("Продължи"));
       await verifyStep("Специалист");
       if (path === "time-first") {
@@ -140,6 +169,7 @@ for (const width of [360, 1440]) {
       await expect(
         page.getByRole("alert").filter({ hasText: /^Въведи име\.$/ }),
       ).toBeVisible();
+      await verifyRendered("Грешки в данните");
       await page.keyboard.type("Demo Keyboard");
       for (const [label, value] of [
         ["Телефон", "0888123456"],
@@ -151,6 +181,7 @@ for (const width of [360, 1440]) {
         );
         await page.keyboard.type(value);
       }
+      await expectNoPersistence(page);
       await activate(page, button("Промени датата и часа"));
       await verifyStep("Дата и час");
       await activate(page, button("Назад"));
@@ -176,27 +207,21 @@ for (const width of [360, 1440]) {
       await expect(summary).toContainText(/35,00\s*€/);
       await expect(summary).toContainText("15:15–16:05");
       await activate(page, button("Провери данните"));
+      await verifyRendered("Проверени данни");
+      await expectNoPersistence(page);
       await activate(page, button("Потвърди демо резервация"));
       await expect(button("Потвърждаваме…")).toBeDisabled();
       // Repeated keyboard activation while the first confirmation is pending.
       await page.keyboard.press("Enter");
       await page.keyboard.press("Space");
       await verifyStep("Демо резервацията е потвърдена");
+      await expectNoPersistence(page);
       await activate(page, button("Нова демо резервация"));
       await verifyStep("Услуги");
       await expect(
         page.getByRole("checkbox", { name: /Подстригване/ }),
       ).not.toBeChecked();
-      expect(new URL(page.url()).search).toBe("");
-      expect(new URL(page.url()).hash).toBe("");
-      expect(
-        await page.evaluate(async () => ({
-          local: localStorage.length,
-          session: sessionStorage.length,
-          databases: (await indexedDB.databases()).map(({ name }) => name),
-        })),
-      ).toEqual({ local: 0, session: 0, databases: [] });
-      expect(await page.context().cookies()).toEqual([]);
+      await expectNoPersistence(page);
       expect(
         requests.filter(
           (request) => !request.startsWith("http://127.0.0.1:3100/"),
