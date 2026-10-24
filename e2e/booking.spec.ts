@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { auditRenderedControls } from "./rendered-audit";
+
 test.use({ timezoneId: "America/New_York" });
 
 test("the home page exposes a visible main landmark", async ({ page }) => {
@@ -115,12 +117,31 @@ test("keyboard service selection updates totals, navigation and focus without a 
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto("/");
   const next = page.getByRole("button", { name: "Продължи" });
-  await expect(next).toBeDisabled();
+  await expect(next).toBeEnabled();
+  const services = page.getByRole("group", { name: "Услуги", exact: true });
+  const error = page.getByText("Избери поне една услуга, за да продължиш.");
+  await expect(error).toHaveCount(0);
+  await next.click();
+  await expect(error).toBeVisible();
+  await expect(services).toBeFocused();
+  await expect(services).toHaveAttribute("aria-invalid", "true");
+  const audit = await auditRenderedControls(page);
+  expect(audit.contrasts.filter(({ ratio }) => ratio < 4.5)).toEqual([]);
+  await next.click();
+  await expect(services).toBeFocused();
+  await page.screenshot({
+    path: "coverage/playwright/services-error.png",
+    fullPage: true,
+  });
   const haircut = page.getByRole("checkbox", { name: /Подстригване/ });
   await haircut.focus();
   await page.keyboard.press("Space");
   await expect(haircut).toBeChecked();
+  await expect(error).toHaveCount(0);
   await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
+  await expect(page.getByTestId("services-total")).toHaveText(
+    /2 услуги · 50 мин · 35,00\s*€/,
+  );
   const summary = page.getByRole("complementary", { name: "Твоят избор" });
   await expect(summary).toContainText("50 мин");
   await expect(summary).toContainText(/35,00\s*€/);
@@ -161,10 +182,46 @@ test("keyboard service selection updates totals, navigation and focus without a 
   ).toBeFocused();
   await haircut.uncheck();
   await page.getByRole("checkbox", { name: /Оформяне на брада/ }).uncheck();
-  await expect(next).toBeDisabled();
+  await expect(next).toBeEnabled();
+  await next.click();
+  await expect(error).toBeVisible();
+  await expect(services).toBeFocused();
   await page.reload();
   await expect(haircut).not.toBeChecked();
   expect(errors).toEqual([]);
+});
+
+test("services route toggle uses the chosen path and cannot clear the route", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const route = page.getByRole("group", {
+    name: "Как предпочиташ да избереш?",
+  });
+  const timeFirst = route.getByRole("button", { name: "Първо дата и час" });
+  await expect(
+    route.getByRole("button", { name: "Първо специалист" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await timeFirst.focus();
+  await page.keyboard.press("Space");
+  await expect(timeFirst).toHaveAttribute("aria-pressed", "true");
+  await expect(timeFirst).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(timeFirst).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+  await expect(page.getByTestId("services-total")).toHaveText(
+    /1 услуга · 30 мин · 23,00\s*€/,
+  );
+  await page.getByRole("button", { name: "Продължи", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Дата и час", exact: true }),
+  ).toBeFocused();
+  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await expect(timeFirst).toHaveAttribute("aria-pressed", "true");
+  await route.getByRole("button", { name: "Първо специалист" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Специалист", exact: true }),
+  ).toBeFocused();
 });
 
 test("specialist choices require explicit selection and match every service", async ({

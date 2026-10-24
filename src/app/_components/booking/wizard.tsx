@@ -1,14 +1,13 @@
 "use client";
 
-import { Checkbox } from "@base-ui/react/checkbox";
 import { Radio } from "@base-ui/react/radio";
 import { RadioGroup } from "@base-ui/react/radio-group";
-import { CheckIcon } from "lucide-react";
 import { useEffect, useReducer, useRef, useState } from "react";
 
 import { BookingSummary } from "@/app/_components/booking/booking-summary";
 import { ConfirmationStep } from "@/app/_components/booking/confirmation-step";
 import { DetailsStep } from "@/app/_components/booking/details-step";
+import { ServicesStep } from "@/app/_components/booking/services-step";
 import { SpecialistStep } from "@/app/_components/booking/specialist-step";
 import { Stepper, stepLabels } from "@/app/_components/booking/stepper";
 import { TimeStep } from "@/app/_components/booking/time-step";
@@ -18,7 +17,6 @@ import {
   qualifiedStaff,
 } from "@/app/_lib/booking/availability";
 import { createDemoSalon } from "@/app/_lib/booking/fixtures";
-import { euros } from "@/app/_lib/booking/format";
 import { createDemoSession } from "@/app/_lib/booking/session";
 import {
   type BookingAction,
@@ -126,7 +124,7 @@ export function BookingWizard() {
   useEffect(() => {
     if (
       previousStep.current !== state.step ||
-      previousPath.current !== state.path ||
+      (previousPath.current !== state.path && state.step !== "services") ||
       (lastFocusedControl.current !== null &&
         !lastFocusedControl.current.isConnected &&
         document.activeElement === document.body)
@@ -207,65 +205,16 @@ export function BookingWizard() {
               }}
             />
           ) : state.step === "services" ? (
-            <fieldset
-              className="flex min-w-0 flex-col gap-3"
-              disabled={salon === null}
-            >
-              <legend className="mb-3 text-muted-foreground">
-                Избери една или повече услуги за посещението си.
-              </legend>
-              {salon?.services.map((service) => (
-                <div
-                  key={service.id}
-                  className="flex min-h-14 cursor-pointer items-center gap-3 rounded-md border p-4 has-[[data-checked]]:border-primary has-[[data-checked]]:bg-secondary"
-                >
-                  <Checkbox.Root
-                    id={`service-${service.id}`}
-                    nativeButton
-                    render={<button type="button" />}
-                    checked={state.serviceIds.includes(service.id)}
-                    onCheckedChange={(checked) =>
-                      dispatch({
-                        type: "services",
-                        ids: checked
-                          ? [...state.serviceIds, service.id]
-                          : state.serviceIds.filter((id) => id !== service.id),
-                      })
-                    }
-                    className="flex size-5 shrink-0 items-center justify-center rounded-sm border border-input bg-background text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
-                    <Checkbox.Indicator>
-                      <CheckIcon aria-hidden="true" className="size-4" />
-                    </Checkbox.Indicator>
-                  </Checkbox.Root>
-                  <label
-                    htmlFor={`service-${service.id}`}
-                    className="flex min-w-0 flex-1 cursor-pointer flex-col gap-1"
-                  >
-                    <span className="font-medium">{service.name}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {service.durationMinutes} мин ·{" "}
-                      {euros.format(service.priceCents / 100)}
-                    </span>
-                  </label>
-                </div>
-              ))}
-              <p className="text-sm text-muted-foreground">
-                За да продължиш, избери поне една услуга.
-              </p>
-              {noSpecialist && (
-                <output>
-                  Няма специалист за тази комбинация от услуги. Промени избора
-                  си.
-                </output>
-              )}
-              <Button
-                className="self-start"
-                disabled={state.serviceIds.length === 0}
-                onClick={() => dispatch({ type: "next" })}
-              >
-                Продължи
-              </Button>
+            <fieldset disabled={salon === null} className="min-w-0">
+              <ServicesStep
+                services={salon?.services ?? []}
+                serviceIds={state.serviceIds}
+                path={state.path}
+                noSpecialist={noSpecialist}
+                onServices={(ids) => dispatch({ type: "services", ids })}
+                onPath={(path) => dispatch({ type: "path", path })}
+                onNext={() => dispatch({ type: "next" })}
+              />
             </fieldset>
           ) : (
             <>
