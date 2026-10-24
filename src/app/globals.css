@@ -31,6 +31,7 @@
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
+  --color-control-border: var(--control-border);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
@@ -71,7 +72,10 @@
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  /* Design deviation: darker input border (#8f8f8f, 3:1 against the card). */
+  --input: oklch(0.65 0 0);
+  /* Design deviation: lighter control border (#d4d4d4) for flat controls. */
+  --control-border: oklch(0.87 0 0);
   --ring: oklch(0.45 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
@@ -135,7 +139,7 @@
   }
   :focus-visible {
     outline: 2px solid var(--ring);
-    outline-offset: 4px;
+    outline-offset: 2px;
   }
 }
 
