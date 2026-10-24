@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 
 import { BookingSummary } from "@/app/_components/booking/booking-summary";
 import { DetailsStep } from "@/app/_components/booking/details-step";
+import { RecoveryNotice } from "@/app/_components/booking/recovery-notice";
 import { ServicesStep } from "@/app/_components/booking/services-step";
 import { SpecialistStep } from "@/app/_components/booking/specialist-step";
 import { Stepper, stepLabels } from "@/app/_components/booking/stepper";
@@ -40,6 +41,7 @@ export function BookingWizard() {
   const submissionLocked = useRef(false);
   const [pending, setPending] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [pathSwitched, setPathSwitched] = useState(false);
   const [confirmationError, setConfirmationError] = useState("");
   const [referenceTime, setReferenceTime] = useState<number | null>(null);
   const [availabilityTime, setAvailabilityTime] = useState<number | null>(null);
@@ -63,6 +65,12 @@ export function BookingWizard() {
   function dispatch(action: BookingAction) {
     const now = Date.now();
     if (action.type !== "contact") setConfirmationError("");
+    if (action.type !== "contact" && action.type !== "refresh")
+      setPathSwitched(
+        action.type === "path" &&
+          action.path !== state.path &&
+          (state.start !== null || state.staffId !== null),
+      );
     setAvailabilityTime(now);
     reduce({ action, now });
   }
@@ -209,9 +217,15 @@ export function BookingWizard() {
               ? "Демо резервацията е потвърдена"
               : stepLabels[state.step]}
           </h2>
-          <output className="text-sm text-muted-foreground empty:hidden">
-            {state.notice}
-          </output>
+          {!confirmed && (
+            <RecoveryNotice
+              state={state}
+              pathSwitched={pathSwitched}
+              staffName={
+                salon?.staff.find(({ id }) => id === state.staffId)?.name
+              }
+            />
+          )}
           {confirmationError && !confirmed && (
             <Alert variant="destructive" className="px-4 py-3">
               <CircleAlert aria-hidden="true" />
