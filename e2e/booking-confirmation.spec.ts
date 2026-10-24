@@ -3,6 +3,153 @@ import { expect, test } from "@playwright/test";
 test.use({ timezoneId: "America/New_York" });
 
 for (const path of ["staff-first", "time-first"] as const) {
+  for (const scenario of ["conflict", "retryable", "stale"] as const) {
+    test(`${path} recovers from ${scenario} without losing contact details`, async ({
+      page,
+    }) => {
+      await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+      if (scenario !== "stale") {
+        // Demo-only bootstrap hook: one enum value, never visitor data.
+        await page.addInitScript((value) => {
+          Object.assign(window, { __SLOTWELL_DEMO_SCENARIO__: value });
+        }, scenario);
+      }
+      const errors: string[] = [];
+      const requests: string[] = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      page.on("console", (message) => {
+        if (["error", "warning"].includes(message.type()))
+          errors.push(message.text());
+      });
+      page.on("request", (request) =>
+        requests.push(`${request.url()} ${request.postData() ?? ""}`),
+      );
+      await page.setViewportSize({ width: 360, height: 800 });
+      await page.goto("/");
+      await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+      await page.getByRole("button", { name: "Продължи" }).click();
+      if (path === "staff-first") {
+        await page.getByRole("radio", { name: /Мила/ }).check();
+        await page.getByRole("button", { name: "Продължи" }).click();
+        await page.getByRole("radio", { name: "15:00", exact: true }).check();
+      } else {
+        await page.getByRole("radio", { name: "Първо дата и час" }).check();
+        await page.getByRole("radio", { name: "15:00", exact: true }).check();
+        await page.getByRole("button", { name: "Продължи" }).click();
+        await page.getByRole("radio", { name: /Мила/ }).check();
+      }
+      await page.getByRole("button", { name: "Продължи" }).click();
+      await page
+        .getByRole("textbox", { name: "Име", exact: true })
+        .fill("Демо Възстановяване");
+      await page
+        .getByRole("textbox", { name: "Телефон", exact: true })
+        .fill("0888123456");
+      await page
+        .getByRole("textbox", { name: "Имейл", exact: true })
+        .fill("recovery@example.com");
+      await page
+        .getByText("Добави бележка (по желание)", { exact: true })
+        .click();
+      await page
+        .getByRole("textbox", { name: /Бележка/ })
+        .fill("Запази бележката.");
+      await page.getByRole("button", { name: "Провери данните" }).click();
+      // Move only the wall clock so the selected time expires before confirm,
+      // without letting the periodic refresh preempt the submit-time check.
+      if (scenario === "stale")
+        await page.clock.setFixedTime(new Date("2026-06-01T11:30:00Z"));
+      await page
+        .getByRole("button", { name: "Потвърди демо резервация", exact: true })
+        .click();
+      const summary = page.getByRole("complementary", { name: "Твоят избор" });
+      await expect(summary).toContainText("Подстригване");
+      if (scenario === "retryable") {
+        await expect(
+          page
+            .getByRole("region", { name: "Данни и преглед" })
+            .getByRole("alert"),
+        ).toContainText("Опитай отново");
+        await expect(summary).toContainText("15:00–15:30");
+        await expect(
+          page.getByRole("textbox", { name: "Име", exact: true }),
+        ).toHaveValue("Демо Възстановяване");
+        await page.screenshot({
+          path: `coverage/playwright/recovery-${path}-${scenario}.png`,
+          fullPage: true,
+        });
+        const retry = page.getByRole("button", {
+          name: "Опитай отново",
+          exact: true,
+        });
+        await retry.focus();
+        await page.keyboard.press("Enter");
+      } else {
+        await expect(
+          page.getByRole("heading", { name: "Дата и час", exact: true }),
+        ).toBeFocused();
+        await expect(summary).not.toContainText("15:00–15:30");
+        await expect(
+          page.getByRole("radio", {
+            name: "15:00",
+            exact: true,
+            checked: true,
+          }),
+        ).toHaveCount(0);
+        await page.screenshot({
+          path: `coverage/playwright/recovery-${path}-${scenario}.png`,
+          fullPage: true,
+        });
+        await page.getByRole("radio", { name: "16:00", exact: true }).check();
+        await page.getByRole("button", { name: "Продължи" }).click();
+        if (path === "time-first") {
+          await page.getByRole("radio", { name: /Мила/ }).check();
+          await page.getByRole("button", { name: "Продължи" }).click();
+        }
+        for (const [name, value] of [
+          ["Име", "Демо Възстановяване"],
+          ["Телефон", "0888123456"],
+          ["Имейл", "recovery@example.com"],
+        ])
+          await expect(
+            page.getByRole("textbox", { name, exact: true }),
+          ).toHaveValue(value);
+        await page.getByRole("button", { name: "Провери данните" }).click();
+        await page
+          .getByRole("button", {
+            name: "Потвърди демо резервация",
+            exact: true,
+          })
+          .click();
+      }
+      await expect(
+        page.getByRole("heading", {
+          name: "Демо резервацията е потвърдена",
+          exact: true,
+        }),
+      ).toBeFocused();
+      await expect(
+        page.getByText("Запази бележката.", { exact: true }),
+      ).toBeVisible();
+      expect(new URL(page.url()).search).toBe("");
+      expect(
+        await page.evaluate(() => [localStorage.length, sessionStorage.length]),
+      ).toEqual([0, 0]);
+      expect(
+        requests.filter(
+          (request) => !request.startsWith("http://127.0.0.1:3100/"),
+        ),
+      ).toEqual([]);
+      for (const contact of [
+        "Демо Възстановяване",
+        "0888123456",
+        "recovery@example.com",
+        "Запази бележката.",
+      ])
+        expect(decodeURIComponent(requests.join("\n"))).not.toContain(contact);
+      expect(errors).toEqual([]);
+    });
+  }
   test(`${path} confirms once, retains demo occupancy on restart and clears everything on reload`, async ({
     page,
   }) => {

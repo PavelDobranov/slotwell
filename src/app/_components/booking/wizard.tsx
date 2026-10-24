@@ -69,6 +69,7 @@ export function BookingWizard() {
   );
   function dispatch(action: BookingAction) {
     const now = Date.now();
+    if (action.type !== "contact") setConfirmationError("");
     setAvailabilityTime(now);
     reduce({ action, now });
   }
@@ -81,9 +82,14 @@ export function BookingWizard() {
       const result = await session.current.confirm(state);
       if (result === "success") {
         setConfirmed(true);
+      } else if (result === "retryable") {
+        submissionLocked.current = false;
+        setConfirmationError(
+          "Демонстрацията не успя да потвърди. Опитай отново.",
+        );
       } else {
         submissionLocked.current = false;
-        dispatch({ type: "refresh" });
+        dispatch({ type: result === "unavailable" ? "conflict" : "refresh" });
         setConfirmationError(
           "Изборът вече не е валиден. Провери данните, специалиста и часа отново.",
         );
@@ -102,13 +108,27 @@ export function BookingWizard() {
   const previousStep = useRef(state.step);
   const previousPath = useRef(state.path);
   useEffect(() => {
-    const now = Date.now();
-    session.current = createDemoSession(
-      createDemoSalon(() => now),
-      () => Date.now(),
-    );
-    setReferenceTime(now);
-    setAvailabilityTime(now);
+    // Keep the one-shot bootstrap intact across Strict Mode effect replay.
+    if (session.current === null) {
+      const now = Date.now();
+      // Demo/test bootstrap only (e.g. Playwright addInitScript). Accept one enum,
+      // then remove the hook. Never use URLs, storage, or visitor data for scenarios.
+      const bootstrap = window as Window & {
+        __SLOTWELL_DEMO_SCENARIO__?: unknown;
+      };
+      const scenario = bootstrap.__SLOTWELL_DEMO_SCENARIO__;
+      delete bootstrap.__SLOTWELL_DEMO_SCENARIO__;
+      session.current = createDemoSession(
+        createDemoSalon(() => now),
+        () => Date.now(),
+        undefined,
+        scenario === "conflict" || scenario === "retryable"
+          ? scenario
+          : "normal",
+      );
+      setReferenceTime(now);
+      setAvailabilityTime(now);
+    }
     // Keep fixtures anchored to this session, but refresh displayed availability.
     const timer = window.setInterval(() => {
       const now = Date.now();
@@ -194,6 +214,11 @@ export function BookingWizard() {
             {state.notice}
           </output>
           <p role="alert">{confirmationError}</p>
+          {confirmationError && state.step === "details" && !confirmed && (
+            <Button className="self-start" disabled={pending} onClick={confirm}>
+              Опитай отново
+            </Button>
+          )}
           {confirmed ? (
             <ConfirmationStep
               contact={state.contact}

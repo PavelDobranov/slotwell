@@ -63,6 +63,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     const draft = { ...selection, path };
     const snapshot = structuredClone(draft);
     const session = createDemoSession(salon, () => now, immediate, "retryable");
+    assert.equal(await session.confirm({ ...draft, start: null }), "invalid");
     assert.equal(await session.confirm(draft), "retryable");
     assert.deepEqual(session.occupied, []);
     assert.deepEqual(draft, snapshot);
