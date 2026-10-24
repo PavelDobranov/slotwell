@@ -232,7 +232,9 @@ test("specialist choices require explicit selection and match every service", as
   await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
   await page.getByRole("button", { name: "Продължи" }).click();
   const specialists = page.getByRole("group", { name: "Избери специалист" });
-  await expect(specialists.getByRole("radio")).toHaveCount(1);
+  await expect(
+    specialists.getByRole("radio").and(page.locator(":enabled")),
+  ).toHaveCount(1);
   const ivan = specialists.getByRole("radio", { name: /Иван/ });
   await expect(ivan).not.toBeChecked();
   await expect(page.getByRole("button", { name: "Продължи" })).toBeDisabled();
@@ -246,9 +248,7 @@ test("specialist choices require explicit selection and match every service", as
   await page.getByRole("checkbox", { name: /Боядисване/ }).check();
   await page.getByRole("button", { name: "Продължи" }).click();
   await expect(
-    page.getByText(
-      "Няма специалист за тази комбинация от услуги. Промени услугите, за да продължиш.",
-    ),
+    page.getByText("Никой специалист не прави всички избрани услуги заедно"),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Продължи" })).toBeDisabled();
 });
@@ -431,7 +431,9 @@ test("time-first deduplicates shared starts, requires explicit staff, and switch
     page.getByRole("heading", { name: "Специалист", exact: true }),
   ).toBeFocused();
   const specialists = page.getByRole("group", { name: "Избери специалист" });
-  await expect(specialists.getByRole("radio")).toHaveCount(2);
+  await expect(
+    specialists.getByRole("radio").and(page.locator(":enabled")),
+  ).toHaveCount(2);
   await expect(next).toBeDisabled();
   await specialists.getByRole("radio", { name: /Мила/ }).check();
   await next.click();
@@ -457,8 +459,10 @@ test("time-first deduplicates shared starts, requires explicit staff, and switch
   await page.getByLabel("Дата на посещението").selectOption("2026-06-08");
   await page.getByRole("radio", { name: "09:30", exact: true }).check();
   await next.click();
-  await expect(specialists.getByRole("radio")).toHaveCount(1);
-  await expect(specialists.getByRole("radio", { name: /Мила/ })).toHaveCount(0);
+  await expect(
+    specialists.getByRole("radio").and(page.locator(":enabled")),
+  ).toHaveCount(1);
+  await expect(specialists.getByRole("radio", { name: /Мила/ })).toBeDisabled();
   await expect(next).toBeDisabled();
   await specialists.getByRole("radio", { name: /Иван/ }).check();
   // Wednesday has only Mila; changing time must clear retained Ivan, not the time.
@@ -466,7 +470,9 @@ test("time-first deduplicates shared starts, requires explicit staff, and switch
   await page.getByLabel("Дата на посещението").selectOption("2026-06-10");
   await page.getByRole("radio", { name: "09:00", exact: true }).check();
   await next.click();
-  await expect(specialists.getByRole("radio")).toHaveCount(1);
+  await expect(
+    specialists.getByRole("radio").and(page.locator(":enabled")),
+  ).toHaveCount(1);
   await expect(
     specialists.getByRole("radio", { name: /Мила/ }),
   ).not.toBeChecked();
@@ -501,7 +507,9 @@ test("time-first filters competencies and rejects a start that becomes stale on 
   await page.getByRole("radio", { name: "10:00", exact: true }).check();
   await next.click();
   const specialists = page.getByRole("group", { name: "Избери специалист" });
-  await expect(specialists.getByRole("radio")).toHaveCount(1);
+  await expect(
+    specialists.getByRole("radio").and(page.locator(":enabled")),
+  ).toHaveCount(1);
   const elena = specialists.getByRole("radio", { name: /Елена/ });
   await expect(elena).not.toBeChecked();
   await expect(next).toBeDisabled();

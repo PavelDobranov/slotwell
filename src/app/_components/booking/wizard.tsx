@@ -279,6 +279,8 @@ export function BookingWizard() {
                           ?.staffIds ?? [])
                       : undefined
                   }
+                  onServices={(ids) => dispatch({ type: "services", ids })}
+                  onEditTime={() => dispatch({ type: "edit", step: "time" })}
                   onSelect={(id) => dispatch({ type: "staff", id })}
                   onNext={() => dispatch({ type: "next" })}
                   onEditServices={() =>
