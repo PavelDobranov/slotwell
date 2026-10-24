@@ -52,7 +52,17 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(note).not.toBeVisible();
     await check.click();
     await expect(name).toBeFocused();
+    const errorSummary = page
+      .getByRole("alert")
+      .filter({ hasText: "Провери 3 полета" });
+    await expect(errorSummary).toBeVisible();
+    await expect(errorSummary.getByRole("link")).toHaveCount(3);
+    await errorSummary.getByRole("link", { name: /Телефон/ }).click();
+    await expect(phone).toBeFocused();
+    await errorSummary.getByRole("link", { name: /^Име —/ }).click();
+    await expect(name).toBeFocused();
     await expect(name).toHaveAccessibleDescription("Въведи име.");
+    await expect(phone).toHaveAccessibleDescription(/Например 0888 123 456/);
     await page.keyboard.type("  Демо Посетител  ");
     await page.keyboard.press("Tab");
     await expect(phone).toBeFocused();

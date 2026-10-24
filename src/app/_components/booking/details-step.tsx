@@ -1,8 +1,12 @@
+import { CircleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 
 import { Button } from "@/app/_components/button";
 import {
   Field,
+  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -87,7 +91,43 @@ export function DetailsStep({
         за демонстрацията. Данните остават само в паметта на тази страница. Не
         проверяваме самоличност или собственост на телефон и имейл.
       </p>
-      <FieldGroup>
+      {Object.keys(errors).length > 0 && (
+        <Alert variant="destructive">
+          <CircleAlert aria-hidden="true" />
+          <AlertTitle>
+            Провери {Object.keys(errors).length}{" "}
+            {Object.keys(errors).length === 1 ? "поле" : "полета"}, за да
+            продължиш
+          </AlertTitle>
+          <AlertDescription>
+            <ul className="list-disc pl-4">
+              {[...fields, { key: "note", label: "Бележка" } as const].map(
+                ({ key, label }) =>
+                  errors[key] ? (
+                    <li key={key}>
+                      <a
+                        href={`#contact-${key}`}
+                        className="underline underline-offset-4"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          if (key === "note") setNoteOpen(true);
+                          requestAnimationFrame(() => {
+                            const control =
+                              form.current?.elements.namedItem(key);
+                            if (control instanceof HTMLElement) control.focus();
+                          });
+                        }}
+                      >
+                        {label} — {errors[key]}
+                      </a>
+                    </li>
+                  ) : null,
+              )}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+      <FieldGroup className="gap-5">
         {fields.map(({ key, label, ...input }) => (
           <Field key={key} data-invalid={Boolean(errors[key])}>
             <FieldLabel htmlFor={`contact-${key}`}>{label}</FieldLabel>
@@ -101,10 +141,20 @@ export function DetailsStep({
               onChange={(event) => change(key, event.target.value)}
               aria-invalid={Boolean(errors[key])}
               aria-describedby={
-                errors[key] ? `contact-${key}-error` : undefined
+                [
+                  errors[key] && `contact-${key}-error`,
+                  key === "phone" && "contact-phone-hint",
+                ]
+                  .filter(Boolean)
+                  .join(" ") || undefined
               }
             />
             <FieldError id={`contact-${key}-error`}>{errors[key]}</FieldError>
+            {key === "phone" && (
+              <FieldDescription id="contact-phone-hint">
+                Например 0888 123 456
+              </FieldDescription>
+            )}
           </Field>
         ))}
         <details
