@@ -1,0 +1,216 @@
+import { expect, type Locator, type Page, test } from "@playwright/test";
+
+// Reach controls through the real tab order, never locator.focus()/click().
+async function tabTo(page: Page, target: Locator) {
+  for (let index = 0; index < 100; index++) {
+    await page.keyboard.press("Tab");
+    if (
+      await target.evaluate((element) => element === document.activeElement)
+    ) {
+      await expect(target).toBeInViewport();
+      // The focused control must not be clipped or covered at its centre.
+      expect(
+        await target.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          const top = document.elementFromPoint(
+            rect.x + rect.width / 2,
+            rect.y + rect.height / 2,
+          );
+          return (
+            top !== null && (element.contains(top) || top.contains(element))
+          );
+        }),
+      ).toBe(true);
+      return;
+    }
+  }
+  throw new Error(
+    `Control is not keyboard reachable: ${await target.ariaSnapshot()}`,
+  );
+}
+
+async function activate(page: Page, target: Locator, key = "Enter") {
+  await tabTo(page, target);
+  await page.keyboard.press(key);
+}
+
+async function chooseTime(page: Page, time: string) {
+  const slots = page.getByRole("group", { name: "Свободни начални часове" });
+  const selected = slots.getByRole("radio", { checked: true });
+  await tabTo(
+    page,
+    (await selected.count()) ? selected : slots.getByRole("radio").first(),
+  );
+  const target = slots.getByRole("radio", { name: time, exact: true });
+  for (let index = 0; index < 100; index++) {
+    if (
+      await target.evaluate((element) => element === document.activeElement)
+    ) {
+      await page.keyboard.press("Space");
+      await expect(target).toBeChecked();
+      return;
+    }
+    await page.keyboard.press("ArrowRight");
+  }
+  throw new Error(`Time is not keyboard reachable: ${time}`);
+}
+
+test.use({ timezoneId: "America/New_York" });
+
+for (const width of [360, 1440]) {
+  for (const path of ["staff-first", "time-first"] as const) {
+    test(`${width}px ${path}: keyboard-only multi-service booking, edits, validation and reset`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+      const consoleMessages: string[] = [];
+      const errors: string[] = [];
+      const requests: string[] = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      page.on("console", (message) => {
+        consoleMessages.push(message.text());
+        if (["error", "warning"].includes(message.type()))
+          errors.push(message.text());
+      });
+      page.on("request", (request) =>
+        requests.push(`${request.url()} ${request.postData() ?? ""}`),
+      );
+      await page.goto("/");
+      const button = (name: string) =>
+        page.getByRole("button", { name, exact: true });
+      const heading = (name: string) =>
+        page.getByRole("heading", { name, exact: true });
+      async function verifyStep(name: string) {
+        await expect(heading(name)).toBeFocused();
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth),
+        ).toBeLessThanOrEqual(width);
+        await page.screenshot({
+          path: `coverage/playwright/keyboard-${width}-${path}-${name}.png`,
+          fullPage: true,
+        });
+      }
+      await expect(page.locator("html")).toHaveAttribute("lang", "bg");
+      for (const name of [/Подстригване/, /Оформяне на брада/]) {
+        const checkbox = page.getByRole("checkbox", { name });
+        await activate(page, checkbox, "Space");
+        await expect(checkbox).toBeChecked();
+        // Visible check icon supplements the selected background colour.
+        await expect(checkbox.locator("svg")).toBeVisible();
+      }
+      await activate(page, button("Продължи"));
+      await verifyStep("Специалист");
+      if (path === "time-first") {
+        await activate(
+          page,
+          page.getByRole("radio", { name: "Първо специалист", exact: true }),
+          "ArrowRight",
+        );
+        await expect(
+          page.getByRole("radio", { name: "Първо дата и час", exact: true }),
+        ).toBeChecked();
+        await verifyStep("Дата и час");
+      } else {
+        await activate(
+          page,
+          page.getByRole("radio", { name: /Иван/ }),
+          "Space",
+        );
+        await activate(page, button("Продължи"));
+        await verifyStep("Дата и час");
+      }
+      await chooseTime(page, "15:00");
+      await activate(page, button("Продължи"));
+      if (path === "time-first") {
+        await verifyStep("Специалист");
+        await activate(
+          page,
+          page.getByRole("radio", { name: /Иван/ }),
+          "Space",
+        );
+        await activate(page, button("Продължи"));
+      }
+      await verifyStep("Данни и преглед");
+      await activate(page, button("Провери данните"));
+      const name = page.getByRole("textbox", { name: "Име", exact: true });
+      await expect(name).toBeFocused();
+      await expect(name).toHaveAttribute("aria-invalid", "true");
+      await expect(name).toHaveAccessibleDescription(/име/);
+      await expect(
+        page.getByRole("alert").filter({ hasText: /^Въведи име\.$/ }),
+      ).toBeVisible();
+      await page.keyboard.type("Demo Keyboard");
+      for (const [label, value] of [
+        ["Телефон", "0888123456"],
+        ["Имейл", "keyboard@example.com"],
+      ]) {
+        await tabTo(
+          page,
+          page.getByRole("textbox", { name: label, exact: true }),
+        );
+        await page.keyboard.type(value);
+      }
+      await activate(page, button("Промени датата и часа"));
+      await verifyStep("Дата и час");
+      await activate(page, button("Назад"));
+      await verifyStep(path === "staff-first" ? "Специалист" : "Услуги");
+      await activate(page, button("Продължи"));
+      await verifyStep("Дата и час");
+      await chooseTime(page, "15:15");
+      await expect(
+        page.getByRole("radio", { name: "15:15", exact: true }),
+      ).toBeChecked();
+      await activate(page, button("Продължи"));
+      if (path === "time-first") {
+        await verifyStep("Специалист");
+        await activate(page, button("Продължи"));
+      }
+      await verifyStep("Данни и преглед");
+      await expect(name).toHaveValue("Demo Keyboard");
+      await expect(
+        page.getByRole("textbox", { name: "Имейл", exact: true }),
+      ).toHaveValue("keyboard@example.com");
+      const summary = page.getByRole("complementary", { name: "Твоят избор" });
+      await expect(summary).toContainText("50 мин");
+      await expect(summary).toContainText(/35,00\s*€/);
+      await expect(summary).toContainText("15:15–16:05");
+      await activate(page, button("Провери данните"));
+      await activate(page, button("Потвърди демо резервация"));
+      await expect(button("Потвърждаваме…")).toBeDisabled();
+      // Repeated keyboard activation while the first confirmation is pending.
+      await page.keyboard.press("Enter");
+      await page.keyboard.press("Space");
+      await verifyStep("Демо резервацията е потвърдена");
+      await activate(page, button("Нова демо резервация"));
+      await verifyStep("Услуги");
+      await expect(
+        page.getByRole("checkbox", { name: /Подстригване/ }),
+      ).not.toBeChecked();
+      expect(new URL(page.url()).search).toBe("");
+      expect(new URL(page.url()).hash).toBe("");
+      expect(
+        await page.evaluate(async () => ({
+          local: localStorage.length,
+          session: sessionStorage.length,
+          databases: (await indexedDB.databases()).map(({ name }) => name),
+        })),
+      ).toEqual({ local: 0, session: 0, databases: [] });
+      expect(await page.context().cookies()).toEqual([]);
+      expect(
+        requests.filter(
+          (request) => !request.startsWith("http://127.0.0.1:3100/"),
+        ),
+      ).toEqual([]);
+      for (const value of [
+        "Demo Keyboard",
+        "0888123456",
+        "keyboard@example.com",
+      ]) {
+        expect(decodeURIComponent(requests.join("\n"))).not.toContain(value);
+        expect(consoleMessages.join("\n")).not.toContain(value);
+      }
+      expect(errors).toEqual([]);
+    });
+  }
+}
