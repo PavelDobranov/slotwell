@@ -233,6 +233,13 @@ for (const path of ["staff-first", "time-first"] as const) {
       exact: true,
     });
     await expect(heading).toBeFocused();
+    const visit = page.getByRole("region", { name: "Твоето посещение" });
+    for (const text of ["Подстригване", "Мила", "15:00–15:30", "30 мин"])
+      await expect(visit).toContainText(text);
+    await expect(visit).toContainText(/23,00\s*€/);
+    await expect(
+      page.getByRole("heading", { name: "Какво означава „демо“?" }),
+    ).toBeVisible();
     await expect(
       page.getByText("Това не е реална резервация.", { exact: false }),
     ).toBeVisible();

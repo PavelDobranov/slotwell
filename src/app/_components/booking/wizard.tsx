@@ -2,17 +2,17 @@
 
 import { Radio } from "@base-ui/react/radio";
 import { RadioGroup } from "@base-ui/react/radio-group";
-import { CircleAlert } from "lucide-react";
+import { CircleAlert, CircleCheck } from "lucide-react";
 import { useEffect, useReducer, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 
 import { BookingSummary } from "@/app/_components/booking/booking-summary";
-import { ConfirmationStep } from "@/app/_components/booking/confirmation-step";
 import { DetailsStep } from "@/app/_components/booking/details-step";
 import { ServicesStep } from "@/app/_components/booking/services-step";
 import { SpecialistStep } from "@/app/_components/booking/specialist-step";
 import { Stepper, stepLabels } from "@/app/_components/booking/stepper";
+import { Success } from "@/app/_components/booking/success";
 import { TimeStep } from "@/app/_components/booking/time-step";
 import { Button } from "@/app/_components/button";
 import {
@@ -33,6 +33,7 @@ import {
   formatBusinessDate,
   formatBusinessTime,
 } from "@/app/_lib/booking/time";
+import { cn } from "@/app/_lib/utils";
 
 export function BookingWizard() {
   const session = useRef<ReturnType<typeof createDemoSession> | null>(null);
@@ -169,7 +170,12 @@ export function BookingWizard() {
       <fieldset
         disabled={pending}
         aria-busy={pending}
-        className="grid min-w-0 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22.5rem]"
+        className={cn(
+          "grid min-w-0 items-start gap-8",
+          confirmed
+            ? "mx-auto max-w-170"
+            : "lg:grid-cols-[minmax(0,1fr)_22.5rem]",
+        )}
       >
         <section
           onFocusCapture={(event) => {
@@ -183,6 +189,12 @@ export function BookingWizard() {
               ? "Демонстрацията е завършена"
               : `Стъпка ${order.indexOf(state.step) + 1} от 4`}
           </p>
+          {confirmed && (
+            <CircleCheck
+              aria-hidden="true"
+              className="size-11 fill-primary text-primary-foreground"
+            />
+          )}
           <h2
             id="step-heading"
             ref={heading}
@@ -211,9 +223,10 @@ export function BookingWizard() {
               <AlertDescription>{confirmationError}</AlertDescription>
             </Alert>
           )}
-          {confirmed ? (
-            <ConfirmationStep
-              contact={state.contact}
+          {confirmed && salon !== null && state.start !== null ? (
+            <Success
+              salon={salon}
+              state={{ ...state, start: state.start }}
               onNewBooking={() => {
                 submissionLocked.current = false;
                 setConfirmed(false);
@@ -384,12 +397,14 @@ export function BookingWizard() {
             За избор на услуги е необходимо да включиш JavaScript.
           </noscript>
         </section>
-        <BookingSummary
-          salon={salon}
-          state={state}
-          confirmed={confirmed}
-          onEdit={(step) => dispatch({ type: "edit", step })}
-        />
+        {!confirmed && (
+          <BookingSummary
+            salon={salon}
+            state={state}
+            confirmed={false}
+            onEdit={(step) => dispatch({ type: "edit", step })}
+          />
+        )}
       </fieldset>
     </>
   );
