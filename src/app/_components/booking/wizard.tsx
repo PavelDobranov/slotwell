@@ -303,6 +303,12 @@ export function BookingWizard() {
                   }}
                   start={state.start}
                   selectedDate={state.date}
+                  onEditStaff={() => {
+                    if (state.path === "time-first") {
+                      dispatch({ type: "path", path: "staff-first" });
+                    }
+                    dispatch({ type: "edit", step: "staff" });
+                  }}
                   onDate={(date) => dispatch({ type: "date", date })}
                   onSelect={(start) => dispatch({ type: "time", start })}
                   onNext={() => dispatch({ type: "next" })}
