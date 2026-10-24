@@ -32,7 +32,7 @@ export type BookingAction =
   | { type: "date"; date: string }
   | { type: "contact"; draft: Partial<ContactDraft> }
   | { type: "edit"; step: BookingStep }
-  | { type: "next" | "back" | "refresh" | "new-booking" };
+  | { type: "next" | "back" | "refresh" | "conflict" | "new-booking" };
 
 type BookingContext = {
   salon: DemoSalon;
@@ -79,6 +79,11 @@ export function bookingReducer(
   const next = { ...state, notice: "" };
   const notices: string[] = [];
   switch (action.type) {
+    case "conflict":
+      next.start = null;
+      next.step = "time";
+      notices.push("Избраният час вече не е свободен. Избери друг час.");
+      break;
     case "services":
       next.serviceIds = [...new Set(action.ids)].filter((id) =>
         context.salon.services.some((service) => service.id === id),

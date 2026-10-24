@@ -12,7 +12,10 @@ export type ConfirmationResult =
   | "success"
   | "pending"
   | "invalid"
+  | "retryable"
   | "unavailable";
+
+export type DemoScenario = "normal" | "conflict" | "retryable";
 
 /** Replaceable, page-memory-only simulation. It never retains contact data. */
 export function createDemoSession(
@@ -20,6 +23,7 @@ export function createDemoSession(
   clock: Clock,
   wait: () => Promise<void> = () =>
     new Promise((resolve) => setTimeout(resolve, 300)),
+  scenario: DemoScenario = "normal",
 ) {
   let occupied: readonly OccupiedInterval[] = [];
   let pending = false;
@@ -48,6 +52,10 @@ export function createDemoSession(
           sessionOccupied: occupied,
         }).find(({ start }) => start === selection.start);
         if (!slot) return "unavailable";
+        const outcome = scenario;
+        scenario = "normal";
+        if (outcome === "retryable") return "retryable";
+        // A competing demo visitor takes this interval; no contact is retained.
         occupied = [
           ...occupied,
           {
@@ -56,7 +64,7 @@ export function createDemoSession(
             end: slot.occupiedEnd,
           },
         ];
-        return "success";
+        return outcome === "conflict" ? "unavailable" : "success";
       } finally {
         pending = false;
       }

@@ -29,6 +29,54 @@ const selection: BookingState = {
 };
 const immediate = async () => {};
 
+for (const path of ["staff-first", "time-first"] as const) {
+  test(`${path} conflict blocks the interval without booking the visitor and returns to time selection`, async () => {
+    const draft = { ...selection, path };
+    const session = createDemoSession(salon, () => now, immediate, "conflict");
+    assert.equal(await session.confirm(draft), "unavailable");
+    const recovered = bookingReducer(
+      draft,
+      { type: "conflict" },
+      {
+        salon,
+        now,
+        sessionOccupied: session.occupied,
+      },
+    );
+    assert.equal(recovered.step, "time");
+    assert.equal(recovered.start, null);
+    assert.deepEqual(recovered.serviceIds, draft.serviceIds);
+    assert.deepEqual(recovered.contact, draft.contact);
+    assert.equal(await session.confirm(draft), "unavailable");
+    assert.equal(session.occupied.length, 1);
+    assert.equal(
+      await session.confirm({
+        ...draft,
+        start: Number(draft.start) + 60 * 60_000,
+      }),
+      "success",
+    );
+    assert.equal(session.occupied.length, 2);
+  });
+
+  test(`${path} retryable failure preserves the draft, consumes the scenario once and cannot duplicate occupancy`, async () => {
+    const draft = { ...selection, path };
+    const snapshot = structuredClone(draft);
+    const session = createDemoSession(salon, () => now, immediate, "retryable");
+    assert.equal(await session.confirm(draft), "retryable");
+    assert.deepEqual(session.occupied, []);
+    assert.deepEqual(draft, snapshot);
+    const results = await Promise.all([
+      session.confirm(draft),
+      session.confirm(draft),
+    ]);
+    assert.deepEqual(results, ["success", "pending"]);
+    assert.equal(session.occupied.length, 1);
+    assert.equal(await session.confirm(draft), "unavailable");
+    assert.equal(session.occupied.length, 1);
+  });
+}
+
 test("confirmation appends one interval including cleanup and rejects duplicate submissions", async () => {
   let release = () => {};
   const session = createDemoSession(
