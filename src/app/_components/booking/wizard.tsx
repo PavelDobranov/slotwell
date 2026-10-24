@@ -6,9 +6,11 @@ import { RadioGroup } from "@base-ui/react/radio-group";
 import { CheckIcon } from "lucide-react";
 import { useEffect, useReducer, useRef, useState } from "react";
 
+import { BookingSummary } from "@/app/_components/booking/booking-summary";
 import { ConfirmationStep } from "@/app/_components/booking/confirmation-step";
 import { DetailsStep } from "@/app/_components/booking/details-step";
 import { SpecialistStep } from "@/app/_components/booking/specialist-step";
+import { Stepper, stepLabels } from "@/app/_components/booking/stepper";
 import { TimeStep } from "@/app/_components/booking/time-step";
 import { Button } from "@/app/_components/button";
 import {
@@ -16,31 +18,15 @@ import {
   qualifiedStaff,
 } from "@/app/_lib/booking/availability";
 import { createDemoSalon } from "@/app/_lib/booking/fixtures";
+import { euros } from "@/app/_lib/booking/format";
 import { createDemoSession } from "@/app/_lib/booking/session";
 import {
   type BookingAction,
-  type BookingStep,
   bookingReducer,
   initialBookingState,
-  selectedTotals,
   stepOrder,
 } from "@/app/_lib/booking/state";
-import {
-  businessDateAt,
-  formatBusinessDate,
-  formatBusinessTime,
-} from "@/app/_lib/booking/time";
-
-const labels: Record<BookingStep, string> = {
-  services: "Услуги",
-  staff: "Специалист",
-  time: "Дата и час",
-  details: "Данни и преглед",
-};
-const euros = new Intl.NumberFormat("bg-BG", {
-  style: "currency",
-  currency: "EUR",
-});
+import { businessDateAt, formatBusinessDate } from "@/app/_lib/booking/time";
 
 export function BookingWizard() {
   const session = useRef<ReturnType<typeof createDemoSession> | null>(null);
@@ -157,9 +143,6 @@ export function BookingWizard() {
   const order = stepOrder(state.path);
   const today =
     availabilityTime === null ? null : businessDateAt(availabilityTime);
-  const selected =
-    salon?.services.filter(({ id }) => state.serviceIds.includes(id)) ?? [];
-  const totals = salon === null ? null : selectedTotals(state, salon);
   const noSpecialist =
     salon !== null &&
     state.serviceIds.length > 0 &&
@@ -168,27 +151,17 @@ export function BookingWizard() {
   return (
     <>
       {!confirmed && (
-        <nav aria-label="Стъпки на резервацията">
-          <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {order.map((step, index) => (
-              <li
-                key={step}
-                aria-current={step === state.step ? "step" : undefined}
-                className="flex items-center gap-3 rounded-md border p-3 text-sm text-muted-foreground aria-[current=step]:border-primary aria-[current=step]:bg-secondary aria-[current=step]:font-semibold aria-[current=step]:text-foreground"
-              >
-                <span aria-hidden="true" className="font-mono">
-                  0{index + 1}
-                </span>
-                {labels[step]}
-              </li>
-            ))}
-          </ol>
-        </nav>
+        <Stepper
+          path={state.path}
+          step={state.step}
+          disabled={pending}
+          onNavigate={(step) => dispatch({ type: "edit", step })}
+        />
       )}
       <fieldset
         disabled={pending}
         aria-busy={pending}
-        className="grid min-w-0 items-start gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+        className="grid min-w-0 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22.5rem]"
       >
         <section
           onFocusCapture={(event) => {
@@ -197,7 +170,7 @@ export function BookingWizard() {
           aria-labelledby="step-heading"
           className="flex min-w-0 flex-col gap-4 py-2"
         >
-          <p className="text-sm font-medium text-muted-foreground">
+          <p className="sr-only">
             {confirmed
               ? "Демонстрацията е завършена"
               : `Стъпка ${order.indexOf(state.step) + 1} от 4`}
@@ -206,14 +179,18 @@ export function BookingWizard() {
             id="step-heading"
             ref={heading}
             tabIndex={-1}
-            className="rounded-sm text-2xl font-semibold"
+            className="rounded-sm text-xl font-semibold"
           >
-            {confirmed ? "Демо резервацията е потвърдена" : labels[state.step]}
+            {confirmed
+              ? "Демо резервацията е потвърдена"
+              : stepLabels[state.step]}
           </h2>
-          <output className="text-sm text-muted-foreground">
+          <output className="text-sm text-muted-foreground empty:hidden">
             {state.notice}
           </output>
-          <p role="alert">{confirmationError}</p>
+          <p role="alert" className="empty:hidden">
+            {confirmationError}
+          </p>
           {confirmationError && state.step === "details" && !confirmed && (
             <Button className="self-start" disabled={pending} onClick={confirm}>
               Опитай отново
@@ -421,74 +398,12 @@ export function BookingWizard() {
             За избор на услуги е необходимо да включиш JavaScript.
           </noscript>
         </section>
-        <aside
-          aria-labelledby="summary-heading"
-          className="flex flex-col gap-4 rounded-lg border bg-muted p-6"
-        >
-          <h2 id="summary-heading" className="text-lg font-semibold">
-            Твоят избор
-          </h2>
-          {selected.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Все още няма избрани услуги.
-            </p>
-          ) : (
-            <>
-              <ul className="flex flex-col gap-2 text-sm">
-                {selected.map((service) => (
-                  <li key={service.id}>{service.name}</li>
-                ))}
-              </ul>
-              <p className="font-medium" aria-live="polite">
-                Общо: {totals?.durationMinutes} мин ·{" "}
-                {euros.format((totals?.priceCents ?? 0) / 100)}
-              </p>
-              {state.staffId !== null && (
-                <p className="text-sm">
-                  {salon?.staff.find(({ id }) => id === state.staffId)?.name}
-                </p>
-              )}
-              {state.start !== null && (
-                <p className="text-sm">
-                  {formatBusinessDate(businessDateAt(state.start))} ·{" "}
-                  {formatBusinessTime(state.start)}–
-                  {formatBusinessTime(
-                    state.start + (totals?.durationMinutes ?? 0) * 60_000,
-                  )}
-                </p>
-              )}
-              {(state.step === "details" || confirmed) && (
-                <p className="text-sm">
-                  Място: {salon?.name}, {salon?.address}
-                </p>
-              )}
-              {state.step === "details" && !confirmed && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => dispatch({ type: "edit", step: "staff" })}
-                  >
-                    Промени специалиста
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => dispatch({ type: "edit", step: "time" })}
-                  >
-                    Промени датата и часа
-                  </Button>
-                </>
-              )}
-              {state.step !== "services" && !confirmed && (
-                <Button
-                  variant="outline"
-                  onClick={() => dispatch({ type: "edit", step: "services" })}
-                >
-                  Промени услугите
-                </Button>
-              )}
-            </>
-          )}
-        </aside>
+        <BookingSummary
+          salon={salon}
+          state={state}
+          confirmed={confirmed}
+          onEdit={(step) => dispatch({ type: "edit", step })}
+        />
       </fieldset>
     </>
   );
