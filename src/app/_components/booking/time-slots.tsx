@@ -32,7 +32,7 @@ export function TimeSlots({
     (slot) => formatBusinessTime(slot.start) >= "17:00",
   );
   return (
-    <div className="flex min-w-0 flex-col gap-4" aria-busy={loading}>
+    <div className="@container flex min-w-0 flex-col gap-4" aria-busy={loading}>
       {loading ? (
         <>
           <output className="text-sm">
@@ -40,7 +40,7 @@ export function TimeSlots({
           </output>
           <div
             aria-hidden="true"
-            className="grid grid-cols-4 gap-2 sm:grid-cols-6"
+            className="grid grid-cols-2 gap-2 @min-[20rem]:grid-cols-4 @min-[30rem]:grid-cols-6"
           >
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((placeholder) => (
               <Skeleton key={placeholder} className="h-12 rounded-slot" />
@@ -72,7 +72,7 @@ export function TimeSlots({
                       {group.length} свободни
                     </span>
                   </p>
-                  <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                  <div className="grid grid-cols-2 gap-2 @min-[20rem]:grid-cols-4 @min-[30rem]:grid-cols-6">
                     {group.map((slot) => (
                       <label
                         key={slot.start}

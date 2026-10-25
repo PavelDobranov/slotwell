@@ -19,11 +19,11 @@ export function DayStrip({
     <fieldset disabled={disabled} className="min-w-0">
       <legend className="sr-only">Дата на посещението</legend>
       <div className="overflow-x-auto p-1">
-        <div className="flex gap-2 sm:grid sm:grid-cols-7">
+        <div className="flex gap-2">
           {days.map(({ date: value, count }) => (
             <label
               key={value}
-              className="relative flex h-18 w-14.5 shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-button border border-border bg-background px-1 py-1.5 text-foreground sm:w-auto has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:disabled]:cursor-not-allowed has-[:disabled]:border-dashed has-[:disabled]:bg-background has-[:disabled]:text-muted-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
+              className="relative flex h-18 w-14.5 shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-button border border-border bg-background px-1 py-1.5 text-foreground sm:min-w-14.5 sm:flex-1 has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:disabled]:cursor-not-allowed has-[:disabled]:border-dashed has-[:disabled]:bg-background has-[:disabled]:text-muted-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
             >
               <input
                 type="radio"

@@ -98,7 +98,10 @@ test("slot groups separate Sofia evenings and omit groups with no available star
 
 test("loading uses the same responsive slot geometry and keeps navigation disabled", () => {
   const html = render({ loading: true });
-  assert.match(html, /grid-cols-4 gap-2 sm:grid-cols-6/);
+  assert.match(
+    html,
+    /grid-cols-2 gap-2 @min-\[20rem\]:grid-cols-4 @min-\[30rem\]:grid-cols-6/,
+  );
   assert.match(html, /h-12 rounded-slot/);
   assert.match(html, /<fieldset disabled=""/);
 });
