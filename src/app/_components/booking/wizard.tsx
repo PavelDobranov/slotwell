@@ -2,7 +2,12 @@
 
 import { Radio } from "@base-ui/react/radio";
 import { RadioGroup } from "@base-ui/react/radio-group";
-import { CircleAlert, CircleCheck } from "lucide-react";
+import {
+  ArrowRight,
+  CircleAlert,
+  CircleCheck,
+  LoaderCircle,
+} from "lucide-react";
 import { useEffect, useReducer, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
@@ -34,6 +39,7 @@ import {
   bookingReducer,
   initialBookingState,
   selectedTotals,
+  stepOrder,
 } from "@/app/_lib/booking/state";
 import {
   businessDateAt,
@@ -171,6 +177,19 @@ export function BookingWizard() {
   const reviewing = progress.current === 3;
   const today =
     availabilityTime === null ? null : businessDateAt(availabilityTime);
+  const order = stepOrder(state.path);
+  const nextStep = order[order.indexOf(state.step) + 1];
+  const nextLabel = reviewing
+    ? "Демонстрация · няма плащане"
+    : state.step === "details"
+      ? "Следва: преглед"
+      : `Следва: ${stepLabels[nextStep]}`;
+  const actionForm =
+    state.step === "services"
+      ? "booking-services"
+      : state.step === "details" && !reviewing
+        ? "booking-contact"
+        : undefined;
   const noSpecialist =
     salon !== null &&
     state.serviceIds.length > 0 &&
@@ -227,7 +246,7 @@ export function BookingWizard() {
             "grid min-w-0 items-start gap-8",
             confirmed
               ? "mx-auto max-w-170"
-              : "pb-24 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12 lg:pb-0",
+              : "gap-y-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-x-12 lg:gap-y-6",
           )}
         >
           <section
@@ -235,7 +254,7 @@ export function BookingWizard() {
               lastFocusedControl.current = event.target;
             }}
             aria-labelledby="step-heading"
-            className="flex min-w-0 flex-col gap-4 py-2"
+            className="mb-6 flex min-w-0 flex-col gap-4 py-2 lg:mb-0"
           >
             <p className="sr-only">
               {confirmed
@@ -296,6 +315,7 @@ export function BookingWizard() {
             ) : state.step === "services" ? (
               <fieldset disabled={salon === null} className="min-w-0">
                 <ServicesStep
+                  showPrimaryAction={false}
                   services={salon?.services ?? []}
                   serviceIds={state.serviceIds}
                   path={state.path}
@@ -353,6 +373,7 @@ export function BookingWizard() {
                 availabilityTime !== null &&
                 state.step === "staff" ? (
                   <SpecialistStep
+                    showPrimaryAction={false}
                     salon={salon}
                     serviceIds={state.serviceIds}
                     staffId={state.staffId}
@@ -383,6 +404,7 @@ export function BookingWizard() {
                   salon !== null &&
                   availabilityTime !== null ? (
                   <TimeStep
+                    showPrimaryAction={false}
                     availability={{
                       salon,
                       now: availabilityTime,
@@ -412,6 +434,7 @@ export function BookingWizard() {
                   salon !== null &&
                   state.start !== null ? (
                   <DetailsStep
+                    showPrimaryAction={false}
                     draft={state.contact}
                     checked={reviewing}
                     onChecked={(checked) => {
@@ -475,6 +498,58 @@ export function BookingWizard() {
               salon={salon}
               state={state}
               confirmed={false}
+              action={
+                <>
+                  <p
+                    id="booking-next"
+                    className="text-sm text-muted-foreground"
+                  >
+                    {nextLabel}
+                  </p>
+                  <Button
+                    // Replace the node on navigation: a button click must not
+                    // acquire a new form-submit default action mid-event.
+                    key={`${state.step}-${reviewing}`}
+                    aria-describedby="booking-next"
+                    type={actionForm ? "submit" : "button"}
+                    form={actionForm}
+                    disabled={
+                      salon === null ||
+                      pending ||
+                      (state.step === "staff" && state.staffId === null) ||
+                      (state.step === "time" && state.start === null)
+                    }
+                    className="h-auto min-h-13 w-full whitespace-normal lg:w-auto lg:min-w-65"
+                    onClick={
+                      reviewing
+                        ? confirm
+                        : state.step === "staff" || state.step === "time"
+                          ? () => dispatch({ type: "next" })
+                          : undefined
+                    }
+                  >
+                    {pending && (
+                      <LoaderCircle
+                        aria-hidden="true"
+                        data-icon="inline-start"
+                        className="motion-safe:animate-spin"
+                      />
+                    )}
+                    {reviewing
+                      ? pending
+                        ? "Потвърждаваме…"
+                        : confirmationError
+                          ? "Опитай отново"
+                          : "Потвърди демо резервация"
+                      : state.step === "details"
+                        ? "Провери данните"
+                        : "Продължи"}
+                    {!reviewing && (
+                      <ArrowRight aria-hidden="true" data-icon="inline-end" />
+                    )}
+                  </Button>
+                </>
+              }
               onEdit={(step) => dispatch({ type: "edit", step })}
             />
           )}

@@ -1,5 +1,5 @@
 import { ChevronUp } from "lucide-react";
-import { useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 
 import { Button } from "@/app/_components/button";
 import { Card, CardContent, CardHeader } from "@/app/_components/card";
@@ -33,7 +33,9 @@ export function BookingSummary({
   state,
   confirmed,
   onEdit,
+  action,
 }: {
+  action: ReactNode;
   salon: DemoSalon | null;
   state: BookingState;
   confirmed: boolean;
@@ -71,9 +73,9 @@ export function BookingSummary({
     );
   }
   const card = (
-    <Card className="[--card-spacing:--spacing(5)]">
+    <Card className="shadow-none [--card-spacing:--spacing(6)]">
       <CardHeader className="hidden lg:grid">
-        <h2 className="text-base font-semibold">Твоят избор</h2>
+        <h2 className="text-lg font-semibold">Твоят избор</h2>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
@@ -100,16 +102,6 @@ export function BookingSummary({
           )}
         </div>
         <Separator />
-        <p
-          className="flex flex-wrap justify-between gap-2 font-semibold"
-          aria-live="polite"
-        >
-          <span>Общо:</span>
-          <span className="tabular-nums">
-            {totals?.durationMinutes ?? 0} мин ·{" "}
-            {euros.format((totals?.priceCents ?? 0) / 100)}
-          </span>
-        </p>
         <div className="flex flex-col gap-1">
           {sectionHeading("staff", "Специалист", "Промени специалиста")}
           {state.staffId === null ? (
@@ -132,13 +124,28 @@ export function BookingSummary({
             </p>
           )}
         </div>
-        {(state.step === "details" || confirmed) && (
+        <div
+          className="flex flex-col gap-2 rounded-xl bg-muted px-4 py-3.5"
+          aria-live="polite"
+        >
+          <p className="flex flex-wrap items-center justify-between gap-2 font-semibold">
+            <span>Общо · {totals?.durationMinutes ?? 0} мин</span>
+            <span className="font-heading text-xl tabular-nums">
+              {euros.format((totals?.priceCents ?? 0) / 100)}
+            </span>
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Демонстрация · няма плащане.
+          </p>
+        </div>
+        {salon !== null && (
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
               Място
             </span>
             <p>
-              Място: {salon?.name}, {salon?.address}
+              Място: {state.step === "details" && `${salon.name}, `}
+              {salon.address}
             </p>
           </div>
         )}
@@ -146,53 +153,84 @@ export function BookingSummary({
     </Card>
   );
   return (
-    <aside aria-label="Твоят избор" className="min-w-0 lg:sticky lg:top-6">
-      <div className="hidden lg:block">{card}</div>
-      <Sheet open={open} onOpenChange={setOpen}>
-        <div className="fixed inset-x-0 bottom-0 border-t bg-background px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-sm lg:hidden">
-          <SheetTrigger
-            render={
-              <Button
-                variant="outline"
-                className="min-h-11 w-full justify-between"
-              />
-            }
-            onClick={() => {
-              editing.current = false;
-            }}
-          >
-            <span className="tabular-nums">
-              {totals?.durationMinutes ?? 0} мин ·{" "}
-              {euros.format((totals?.priceCents ?? 0) / 100)}
-            </span>
-            <span className="flex items-center gap-2">
-              Виж избора <ChevronUp aria-hidden="true" data-icon="inline-end" />
-            </span>
-          </SheetTrigger>
-        </div>
-        <SheetContent
-          side="bottom"
-          className="max-h-[90dvh] overflow-y-auto rounded-t-2xl"
-          finalFocus={() =>
-            editing.current ? document.getElementById("step-heading") : true
-          }
-        >
-          <SheetHeader className="pr-16">
-            <SheetTitle>Твоят избор</SheetTitle>
-            <SheetDescription>
-              Всички часове са местни за салона в София (Europe/Sofia).
-            </SheetDescription>
-          </SheetHeader>
-          <div className="px-4">{card}</div>
-          <SheetFooter>
-            <SheetClose
-              render={<Button variant="outline" className="min-h-11" />}
+    <>
+      <aside
+        aria-label="Твоят избор"
+        className="min-w-0 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1 lg:row-span-2"
+      >
+        <div className="hidden lg:block">{card}</div>
+        <Sheet open={open} onOpenChange={setOpen}>
+          <div className="border-t bg-card px-4 pt-2 lg:hidden">
+            <SheetTrigger
+              render={
+                <Button
+                  variant="outline"
+                  aria-label="Обобщение — Виж избора"
+                  aria-describedby="booking-running-total"
+                  className="h-auto min-h-12 w-full justify-between gap-3 border-0 px-0 py-2 text-left whitespace-normal"
+                />
+              }
+              onClick={() => {
+                editing.current = false;
+              }}
             >
-              Затвори
-            </SheetClose>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-    </aside>
+              <span
+                id="booking-running-total"
+                className="flex min-w-0 flex-col gap-1 tabular-nums"
+                aria-live="polite"
+              >
+                <span>
+                  {selected.length === 0
+                    ? "Няма избрани услуги"
+                    : `${selected.length} ${selected.length === 1 ? "услуга" : "услуги"} · ${totals?.durationMinutes ?? 0} мин`}
+                </span>
+                <span className="text-sm font-normal text-muted-foreground">
+                  {euros.format((totals?.priceCents ?? 0) / 100)}
+                  {state.start !== null && (
+                    <>
+                      {" "}
+                      · {formatBusinessDate(businessDateAt(state.start))} ·{" "}
+                      {formatBusinessTime(state.start)}
+                    </>
+                  )}
+                </span>
+              </span>
+              <span className="flex shrink-0 items-center gap-1 text-primary">
+                Обобщение{" "}
+                <ChevronUp aria-hidden="true" data-icon="inline-end" />
+              </span>
+            </SheetTrigger>
+          </div>
+          <SheetContent
+            side="bottom"
+            className="max-h-[78dvh] overflow-y-auto rounded-t-[22px]"
+            finalFocus={() =>
+              editing.current ? document.getElementById("step-heading") : true
+            }
+          >
+            <SheetHeader className="pr-16">
+              <SheetTitle>Твоят избор</SheetTitle>
+              <SheetDescription>
+                Всички часове са местни за салона в София (Europe/Sofia).
+              </SheetDescription>
+            </SheetHeader>
+            <div className="px-4">{card}</div>
+            <SheetFooter>
+              <SheetClose
+                render={<Button variant="outline" className="min-h-11" />}
+              >
+                Затвори
+              </SheetClose>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      </aside>
+      <fieldset
+        aria-label="Действия по резервацията"
+        className="flex min-w-0 flex-col gap-2 bg-card px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] lg:col-start-1 lg:row-start-2 lg:items-end lg:bg-transparent lg:p-0"
+      >
+        {action}
+      </fieldset>
+    </>
   );
 }

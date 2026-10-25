@@ -1,5 +1,37 @@
 import { expect, test } from "@playwright/test";
 
+test("desktop summary remains a sticky 340px rail with one native service submitter", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+  await page.goto("/");
+  const rail = page.getByRole("complementary", { name: "Твоят избор" });
+  await expect(rail).toHaveCSS("width", "340px");
+  await expect(rail).toHaveCSS("position", "sticky");
+  await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+  await expect(rail).toContainText("Общо · 30 мин");
+  await expect(rail).toContainText("23,00");
+  const next = page.getByRole("button", { name: "Продължи", exact: true });
+  await expect(next).toHaveCount(1);
+  await expect(next).toHaveAttribute("form", "booking-services");
+  await next.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "Специалист", exact: true }),
+  ).toBeFocused();
+  await expect(next).toBeDisabled();
+  await page.getByRole("radio", { name: /Мила/ }).check();
+  await next.click();
+  await page.getByRole("radio", { name: "15:00", exact: true }).check();
+  await expect(rail).toContainText("15:00–15:30");
+  await expect(rail).toContainText("Мила");
+  await page.screenshot({
+    path: "coverage/playwright/summary-rail-1280.png",
+    fullPage: true,
+  });
+});
+
 import { auditRenderedControls } from "./rendered-audit";
 
 for (const width of [360, 390, 768, 1024, 1280, 1440]) {

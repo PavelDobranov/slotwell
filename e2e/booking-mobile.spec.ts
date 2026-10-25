@@ -2,6 +2,91 @@ import { expect, test } from "@playwright/test";
 
 import { auditRenderedControls } from "./rendered-audit";
 
+test("360px booking bar owns one action and remains in flow with a short keyboard viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 844 });
+  await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+  await page.goto("/");
+  const summary = page.getByRole("button", { name: /Обобщение/ });
+  const next = page.getByRole("button", { name: "Продължи", exact: true });
+  await expect(next).toHaveCount(1);
+  await expect(summary).toContainText("Няма избрани услуги");
+  await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+  await expect(summary).toContainText("1 услуга · 30 мин");
+  await expect(summary).toContainText("23,00");
+  await next.click();
+  await expect(next).toBeDisabled();
+  await page.getByRole("radio", { name: /Мила/ }).check();
+  await next.click();
+  await page.getByRole("radio", { name: "15:00", exact: true }).check();
+  await expect(summary).toContainText("15:00");
+  await next.click();
+  const submit = page.getByRole("button", {
+    name: "Провери данните",
+    exact: true,
+  });
+  await expect(submit).toHaveCount(1);
+  await expect(
+    page.getByRole("textbox", { name: "Име", exact: true }),
+  ).toHaveAttribute("aria-invalid", "false");
+  await expect(submit).toHaveAttribute("form", "booking-contact");
+  await page.setViewportSize({ width: 360, height: 320 });
+  const email = page.getByRole("textbox", { name: "Имейл", exact: true });
+  await email.focus();
+  await expect(email).toBeInViewport();
+  await page.keyboard.type("demo@example.com");
+  await page.keyboard.press("Tab");
+  await submit.scrollIntoViewIfNeeded();
+  await expect(submit).toBeInViewport();
+  await submit.click();
+  await expect(
+    page.getByRole("textbox", { name: "Име", exact: true }),
+  ).toBeFocused();
+  await expect(page).toHaveURL("/");
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(360);
+});
+
+test("200% scaled mobile bar and long summary stay scrollable without covering focus", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 600 });
+  await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+  await page.goto("/");
+  await expect(page.getByRole("checkbox")).toHaveCount(4);
+  for (const checkbox of await page.getByRole("checkbox").all())
+    await checkbox.check();
+  await page.evaluate(() => {
+    document.documentElement.style.zoom = "2";
+  });
+  const trigger = page.getByRole("button", { name: /Обобщение/ });
+  await trigger.scrollIntoViewIfNeeded();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(360);
+  await trigger.click();
+  const sheet = page.getByRole("dialog", { name: "Твоят избор" });
+  await expect(sheet.getByRole("listitem")).toHaveCount(4);
+  expect(
+    await sheet.evaluate(
+      (element) => element.scrollHeight > element.clientHeight,
+    ),
+  ).toBe(true);
+  const footerClose = sheet
+    .locator('[data-slot="sheet-footer"]')
+    .getByRole("button", { name: "Затвори", exact: true });
+  await footerClose.focus();
+  await expect(footerClose).toBeInViewport();
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  await page.screenshot({
+    path: "coverage/playwright/booking-bar-200-percent.png",
+    fullPage: true,
+  });
+});
+
 for (const width of [390, 1440]) {
   test(`${width}px shared controls retain size and state throughout the wizard`, async ({
     page,

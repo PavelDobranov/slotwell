@@ -70,7 +70,7 @@ async function reachReview(
   await expect(review).toContainText("Демо Посетител");
   await expect(review).toContainText("baseline@example.com");
   await expect(
-    review.getByRole("button", {
+    page.getByRole("button", {
       name: "Потвърди демо резервация",
       exact: true,
     }),
