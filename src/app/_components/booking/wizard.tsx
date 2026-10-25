@@ -7,6 +7,7 @@ import { useEffect, useReducer, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 
+import { BookingHeader } from "@/app/_components/booking/booking-header";
 import { BookingSummary } from "@/app/_components/booking/booking-summary";
 import { DetailsStep } from "@/app/_components/booking/details-step";
 import { RecoveryNotice } from "@/app/_components/booking/recovery-notice";
@@ -175,276 +176,297 @@ export function BookingWizard() {
 
   return (
     <>
-      {!confirmed && (
-        <Stepper
-          state={state}
-          review={reviewing}
-          disabled={pending}
-          onNavigate={(step) => {
-            dispatch({ type: "edit", step });
-            requestAnimationFrame(() => heading.current?.focus());
-          }}
-        />
-      )}
-      <fieldset
+      <BookingHeader
         disabled={pending}
-        aria-busy={pending}
-        className={cn(
-          "grid min-w-0 items-start gap-8",
-          confirmed
-            ? "mx-auto max-w-170"
-            : "pb-24 lg:grid-cols-[minmax(0,1fr)_22.5rem] lg:pb-0",
-        )}
-      >
-        <section
-          onFocusCapture={(event) => {
-            lastFocusedControl.current = event.target;
-          }}
-          aria-labelledby="step-heading"
-          className="flex min-w-0 flex-col gap-4 py-2"
-        >
-          <p className="sr-only">
-            {confirmed
-              ? "Демонстрацията е завършена"
-              : `Стъпка ${progress.current + 1} от 4`}
-          </p>
-          {confirmed && (
-            <CircleCheck
-              aria-hidden="true"
-              className="size-11 fill-primary text-primary-foreground"
-            />
-          )}
-          <h2
-            id="step-heading"
-            ref={heading}
-            tabIndex={-1}
-            className={
-              state.step === "details" && !confirmed
-                ? "sr-only"
-                : "rounded-sm text-xl font-semibold"
-            }
-          >
-            {confirmed
-              ? "Демо резервацията е потвърдена"
-              : stepLabels[state.step]}
-          </h2>
-          {!confirmed && (
-            <RecoveryNotice
-              state={state}
-              pathSwitched={pathSwitched}
-              staffName={
-                salon?.staff.find(({ id }) => id === state.staffId)?.name
+        onBack={
+          confirmed || state.step === "services"
+            ? undefined
+            : () => {
+                if (reviewing) {
+                  setReviewRequested(false);
+                  requestAnimationFrame(() => heading.current?.focus());
+                } else dispatch({ type: "back" });
               }
-            />
-          )}
-          {confirmationError && !confirmed && (
-            <Alert variant="destructive" className="px-4 py-3">
-              <CircleAlert aria-hidden="true" />
-              <AlertTitle>
-                {state.step === "details"
-                  ? "Не успяхме да потвърдим"
-                  : "Избери нов час"}
-              </AlertTitle>
-              <AlertDescription>{confirmationError}</AlertDescription>
-            </Alert>
-          )}
-          {confirmed && salon !== null && state.start !== null ? (
-            <Success
-              salon={salon}
-              state={{ ...state, start: state.start }}
-              onNewBooking={() => {
-                submissionLocked.current = false;
-                setConfirmed(false);
-                setConfirmationError("");
-                dispatch({ type: "new-booking" });
-              }}
-            />
-          ) : state.step === "services" ? (
-            <fieldset disabled={salon === null} className="min-w-0">
-              <ServicesStep
-                services={salon?.services ?? []}
-                serviceIds={state.serviceIds}
-                path={state.path}
-                noSpecialist={noSpecialist}
-                onServices={(ids) => dispatch({ type: "services", ids })}
-                onPath={(path) => dispatch({ type: "path", path })}
-                onNext={() => dispatch({ type: "next" })}
-              />
-            </fieldset>
-          ) : (
-            <>
-              <fieldset className="flex min-w-0 flex-col gap-3">
-                <legend id="path-label" className="mb-3 font-medium">
-                  Как предпочиташ да избереш?
-                </legend>
-                <RadioGroup
-                  aria-labelledby="path-label"
-                  value={state.path}
-                  onValueChange={(path) => {
-                    if (path === "staff-first" || path === "time-first")
-                      dispatch({ type: "path", path });
-                  }}
-                  className="flex flex-col gap-3 sm:flex-row"
-                >
-                  {(
-                    [
-                      ["staff-first", "Първо специалист"],
-                      ["time-first", "Първо дата и час"],
-                    ] as const
-                  ).map(([path, label]) => (
-                    <div
-                      key={path}
-                      className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3"
-                    >
-                      <Radio.Root
-                        id={path}
-                        nativeButton
-                        render={<button type="button" />}
-                        value={path}
-                        className="flex size-5 shrink-0 items-center justify-center rounded-full border border-input bg-background text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                      >
-                        <Radio.Indicator className="size-2.5 rounded-full bg-current" />
-                      </Radio.Root>
-                      <label
-                        htmlFor={path}
-                        className="flex min-h-11 cursor-pointer items-center"
-                      >
-                        {label}
-                      </label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </fieldset>
-              {salon !== null &&
-              availabilityTime !== null &&
-              state.step === "staff" ? (
-                <SpecialistStep
-                  salon={salon}
-                  serviceIds={state.serviceIds}
-                  staffId={state.staffId}
-                  availableStaffIds={
-                    state.path === "time-first"
-                      ? (availableSlots({
-                          salon,
-                          now: availabilityTime,
-                          sessionOccupied: session.current?.occupied,
-                          serviceIds: state.serviceIds,
-                          date:
-                            state.start === null
-                              ? businessDateAt(availabilityTime)
-                              : businessDateAt(state.start),
-                        }).find(({ start }) => start === state.start)
-                          ?.staffIds ?? [])
-                      : undefined
-                  }
-                  onServices={(ids) => dispatch({ type: "services", ids })}
-                  onEditTime={() => dispatch({ type: "edit", step: "time" })}
-                  onSelect={(id) => dispatch({ type: "staff", id })}
-                  onNext={() => dispatch({ type: "next" })}
-                  onEditServices={() =>
-                    dispatch({ type: "edit", step: "services" })
-                  }
-                />
-              ) : state.step === "time" &&
-                salon !== null &&
-                availabilityTime !== null ? (
-                <TimeStep
-                  availability={{
-                    salon,
-                    now: availabilityTime,
-                    sessionOccupied: session.current?.occupied,
-                    serviceIds: state.serviceIds,
-                    staffId:
-                      state.path === "staff-first"
-                        ? (state.staffId ?? undefined)
-                        : undefined,
-                  }}
-                  start={state.start}
-                  selectedDate={state.date}
-                  onEditStaff={() => {
-                    if (state.path === "time-first") {
-                      dispatch({ type: "path", path: "staff-first" });
-                    }
-                    dispatch({ type: "edit", step: "staff" });
-                  }}
-                  onDate={(date) => dispatch({ type: "date", date })}
-                  onSelect={(start) => dispatch({ type: "time", start })}
-                  onNext={() => dispatch({ type: "next" })}
-                  onEditServices={() =>
-                    dispatch({ type: "edit", step: "services" })
-                  }
-                />
-              ) : state.step === "details" &&
-                salon !== null &&
-                state.start !== null ? (
-                <DetailsStep
-                  draft={state.contact}
-                  checked={reviewing}
-                  onChecked={(checked) => {
-                    // Revalidate against the live clock before entering review.
-                    if (checked) dispatch({ type: "refresh" });
-                    setReviewRequested(checked);
-                  }}
-                  pending={pending}
-                  retryable={Boolean(confirmationError)}
-                  appointment={{
-                    start: state.start,
-                    staffName:
-                      salon.staff.find(({ id }) => id === state.staffId)
-                        ?.name ?? "",
-                    ...selectedTotals(state, salon),
-                  }}
-                  onBack={() => dispatch({ type: "back" })}
-                  onConfirm={confirm}
-                  onChange={(draft) => dispatch({ type: "contact", draft })}
-                />
-              ) : (
-                <p className="text-muted-foreground">
-                  {noSpecialist
-                    ? "Няма специалист за тази комбинация от услуги. Върни се и промени избора си."
-                    : "Изборът на конкретен специалист и свободен час ще бъде добавен в следващите стъпки на прототипа."}
-                </p>
-              )}
-              <Button
-                hidden={state.step === "details"}
-                variant="outline"
-                className="self-start"
-                onClick={() => dispatch({ type: "back" })}
-              >
-                Назад
-              </Button>
-            </>
-          )}
-          {!confirmed && (
-            <>
-              <p className="text-sm text-muted-foreground" aria-live="polite">
-                {today === null ? (
-                  "Подготвяме датата на салона…"
-                ) : (
-                  <>
-                    Днес:{" "}
-                    <time dateTime={today}>{formatBusinessDate(today)}</time>
-                  </>
-                )}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Всички часове са местни за салона в София (Europe/Sofia).
-              </p>
-            </>
-          )}
-          <noscript>
-            За избор на услуги е необходимо да включиш JavaScript.
-          </noscript>
-        </section>
+        }
+      >
         {!confirmed && (
-          <BookingSummary
-            salon={salon}
+          <Stepper
             state={state}
-            confirmed={false}
-            onEdit={(step) => dispatch({ type: "edit", step })}
+            review={reviewing}
+            disabled={pending}
+            onNavigate={(step) => {
+              dispatch({ type: "edit", step });
+              requestAnimationFrame(() => heading.current?.focus());
+            }}
           />
         )}
-      </fieldset>
+      </BookingHeader>
+      <main
+        id="booking"
+        tabIndex={-1}
+        className="flex w-full flex-1 flex-col gap-5 px-4 pt-5 pb-7 lg:gap-6 lg:px-12 lg:pt-10 lg:pb-14"
+      >
+        <h1 className="sr-only">Запази време за себе си</h1>
+        <fieldset
+          disabled={pending}
+          aria-busy={pending}
+          className={cn(
+            "grid min-w-0 items-start gap-8",
+            confirmed
+              ? "mx-auto max-w-170"
+              : "pb-24 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12 lg:pb-0",
+          )}
+        >
+          <section
+            onFocusCapture={(event) => {
+              lastFocusedControl.current = event.target;
+            }}
+            aria-labelledby="step-heading"
+            className="flex min-w-0 flex-col gap-4 py-2"
+          >
+            <p className="sr-only">
+              {confirmed
+                ? "Демонстрацията е завършена"
+                : `Стъпка ${progress.current + 1} от 4`}
+            </p>
+            {confirmed && (
+              <CircleCheck
+                aria-hidden="true"
+                className="size-11 fill-primary text-primary-foreground"
+              />
+            )}
+            <h2
+              id="step-heading"
+              ref={heading}
+              tabIndex={-1}
+              className={
+                state.step === "details" && !confirmed
+                  ? "sr-only"
+                  : "rounded-sm text-xl font-semibold"
+              }
+            >
+              {confirmed
+                ? "Демо резервацията е потвърдена"
+                : stepLabels[state.step]}
+            </h2>
+            {!confirmed && (
+              <RecoveryNotice
+                state={state}
+                pathSwitched={pathSwitched}
+                staffName={
+                  salon?.staff.find(({ id }) => id === state.staffId)?.name
+                }
+              />
+            )}
+            {confirmationError && !confirmed && (
+              <Alert variant="destructive" className="px-4 py-3">
+                <CircleAlert aria-hidden="true" />
+                <AlertTitle>
+                  {state.step === "details"
+                    ? "Не успяхме да потвърдим"
+                    : "Избери нов час"}
+                </AlertTitle>
+                <AlertDescription>{confirmationError}</AlertDescription>
+              </Alert>
+            )}
+            {confirmed && salon !== null && state.start !== null ? (
+              <Success
+                salon={salon}
+                state={{ ...state, start: state.start }}
+                onNewBooking={() => {
+                  submissionLocked.current = false;
+                  setConfirmed(false);
+                  setConfirmationError("");
+                  dispatch({ type: "new-booking" });
+                }}
+              />
+            ) : state.step === "services" ? (
+              <fieldset disabled={salon === null} className="min-w-0">
+                <ServicesStep
+                  services={salon?.services ?? []}
+                  serviceIds={state.serviceIds}
+                  path={state.path}
+                  noSpecialist={noSpecialist}
+                  onServices={(ids) => dispatch({ type: "services", ids })}
+                  onPath={(path) => dispatch({ type: "path", path })}
+                  onNext={() => dispatch({ type: "next" })}
+                />
+              </fieldset>
+            ) : (
+              <>
+                <fieldset className="flex min-w-0 flex-col gap-3">
+                  <legend id="path-label" className="mb-3 font-medium">
+                    Как предпочиташ да избереш?
+                  </legend>
+                  <RadioGroup
+                    aria-labelledby="path-label"
+                    value={state.path}
+                    onValueChange={(path) => {
+                      if (path === "staff-first" || path === "time-first")
+                        dispatch({ type: "path", path });
+                    }}
+                    className="flex flex-col gap-3 sm:flex-row"
+                  >
+                    {(
+                      [
+                        ["staff-first", "Първо специалист"],
+                        ["time-first", "Първо дата и час"],
+                      ] as const
+                    ).map(([path, label]) => (
+                      <div
+                        key={path}
+                        className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3"
+                      >
+                        <Radio.Root
+                          id={path}
+                          nativeButton
+                          render={<button type="button" />}
+                          value={path}
+                          className="flex size-5 shrink-0 items-center justify-center rounded-full border border-input bg-background text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        >
+                          <Radio.Indicator className="size-2.5 rounded-full bg-current" />
+                        </Radio.Root>
+                        <label
+                          htmlFor={path}
+                          className="flex min-h-11 cursor-pointer items-center"
+                        >
+                          {label}
+                        </label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </fieldset>
+                {salon !== null &&
+                availabilityTime !== null &&
+                state.step === "staff" ? (
+                  <SpecialistStep
+                    salon={salon}
+                    serviceIds={state.serviceIds}
+                    staffId={state.staffId}
+                    availableStaffIds={
+                      state.path === "time-first"
+                        ? (availableSlots({
+                            salon,
+                            now: availabilityTime,
+                            sessionOccupied: session.current?.occupied,
+                            serviceIds: state.serviceIds,
+                            date:
+                              state.start === null
+                                ? businessDateAt(availabilityTime)
+                                : businessDateAt(state.start),
+                          }).find(({ start }) => start === state.start)
+                            ?.staffIds ?? [])
+                        : undefined
+                    }
+                    onServices={(ids) => dispatch({ type: "services", ids })}
+                    onEditTime={() => dispatch({ type: "edit", step: "time" })}
+                    onSelect={(id) => dispatch({ type: "staff", id })}
+                    onNext={() => dispatch({ type: "next" })}
+                    onEditServices={() =>
+                      dispatch({ type: "edit", step: "services" })
+                    }
+                  />
+                ) : state.step === "time" &&
+                  salon !== null &&
+                  availabilityTime !== null ? (
+                  <TimeStep
+                    availability={{
+                      salon,
+                      now: availabilityTime,
+                      sessionOccupied: session.current?.occupied,
+                      serviceIds: state.serviceIds,
+                      staffId:
+                        state.path === "staff-first"
+                          ? (state.staffId ?? undefined)
+                          : undefined,
+                    }}
+                    start={state.start}
+                    selectedDate={state.date}
+                    onEditStaff={() => {
+                      if (state.path === "time-first") {
+                        dispatch({ type: "path", path: "staff-first" });
+                      }
+                      dispatch({ type: "edit", step: "staff" });
+                    }}
+                    onDate={(date) => dispatch({ type: "date", date })}
+                    onSelect={(start) => dispatch({ type: "time", start })}
+                    onNext={() => dispatch({ type: "next" })}
+                    onEditServices={() =>
+                      dispatch({ type: "edit", step: "services" })
+                    }
+                  />
+                ) : state.step === "details" &&
+                  salon !== null &&
+                  state.start !== null ? (
+                  <DetailsStep
+                    draft={state.contact}
+                    checked={reviewing}
+                    onChecked={(checked) => {
+                      // Revalidate against the live clock before entering review.
+                      if (checked) dispatch({ type: "refresh" });
+                      setReviewRequested(checked);
+                    }}
+                    pending={pending}
+                    retryable={Boolean(confirmationError)}
+                    appointment={{
+                      start: state.start,
+                      staffName:
+                        salon.staff.find(({ id }) => id === state.staffId)
+                          ?.name ?? "",
+                      ...selectedTotals(state, salon),
+                    }}
+                    onBack={() => dispatch({ type: "back" })}
+                    onConfirm={confirm}
+                    onChange={(draft) => dispatch({ type: "contact", draft })}
+                  />
+                ) : (
+                  <p className="text-muted-foreground">
+                    {noSpecialist
+                      ? "Няма специалист за тази комбинация от услуги. Върни се и промени избора си."
+                      : "Изборът на конкретен специалист и свободен час ще бъде добавен в следващите стъпки на прототипа."}
+                  </p>
+                )}
+                <Button
+                  hidden={state.step === "details"}
+                  variant="outline"
+                  className="hidden self-start lg:inline-flex"
+                  onClick={() => dispatch({ type: "back" })}
+                >
+                  Назад
+                </Button>
+              </>
+            )}
+            {!confirmed && (
+              <>
+                <p className="text-sm text-muted-foreground" aria-live="polite">
+                  {today === null ? (
+                    "Подготвяме датата на салона…"
+                  ) : (
+                    <>
+                      Днес:{" "}
+                      <time dateTime={today}>{formatBusinessDate(today)}</time>
+                    </>
+                  )}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Всички часове са местни за салона в София (Europe/Sofia).
+                </p>
+              </>
+            )}
+            <noscript>
+              За избор на услуги е необходимо да включиш JavaScript.
+            </noscript>
+          </section>
+          {!confirmed && (
+            <BookingSummary
+              salon={salon}
+              state={state}
+              confirmed={false}
+              onEdit={(step) => dispatch({ type: "edit", step })}
+            />
+          )}
+        </fieldset>
+      </main>
     </>
   );
 }

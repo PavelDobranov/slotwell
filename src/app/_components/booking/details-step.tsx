@@ -234,7 +234,7 @@ export function DetailsStep({
             <Button
               type="button"
               variant="outline"
-              className="min-h-11"
+              className="hidden min-h-11 lg:inline-flex"
               onClick={onBack}
             >
               <ArrowLeft aria-hidden="true" data-icon="inline-start" />

@@ -2,7 +2,43 @@ import { expect, test } from "@playwright/test";
 
 import { auditRenderedControls } from "./rendered-audit";
 
-for (const width of [360, 1440]) {
+for (const width of [360, 390, 768, 1024, 1280, 1440]) {
+  test(`${width}px fluid brand shell retains landmarks, gutters and skip access`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 600 });
+    await page.goto("/");
+    await expect(page.getByRole("banner")).toHaveCount(1);
+    await expect(page.getByRole("main")).toHaveCount(1);
+    await expect(page.locator("h1")).toHaveCount(1);
+    await expect(page).toHaveTitle(/Ателие Мента/);
+    await expect(page.getByRole("banner")).toContainText("Ателие Мента");
+    await expect(page.getByRole("banner")).toContainText(
+      "Демо версия — не се създава реална резервация.",
+    );
+    await expect(page.getByRole("contentinfo")).toContainText(
+      "Данните се пазят само докато страницата е отворена.",
+    );
+    const main = page.getByRole("main");
+    const gutter = width >= 1024 ? "48px" : "16px";
+    await expect(main).toHaveCSS("padding-left", gutter);
+    await expect(main).toHaveCSS("padding-right", gutter);
+    await page.keyboard.press("Tab");
+    await expect(
+      page.getByRole("link", { name: "Към резервацията" }),
+    ).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(main).toBeFocused();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+    await page.getByRole("contentinfo").scrollIntoViewIfNeeded();
+    await expect(page.getByRole("contentinfo")).toBeInViewport();
+    await page.screenshot({
+      path: `coverage/playwright/shell-${width}.png`,
+      fullPage: true,
+    });
+  });
   test(`${width}px calendar and route targets meet the shared 44px floor`, async ({
     page,
   }) => {
@@ -93,6 +129,17 @@ for (const width of [360, 1440]) {
           .getByRole("button", { name: "Продължи", exact: true })
           .click();
       }
+      await expect(
+        page.getByRole("button", { name: "Назад", exact: true }),
+      ).toHaveCount(1);
+      await page.getByRole("button", { name: "Назад", exact: true }).click();
+      await expect(
+        page.getByRole("heading", {
+          name: path === "staff-first" ? "Дата и час" : "Специалист",
+          exact: true,
+        }),
+      ).toBeFocused();
+      await page.getByRole("button", { name: "Продължи", exact: true }).click();
       await page
         .getByRole("textbox", { name: "Име", exact: true })
         .fill("Demo Chrome");
