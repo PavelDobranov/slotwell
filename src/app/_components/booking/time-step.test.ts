@@ -50,6 +50,14 @@ test("date strip shows seven dated options with selector counts, today and disab
   assert.match(html, /Календар/);
 });
 
+test("Clear Day dates are compact chips with a non-color unavailable treatment", () => {
+  const html = render();
+  assert.match(html, /h-18/);
+  assert.match(html, /has-\[:disabled\]:border-dashed/);
+  assert.match(html, /has-\[:checked\]:bg-primary/);
+  assert.match(html, /aria-label="[^"]+Няма часове/);
+});
+
 test("slot groups and selected range use salon time and exclude cleanup", () => {
   const html = render({ start: localStart("2026-06-01", 900) });
   assert.match(html, /Сутрин/);

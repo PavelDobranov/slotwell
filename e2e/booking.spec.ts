@@ -849,6 +849,58 @@ test("date strip pages without changing selection and calendar supports keyboard
   await expect(dates.getByRole("radio").last()).toHaveValue("2026-07-31");
 });
 
+for (const width of [360, 1280]) {
+  test(`Clear Day dates and real slot controls fit ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+    await page.goto("/");
+    await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+    await page.getByRole("button", { name: "Продължи", exact: true }).click();
+    const dates = page.getByRole("group", {
+      name: "Дата на посещението",
+      exact: true,
+    });
+    const firstDate = dates.getByRole("radio").first();
+    const chip = firstDate.locator("..");
+    await expect(chip).toHaveCSS("height", "72px");
+    const unavailable = dates
+      .getByRole("radio", { name: /Няма часове/ })
+      .first();
+    await expect(unavailable).toBeDisabled();
+    await expect(unavailable.locator("..")).toHaveCSS("border-style", "dashed");
+    await expect(
+      page.getByRole("radio", { name: "09:00", exact: true }),
+    ).not.toBeChecked();
+    const slot = page.getByRole("radio", { name: "09:00", exact: true });
+    await expect(slot.locator("..")).toHaveCSS("min-height", "48px");
+    await slot.check();
+    await expect(slot.locator("..")).toHaveCSS(
+      "background-color",
+      await chip.evaluate((node) => getComputedStyle(node).backgroundColor),
+    );
+    await expect(
+      page.getByRole("radio", { name: "09:15", exact: true }),
+    ).not.toBeChecked();
+    const grid = slot.locator("../..");
+    expect(
+      await grid.evaluate(
+        (node) => getComputedStyle(node).gridTemplateColumns.split(" ").length,
+      ),
+    ).toBe(width === 360 ? 4 : 6);
+    await page.getByRole("button", { name: "Следващите 7 дни" }).click();
+    await expect(slot).toBeChecked();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+    await page.screenshot({
+      path: `coverage/playwright/time-controls-${width}.png`,
+      fullPage: true,
+    });
+  });
+}
+
 for (const width of [320, 360, 768, 1024, 1440]) {
   test(`the shell fits a ${width}px viewport`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
