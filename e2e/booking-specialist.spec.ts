@@ -10,6 +10,9 @@ for (const width of [390, 1440]) {
     await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
     await page.getByRole("checkbox", { name: /Измиване и оформяне/ }).check();
     await page.getByRole("button", { name: "Продължи", exact: true }).click();
+    await page
+      .getByRole("radio", { name: "Първо специалист", exact: true })
+      .check();
     const group = page.getByRole("group", { name: "Избери специалист" });
     await expect(group.getByRole("radio")).toHaveCount(3);
     for (const radio of await group.getByRole("radio").all()) {

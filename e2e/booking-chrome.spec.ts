@@ -17,6 +17,9 @@ test("desktop summary remains a sticky 340px rail with one native service submit
   await expect(next).toHaveAttribute("form", "booking-services");
   await next.focus();
   await page.keyboard.press("Enter");
+  await page
+    .getByRole("radio", { name: "Първо специалист", exact: true })
+    .check();
   await expect(
     page.getByRole("heading", { name: "Специалист", exact: true }),
   ).toBeFocused();
@@ -119,17 +122,17 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
     await expect(
       page.getByRole("button", { name: "Продължи", exact: true }),
     ).toBeEnabled();
-    const route = await auditRenderedControls(
-      page,
-      '[data-slot="toggle-group"]',
-    );
-    expect(route.targets.length).toBeGreaterThan(0);
-    expect(route.targets.filter(({ minimum44 }) => !minimum44)).toEqual([]);
     await page.getByRole("checkbox", { name: /Подстригване/ }).check();
     await page.getByRole("button", { name: "Продължи", exact: true }).click();
     await page
       .getByRole("radio", { name: "Първо дата и час", exact: true })
       .check();
+    const route = await auditRenderedControls(
+      page,
+      '[role="radiogroup"][aria-labelledby="path-label"]',
+    );
+    expect(route.targets.length).toBeGreaterThan(0);
+    expect(route.targets.filter(({ minimum44 }) => !minimum44)).toEqual([]);
     await page.getByRole("button", { name: "Календар", exact: true }).click();
     const popup = page.locator('[data-slot="popover-content"]');
     await expect
@@ -170,10 +173,13 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       await expect(nav.getByRole("link")).toHaveCount(0);
       await page.getByRole("checkbox", { name: /Подстригване/ }).check();
       await page.getByRole("button", { name: "Продължи", exact: true }).click();
-      if (path === "time-first")
-        await page
-          .getByRole("radio", { name: "Първо дата и час", exact: true })
-          .check();
+      await page
+        .getByRole("radio", {
+          name:
+            path === "staff-first" ? "Първо специалист" : "Първо дата и час",
+          exact: true,
+        })
+        .check();
       const second = "Час и специалист";
       await expect(nav.locator('[aria-current="step"]')).toContainText(second);
       await expect(nav.getByRole("link")).toHaveCount(1);
@@ -292,6 +298,13 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
           "Преглед",
         );
       }
+      await nav.getByRole("link", { name: /Час и специалист/ }).click();
+      await expect(
+        page.getByRole("heading", {
+          name: path === "staff-first" ? "Специалист" : "Дата и час",
+          exact: true,
+        }),
+      ).toBeFocused();
       await page
         .getByRole("radio", {
           name:
@@ -350,10 +363,13 @@ for (const path of ["staff-first", "time-first"] as const) {
       await page.goto("/");
       await page.getByRole("checkbox", { name: /Подстригване/ }).check();
       await page.getByRole("button", { name: "Продължи", exact: true }).click();
-      if (path === "time-first")
-        await page
-          .getByRole("radio", { name: "Първо дата и час", exact: true })
-          .check();
+      await page
+        .getByRole("radio", {
+          name:
+            path === "staff-first" ? "Първо специалист" : "Първо дата и час",
+          exact: true,
+        })
+        .check();
       if (path === "staff-first") {
         await page.getByRole("radio", { name: /Иван/ }).check();
         await page

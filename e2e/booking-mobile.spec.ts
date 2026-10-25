@@ -16,6 +16,9 @@ test("360px booking bar owns one action and remains in flow with a short keyboar
   await expect(summary).toContainText("1 услуга · 30 мин");
   await expect(summary).toContainText("23,00");
   await next.click();
+  await page
+    .getByRole("radio", { name: "Първо специалист", exact: true })
+    .check();
   await expect(next).toBeDisabled();
   await page.getByRole("radio", { name: /Мила/ }).check();
   await next.click();
@@ -190,6 +193,9 @@ for (const width of [390, 1440]) {
     await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
     await page.getByRole("checkbox", { name: /Измиване и оформяне/ }).check();
     await page.getByRole("button", { name: "Продължи", exact: true }).click();
+    await page
+      .getByRole("radio", { name: "Първо специалист", exact: true })
+      .check();
     const removal = page.getByRole("button", {
       name: "Махни „Измиване и оформяне“",
     });

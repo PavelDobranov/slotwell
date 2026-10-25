@@ -129,7 +129,24 @@ for (const width of [360, 1440]) {
       }
       await verifyRendered("Избрани услуги");
       await activate(page, button("Продължи"));
-      await verifyStep("Специалист");
+      const staffPath = page.getByRole("radio", {
+        name: "Първо специалист",
+        exact: true,
+      });
+      const timePath = page.getByRole("radio", {
+        name: "Първо дата и час",
+        exact: true,
+      });
+      const startsWithStaff = await staffPath.isChecked();
+      await verifyStep(startsWithStaff ? "Специалист" : "Дата и час");
+      // Normalize with the keyboard, even when staff-first is already selected.
+      await activate(
+        page,
+        startsWithStaff ? staffPath : timePath,
+        startsWithStaff ? "Space" : "ArrowLeft",
+      );
+      await expect(staffPath).toBeChecked();
+      if (!startsWithStaff) await verifyStep("Специалист");
       if (path === "time-first") {
         await activate(
           page,
@@ -183,7 +200,8 @@ for (const width of [360, 1440]) {
       }
       await expectNoPersistence(page);
       const summaryTrigger = page.getByRole("button", { name: "Виж избора" });
-      if (await summaryTrigger.isVisible()) await activate(page, summaryTrigger);
+      if (await summaryTrigger.isVisible())
+        await activate(page, summaryTrigger);
       await activate(page, button("Промени датата и часа"));
       await verifyStep("Дата и час");
       await activate(page, button("Назад"));
