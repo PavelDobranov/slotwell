@@ -4,10 +4,12 @@ import { Radio } from "@base-ui/react/radio";
 import { RadioGroup } from "@base-ui/react/radio-group";
 import {
   ArrowRight,
+  Calendar,
   Check,
   CircleAlert,
   CircleCheck,
   LoaderCircle,
+  User,
 } from "lucide-react";
 import { useEffect, useReducer, useRef, useState } from "react";
 
@@ -341,9 +343,12 @@ export function BookingWizard() {
             ) : (
               <>
                 {(state.step === "staff" || state.step === "time") && (
-                  <fieldset className="flex min-w-0 flex-col gap-3">
-                    <legend id="path-label" className="mb-3 font-medium">
-                      Как предпочиташ да избереш?
+                  <fieldset className="flex min-w-0 flex-col gap-2">
+                    <legend
+                      id="path-label"
+                      className="mb-2 text-sm font-medium text-muted-foreground"
+                    >
+                      Започнете с
                     </legend>
                     <RadioGroup
                       aria-labelledby="path-label"
@@ -352,34 +357,27 @@ export function BookingWizard() {
                         if (path === "staff-first" || path === "time-first")
                           dispatch({ type: "path", path });
                       }}
-                      className="flex flex-col gap-3 sm:flex-row"
+                      className="flex gap-1 rounded-card bg-secondary p-1"
                     >
                       {(
                         [
-                          ["staff-first", "Първо специалист"],
-                          ["time-first", "Първо дата и час"],
+                          ["time-first", "Дата и час", Calendar],
+                          ["staff-first", "Специалист", User],
                         ] as const
-                      ).map(([path, label]) => (
-                        <div
+                      ).map(([path, label, Icon]) => (
+                        <Radio.Root
                           key={path}
-                          className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3"
+                          nativeButton
+                          render={<button type="button" />}
+                          value={path}
+                          className="flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-2.5 rounded-slot bg-secondary px-3 text-sm font-semibold text-muted-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-checked:bg-card data-checked:text-foreground data-checked:shadow-sm"
                         >
-                          <Radio.Root
-                            id={path}
-                            nativeButton
-                            render={<button type="button" />}
-                            value={path}
-                            className="flex size-5 shrink-0 items-center justify-center rounded-full border border-input bg-background text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                          >
-                            <Radio.Indicator className="size-2.5 rounded-full bg-current" />
-                          </Radio.Root>
-                          <label
-                            htmlFor={path}
-                            className="flex min-h-11 cursor-pointer items-center"
-                          >
-                            {label}
-                          </label>
-                        </div>
+                          <Icon
+                            aria-hidden="true"
+                            className="size-[18px] shrink-0"
+                          />
+                          {label}
+                        </Radio.Root>
                       ))}
                     </RadioGroup>
                   </fieldset>

@@ -90,7 +90,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await page.getByRole("button", { name: "Продължи" }).click();
     await page
       .getByRole("radio", {
-        name: path === "staff-first" ? "Първо специалист" : "Първо дата и час",
+        name: path === "staff-first" ? "Специалист" : "Дата и час",
         exact: true,
       })
       .check();
@@ -183,7 +183,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(
       page.getByRole("status").filter({ hasText: "Данните са валидни" }),
     ).toBeVisible();
-    const summary = page.getByRole("complementary", { name: "Твоят избор" });
+    const summary = page.getByRole("complementary", { name: "Вашата резервация" });
     await expect(summary).toContainText("Подстригване");
     await expect(summary).toContainText("Мила");
     await expect(summary).toContainText("1 юни 2026");
@@ -231,7 +231,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     }
     await page.setViewportSize({ width: 360, height: 800 });
     for (const [action, heading] of [
-      ["Промени услугите в прегледа", "Услуги"],
+      ["Промени услугите в прегледа", "Изберете услуги"],
       ["Промени специалиста в прегледа", "Специалист"],
       ["Промени датата и часа в прегледа", "Дата и час"],
     ]) {
@@ -269,7 +269,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await page.getByRole("button", { name: "Продължи" }).click();
     await expect(name).toHaveValue("  Демо Посетител  ");
     for (const [action, heading] of [
-      ["Промени услугите", "Услуги"],
+      ["Промени услугите", "Изберете услуги"],
       ["Промени специалиста", "Специалист"],
       ["Промени датата и часа", "Дата и час"],
     ]) {

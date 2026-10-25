@@ -52,8 +52,8 @@ export function ServicesStep({
       }}
     >
       <FieldDescription id="services-description">
-        Избери една или повече услуги. Всички се изпълняват от един специалист в
-        едно посещение.
+        Може да изберете няколко. Правят се последователно, в едно посещение, от
+        един специалист.
       </FieldDescription>
       <FieldSet
         ref={group}

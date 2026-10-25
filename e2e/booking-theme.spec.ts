@@ -134,7 +134,7 @@ for (const width of [390, 1280]) {
         "animation-name",
         "none",
       );
-      await expect(page.getByRole("dialog")).toContainText("Твоят избор");
+      await expect(page.getByRole("dialog")).toContainText("Вашата резервация");
       await page.keyboard.press("Escape");
       await expect(page.getByRole("dialog")).toHaveCount(0);
     }

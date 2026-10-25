@@ -46,7 +46,7 @@ export function bookingProgress(state: BookingState, review: boolean) {
 }
 
 export const stepLabels: Record<BookingStep, string> = {
-  services: "Услуги",
+  services: "Изберете услуги",
   staff: "Специалист",
   time: "Дата и час",
   details: "Данни и преглед",

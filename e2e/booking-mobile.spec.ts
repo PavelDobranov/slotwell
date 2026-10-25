@@ -17,7 +17,7 @@ test("360px booking bar owns one action and remains in flow with a short keyboar
   await expect(summary).toContainText("23,00");
   await next.click();
   await page
-    .getByRole("radio", { name: "Първо специалист", exact: true })
+    .getByRole("radio", { name: "Специалист", exact: true })
     .check();
   await expect(next).toBeDisabled();
   await page.getByRole("radio", { name: /Мила/ }).check();
@@ -70,7 +70,7 @@ test("200% scaled mobile bar and long summary stay scrollable without covering f
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(360);
   await trigger.click();
-  const sheet = page.getByRole("dialog", { name: "Твоят избор" });
+  const sheet = page.getByRole("dialog", { name: "Вашата резервация" });
   await expect(sheet.getByRole("listitem")).toHaveCount(4);
   expect(
     await sheet.evaluate(
@@ -90,7 +90,7 @@ test("200% scaled mobile bar and long summary stay scrollable without covering f
   });
 });
 
-for (const width of [390, 1440]) {
+for (const width of [360, 390, 1280, 1440]) {
   test(`${width}px shared controls retain size and state throughout the wizard`, async ({
     page,
   }, testInfo) => {
@@ -107,7 +107,7 @@ for (const width of [390, 1440]) {
     await expect(service).toBeChecked();
     await next.click();
     await page
-      .getByRole("radio", { name: "Първо дата и час", exact: true })
+      .getByRole("radio", { name: "Дата и час", exact: true })
       .check();
     await expect(next).toBeDisabled();
     await expect(next).toHaveCSS("opacity", "0.5");
@@ -194,7 +194,7 @@ for (const width of [390, 1440]) {
     await page.getByRole("checkbox", { name: /Измиване и оформяне/ }).check();
     await page.getByRole("button", { name: "Продължи", exact: true }).click();
     await page
-      .getByRole("radio", { name: "Първо специалист", exact: true })
+      .getByRole("radio", { name: "Специалист", exact: true })
       .check();
     const removal = page.getByRole("button", {
       name: "Махни „Измиване и оформяне“",
@@ -252,7 +252,7 @@ for (const width of [360, 390]) {
     await verify("M1-services");
     await page.getByRole("checkbox", { name: /Подстригване/ }).check();
     await page.getByRole("button", { name: "Продължи" }).click();
-    await page.getByRole("radio", { name: "Първо дата и час" }).check();
+    await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
     await verify("M2-time");
     await page.getByRole("button", { name: "Календар", exact: true }).click();
     // The popup scales in; measure settled hit areas rather than an animation frame.
@@ -315,11 +315,11 @@ for (const width of [360, 390]) {
     await page.goto("/");
     await page.getByRole("checkbox", { name: /Подстригване/ }).check();
     await page.getByRole("button", { name: "Продължи" }).click();
-    await page.getByRole("radio", { name: "Първо дата и час" }).check();
+    await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
     await page.getByRole("radio", { name: "15:00", exact: true }).check();
     const trigger = page.getByRole("button", { name: "Виж избора" });
     await trigger.click();
-    const sheet = page.getByRole("dialog", { name: "Твоят избор" });
+    const sheet = page.getByRole("dialog", { name: "Вашата резервация" });
     await expect(sheet).toContainText("Подстригване");
     await expect(sheet).toContainText("15:00–15:30");
     await expect(sheet).toContainText("Предстои — стъпка 2");
@@ -346,7 +346,7 @@ for (const width of [360, 390]) {
       .click();
     await expect(sheet).not.toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Услуги", exact: true }),
+      page.getByRole("heading", { name: "Изберете услуги", exact: true }),
     ).toBeFocused();
     await expect(
       page.getByRole("checkbox", { name: /Подстригване/ }),

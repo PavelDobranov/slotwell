@@ -14,7 +14,7 @@ for (const width of [390, 1280]) {
       await page.getByRole("button", { name: "Продължи", exact: true }).click();
       if (!timeFirst)
         await page
-          .getByRole("radio", { name: "Първо специалист", exact: true })
+          .getByRole("radio", { name: "Специалист", exact: true })
           .check();
       const recap = page.getByRole("region", { name: "Първият ти избор" });
       const time = page.getByRole("radio", { name: "15:00", exact: true });
@@ -46,7 +46,7 @@ for (const width of [390, 1280]) {
       // Switching order keeps both still-valid selections and reverses the recap.
       await page
         .getByRole("radio", {
-          name: timeFirst ? "Първо специалист" : "Първо дата и час",
+          name: timeFirst ? "Специалист" : "Дата и час",
           exact: true,
         })
         .check();
@@ -123,7 +123,7 @@ for (const width of [390, 1440]) {
     await page.getByRole("checkbox", { name: /Измиване и оформяне/ }).check();
     await page.getByRole("button", { name: "Продължи", exact: true }).click();
     await page
-      .getByRole("radio", { name: "Първо специалист", exact: true })
+      .getByRole("radio", { name: "Специалист", exact: true })
       .check();
     const group = page.getByRole("group", { name: "Избери специалист" });
     await expect(group.getByRole("radio")).toHaveCount(3);

@@ -74,12 +74,18 @@ async function chooseTime(page: Page, time: string) {
 
 test.use({ timezoneId: "America/New_York" });
 
-for (const width of [360, 1440]) {
+const reviewViewports = [360, 390, 768, 1023, 1024, 1280, 1440].map(
+  (width) => ({ width, zoom: false }),
+);
+reviewViewports.push({ width: 390, zoom: true }, { width: 1280, zoom: true });
+
+for (const { width, zoom } of reviewViewports) {
   for (const path of ["staff-first", "time-first"] as const) {
-    test(`${width}px ${path}: keyboard-only multi-service booking, edits, validation and reset`, async ({
+    test(`${width}px ${path}${zoom ? " at 200% CSS zoom with reduced motion" : ""}: keyboard-only multi-service booking, edits, validation and reset`, async ({
       page,
     }, testInfo) => {
       await page.setViewportSize({ width, height: 900 });
+      if (zoom) await page.emulateMedia({ reducedMotion: "reduce" });
       await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
       const consoleMessages: string[] = [];
       const errors: string[] = [];
@@ -93,7 +99,24 @@ for (const width of [360, 1440]) {
       page.on("request", (request) =>
         requests.push(`${request.url()} ${request.postData() ?? ""}`),
       );
+      page.on("requestfailed", (request) =>
+        errors.push(`Failed request: ${request.url()}`),
+      );
+      page.on("response", (response) => {
+        if (response.status() >= 400)
+          errors.push(`HTTP ${response.status()}: ${response.url()}`);
+      });
       await page.goto("/");
+      if (zoom) {
+        await page.evaluate(() => {
+          document.documentElement.style.zoom = "2";
+        });
+        expect(
+          await page.evaluate(() =>
+            matchMedia("(prefers-reduced-motion: reduce)").matches,
+          ),
+        ).toBe(true);
+      }
       const button = (name: string | RegExp) =>
         page.getByRole("button", { name, exact: true });
       const heading = (name: string) =>
@@ -106,13 +129,17 @@ for (const width of [360, 1440]) {
         });
         expect(audit.contrasts.length).toBeGreaterThan(0);
         expect(audit.contrasts.filter(({ ratio }) => ratio < 4.5)).toEqual([]);
-        expect(audit.targets.filter(({ minimum24 }) => !minimum24)).toEqual([]);
+        expect(audit.targets.filter(({ minimum44 }) => !minimum44)).toEqual([]);
         expect(
           await page.evaluate(() => document.documentElement.scrollWidth),
         ).toBeLessThanOrEqual(width);
-        await page.screenshot({
-          path: `coverage/playwright/keyboard-${width}-${path}-${name}.png`,
+        const screenshot = await page.screenshot({
+          path: `coverage/playwright/keyboard-${width}-${path}${zoom ? "-zoom-reduced" : ""}-${name}.png`,
           fullPage: true,
+        });
+        await testInfo.attach(`screen-${name}`, {
+          body: screenshot,
+          contentType: "image/png",
         });
       }
       async function verifyStep(name: string) {
@@ -130,11 +157,11 @@ for (const width of [360, 1440]) {
       await verifyRendered("Избрани услуги");
       await activate(page, button("Продължи"));
       const staffPath = page.getByRole("radio", {
-        name: "Първо специалист",
+        name: "Специалист",
         exact: true,
       });
       const timePath = page.getByRole("radio", {
-        name: "Първо дата и час",
+        name: "Дата и час",
         exact: true,
       });
       const startsWithStaff = await staffPath.isChecked();
@@ -150,11 +177,11 @@ for (const width of [360, 1440]) {
       if (path === "time-first") {
         await activate(
           page,
-          page.getByRole("radio", { name: "Първо специалист", exact: true }),
+          page.getByRole("radio", { name: "Специалист", exact: true }),
           "ArrowRight",
         );
         await expect(
-          page.getByRole("radio", { name: "Първо дата и час", exact: true }),
+          page.getByRole("radio", { name: "Дата и час", exact: true }),
         ).toBeChecked();
         await verifyStep("Дата и час");
       } else {
@@ -205,7 +232,7 @@ for (const width of [360, 1440]) {
       await activate(page, button("Промени датата и часа"));
       await verifyStep("Дата и час");
       await activate(page, button("Назад"));
-      await verifyStep(path === "staff-first" ? "Специалист" : "Услуги");
+      await verifyStep(path === "staff-first" ? "Специалист" : "Изберете услуги");
       await activate(page, button("Продължи"));
       await verifyStep("Дата и час");
       await chooseTime(page, "15:15");
@@ -222,7 +249,7 @@ for (const width of [360, 1440]) {
       await expect(
         page.getByRole("textbox", { name: "Имейл", exact: true }),
       ).toHaveValue("keyboard@example.com");
-      const summary = page.getByRole("complementary", { name: "Твоят избор" });
+      const summary = page.getByRole("complementary", { name: "Вашата резервация" });
       await expect(summary).toContainText("50 мин");
       await expect(summary).toContainText(/35,00\s*€/);
       await expect(summary).toContainText("15:15–16:05");
@@ -237,7 +264,7 @@ for (const width of [360, 1440]) {
       await verifyStep("Демо резервацията е потвърдена");
       await expectNoPersistence(page);
       await activate(page, button("Нова демо резервация"));
-      await verifyStep("Услуги");
+      await verifyStep("Изберете услуги");
       await expect(
         page.getByRole("checkbox", { name: /Подстригване/ }),
       ).not.toBeChecked();

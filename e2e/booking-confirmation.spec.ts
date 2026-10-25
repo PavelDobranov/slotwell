@@ -31,7 +31,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       await page
         .getByRole("radio", {
           name:
-            path === "staff-first" ? "Първо специалист" : "Първо дата и час",
+            path === "staff-first" ? "Специалист" : "Дата и час",
           exact: true,
         })
         .check();
@@ -71,7 +71,7 @@ for (const path of ["staff-first", "time-first"] as const) {
           exact: true,
         })
         .click();
-      const summary = page.getByRole("complementary", { name: "Твоят избор" });
+      const summary = page.getByRole("complementary", { name: "Вашата резервация" });
       await expect(summary).toContainText("Подстригване");
       if (scenario === "retryable") {
         await expect(
@@ -214,7 +214,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       await page.getByRole("checkbox", { name: /Подстригване/ }).check();
       await page.getByRole("button", { name: "Продължи" }).click();
       await page
-        .getByRole("radio", { name: "Първо специалист", exact: true })
+        .getByRole("radio", { name: "Специалист", exact: true })
         .check();
       await page.getByRole("radio", { name: /Мила/ }).check();
       await page.getByRole("button", { name: "Продължи" }).click();
@@ -225,7 +225,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     } else {
       await page.getByRole("checkbox", { name: /Подстригване/ }).check();
       await page.getByRole("button", { name: "Продължи" }).click();
-      await page.getByRole("radio", { name: "Първо дата и час" }).check();
+      await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
       await page.getByRole("radio", { name: "15:00", exact: true }).check();
       await page.getByRole("button", { name: "Продължи" }).click();
       await page.getByRole("radio", { name: /Мила/ }).check();
@@ -282,7 +282,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     });
     await page.setViewportSize({ width: 1280, height: 880 });
     const pendingSummary = page.getByRole("complementary", {
-      name: "Твоят избор",
+      name: "Вашата резервация",
     });
     for (const button of await pendingSummary.getByRole("button").all()) {
       await expect(button).toBeDisabled();
@@ -313,7 +313,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(
       page.getByText("Това не е реална резервация.", { exact: false }),
     ).toBeVisible();
-    const summary = page.getByRole("complementary", { name: "Твоят избор" });
+    const summary = page.getByRole("complementary", { name: "Вашата резервация" });
     for (const text of [
       "Подстригване",
       "Мила",
@@ -408,7 +408,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     });
     await page.getByRole("button", { name: "Нова демо резервация" }).click();
     await expect(
-      page.getByRole("heading", { name: "Услуги", exact: true }),
+      page.getByRole("heading", { name: "Изберете услуги", exact: true }),
     ).toBeFocused();
     await expect(
       page.getByRole("checkbox", { name: /Подстригване/ }),

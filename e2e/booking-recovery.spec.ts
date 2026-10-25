@@ -14,7 +14,7 @@ test("path switches preserve valid choices and service edits explain only invali
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
   await page.getByRole("button", { name: "Продължи" }).click();
   await page
-    .getByRole("radio", { name: "Първо специалист", exact: true })
+    .getByRole("radio", { name: "Специалист", exact: true })
     .check();
   await page.getByRole("radio", { name: /Мила/ }).check();
   await page.getByRole("button", { name: "Продължи" }).click();
@@ -36,7 +36,7 @@ test("path switches preserve valid choices and service edits explain only invali
   await expect(
     page.getByRole("heading", { name: "Дата и час", exact: true }),
   ).toBeFocused();
-  await page.getByRole("radio", { name: "Първо дата и час" }).check();
+  await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
   const preserved = page
     .getByRole("status")
     .filter({ hasText: "Запазихме избора ти" });
@@ -71,7 +71,7 @@ test("path switches preserve valid choices and service edits explain only invali
   for (const contact of ["Демо Клиент", "0888123456", "demo@example.com"])
     await expect(invalidated).not.toContainText(contact);
   // The time is still valid with Ivan: only Mila must be cleared.
-  const summary = page.getByRole("complementary", { name: "Твоят избор" });
+  const summary = page.getByRole("complementary", { name: "Вашата резервация" });
   await expect(summary).toContainText("15:00–15:50");
   await expect(summary).not.toContainText("Мила");
   await page.screenshot({
@@ -95,7 +95,7 @@ test("path switches preserve valid choices and service edits explain only invali
     );
 });
 
-for (const width of [390, 1280]) {
+for (const width of [360, 390, 1280]) {
   test(`state matrix: empty selection, no common specialist and empty day at ${width}px`, async ({
     page,
   }) => {
@@ -118,7 +118,7 @@ for (const width of [390, 1280]) {
     await page.getByRole("checkbox", { name: /Измиване и оформяне/ }).check();
     await next.click();
     await page
-      .getByRole("radio", { name: "Първо специалист", exact: true })
+      .getByRole("radio", { name: "Специалист", exact: true })
       .check();
     const noqual = page
       .getByRole("alert")

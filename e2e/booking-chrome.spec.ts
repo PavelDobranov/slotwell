@@ -6,7 +6,7 @@ test("desktop summary remains a sticky 340px rail with one native service submit
   await page.setViewportSize({ width: 1280, height: 600 });
   await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
   await page.goto("/");
-  const rail = page.getByRole("complementary", { name: "Твоят избор" });
+  const rail = page.getByRole("complementary", { name: "Вашата резервация" });
   await expect(rail).toHaveCSS("width", "340px");
   await expect(rail).toHaveCSS("position", "sticky");
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
@@ -18,7 +18,7 @@ test("desktop summary remains a sticky 340px rail with one native service submit
   await next.focus();
   await page.keyboard.press("Enter");
   await page
-    .getByRole("radio", { name: "Първо специалист", exact: true })
+    .getByRole("radio", { name: "Специалист", exact: true })
     .check();
   await expect(
     page.getByRole("heading", { name: "Специалист", exact: true }),
@@ -60,7 +60,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
     await expect(main).toHaveCSS("padding-right", gutter);
     if (width >= 1024)
       await expect(
-        page.getByRole("complementary", { name: "Твоят избор" }),
+        page.getByRole("complementary", { name: "Вашата резервация" }),
       ).toHaveCSS("width", "340px");
     await page.keyboard.press("Tab");
     await expect(
@@ -125,7 +125,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
     await page.getByRole("checkbox", { name: /Подстригване/ }).check();
     await page.getByRole("button", { name: "Продължи", exact: true }).click();
     await page
-      .getByRole("radio", { name: "Първо дата и час", exact: true })
+      .getByRole("radio", { name: "Дата и час", exact: true })
       .check();
     const route = await auditRenderedControls(
       page,
@@ -176,7 +176,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       await page
         .getByRole("radio", {
           name:
-            path === "staff-first" ? "Първо специалист" : "Първо дата и час",
+            path === "staff-first" ? "Специалист" : "Дата и час",
           exact: true,
         })
         .check();
@@ -188,7 +188,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       await nav.getByRole("link", { name: /Услуги/ }).focus();
       await page.keyboard.press("Enter");
       await expect(
-        page.getByRole("heading", { name: "Услуги", exact: true }),
+        page.getByRole("heading", { name: "Изберете услуги", exact: true }),
       ).toBeFocused();
       await expect(
         page.getByRole("checkbox", { name: /Подстригване/ }),
@@ -268,7 +268,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       for (const [label, heading] of [
         ["Промени специалиста", "Специалист"],
         ["Промени датата и часа", "Дата и час"],
-        ["Промени услугите", "Услуги"],
+        ["Промени услугите", "Изберете услуги"],
       ]) {
         const trigger = page.getByRole("button", { name: "Виж избора" });
         if (await trigger.isVisible()) await trigger.click();
@@ -308,7 +308,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       await page
         .getByRole("radio", {
           name:
-            path === "staff-first" ? "Първо дата и час" : "Първо специалист",
+            path === "staff-first" ? "Дата и час" : "Специалист",
           exact: true,
         })
         .check();
@@ -366,7 +366,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       await page
         .getByRole("radio", {
           name:
-            path === "staff-first" ? "Първо специалист" : "Първо дата и час",
+            path === "staff-first" ? "Специалист" : "Дата и час",
           exact: true,
         })
         .check();

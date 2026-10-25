@@ -15,13 +15,13 @@ async function reachReview(
   await service.check();
   await expect(service).toBeChecked();
   await expect(
-    page.getByRole("heading", { name: "Услуги", exact: true }),
+    page.getByRole("heading", { name: "Изберете услуги", exact: true }),
   ).toBeVisible();
   await capture("services");
   await page.getByRole("button", { name: "Продължи", exact: true }).click();
   await page
     .getByRole("radio", {
-      name: path === "staff-first" ? "Първо специалист" : "Първо дата и час",
+      name: path === "staff-first" ? "Специалист" : "Дата и час",
       exact: true,
     })
     .check();
@@ -111,7 +111,7 @@ for (const width of [360, 390, 1280]) {
         const summary = page.getByRole(
           width < 1280 ? "dialog" : "complementary",
           {
-            name: "Твоят избор",
+            name: "Вашата резервация",
             exact: true,
           },
         );

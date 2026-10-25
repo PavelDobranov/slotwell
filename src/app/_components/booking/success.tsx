@@ -40,7 +40,7 @@ export function Success({
         посещението.
       </p>
       <section aria-label="Твоето посещение">
-        <aside aria-label="Твоят избор">
+        <aside aria-label="Вашата резервация">
           <Card className="pt-0 [--card-spacing:--spacing(5)]">
             <CardHeader className="gap-3 bg-accent py-5">
               <CardTitle>

@@ -75,7 +75,7 @@ export function BookingSummary({
   const card = (
     <Card className="shadow-none [--card-spacing:--spacing(6)]">
       <CardHeader className="hidden lg:grid">
-        <h2 className="text-lg font-semibold">Твоят избор</h2>
+        <h2 className="text-lg font-semibold">Вашата резервация</h2>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
@@ -155,7 +155,7 @@ export function BookingSummary({
   return (
     <>
       <aside
-        aria-label="Твоят избор"
+        aria-label="Вашата резервация"
         className="min-w-0 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1 lg:row-span-2"
       >
         <div className="hidden lg:block">{card}</div>
@@ -209,7 +209,7 @@ export function BookingSummary({
             }
           >
             <SheetHeader className="pr-16">
-              <SheetTitle>Твоят избор</SheetTitle>
+              <SheetTitle>Вашата резервация</SheetTitle>
               <SheetDescription>
                 Всички часове са местни за салона в София (Europe/Sofia).
               </SheetDescription>
