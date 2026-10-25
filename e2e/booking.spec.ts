@@ -229,9 +229,6 @@ test("keyboard service selection updates totals, navigation and focus without a 
   await expect(haircut).toBeChecked();
   await expect(error).toHaveCount(0);
   await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
-  await expect(page.getByTestId("services-total")).toHaveText(
-    /2 услуги · 50 мин · 35,00\s*€/,
-  );
   const summary = page.getByRole("complementary", { name: "Вашата резервация" });
   await expect(summary).toContainText("50 мин");
   await expect(summary).toContainText(/35,00\s*€/);
@@ -300,9 +297,9 @@ test("route choice exists only in when/who, defaults to time-first and cannot be
     page.getByRole("button", { name: "Дата и час" }),
   ).toHaveCount(0);
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-  await expect(page.getByTestId("services-total")).toHaveText(
-    /1 услуга · 30 мин · 23,00\s*€/,
-  );
+  const summary = page.getByRole("complementary", { name: "Вашата резервация" });
+  await expect(summary).toContainText("30 мин");
+  await expect(summary).toContainText(/23,00\s*€/);
   const next = page.getByRole("button", { name: "Продължи", exact: true });
   await next.click();
   await expect(

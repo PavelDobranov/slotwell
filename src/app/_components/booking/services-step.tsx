@@ -11,8 +11,6 @@ import {
   FieldSet,
 } from "@/app/_components/field";
 import { Separator } from "@/app/_components/separator";
-import { serviceTotals } from "@/app/_lib/booking/fixtures";
-import { euros } from "@/app/_lib/booking/format";
 import type { Service } from "@/app/_lib/booking/types";
 
 export function ServicesStep({
@@ -36,9 +34,6 @@ export function ServicesStep({
   useEffect(() => {
     if (invalid && attempts > 0) group.current?.focus();
   }, [invalid, attempts]);
-  const totals = serviceTotals(
-    services.filter(({ id }) => serviceIds.includes(id)),
-  );
 
   return (
     <form
@@ -97,17 +92,14 @@ export function ServicesStep({
           Няма специалист за тази комбинация от услуги. Промени избора си.
         </output>
       )}
-      <Separator />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p data-testid="services-total" className="text-sm tabular-nums">
-          {serviceIds.length} {serviceIds.length === 1 ? "услуга" : "услуги"} ·{" "}
-          {totals.durationMinutes} мин ·{" "}
-          <strong className="font-semibold">
-            {euros.format(totals.priceCents / 100)}
-          </strong>
-        </p>
-        {showPrimaryAction && <Button type="submit">Продължи</Button>}
-      </div>
+      {showPrimaryAction && (
+        <>
+          <Separator />
+          <div className="flex justify-end">
+            <Button type="submit">Продължи</Button>
+          </div>
+        </>
+      )}
     </form>
   );
 }

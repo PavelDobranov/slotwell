@@ -517,7 +517,7 @@ export function BookingWizard() {
                 </Button>
               </>
             )}
-            {!confirmed && (
+            {!confirmed && state.step !== "services" && (
               <>
                 <p className="text-sm text-muted-foreground" aria-live="polite">
                   {today === null ? (
