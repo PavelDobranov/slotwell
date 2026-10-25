@@ -28,12 +28,18 @@ for (const path of ["staff-first", "time-first"] as const) {
       await page.goto("/");
       await page.getByRole("checkbox", { name: /Подстригване/ }).check();
       await page.getByRole("button", { name: "Продължи" }).click();
+      await page
+        .getByRole("radio", {
+          name:
+            path === "staff-first" ? "Първо специалист" : "Първо дата и час",
+          exact: true,
+        })
+        .check();
       if (path === "staff-first") {
         await page.getByRole("radio", { name: /Мила/ }).check();
         await page.getByRole("button", { name: "Продължи" }).click();
         await page.getByRole("radio", { name: "15:00", exact: true }).check();
       } else {
-        await page.getByRole("radio", { name: "Първо дата и час" }).check();
         await page.getByRole("radio", { name: "15:00", exact: true }).check();
         await page.getByRole("button", { name: "Продължи" }).click();
         await page.getByRole("radio", { name: /Мила/ }).check();
@@ -178,6 +184,9 @@ for (const path of ["staff-first", "time-first"] as const) {
     async function chooseServiceAndStaff() {
       await page.getByRole("checkbox", { name: /Подстригване/ }).check();
       await page.getByRole("button", { name: "Продължи" }).click();
+      await page
+        .getByRole("radio", { name: "Първо специалист", exact: true })
+        .check();
       await page.getByRole("radio", { name: /Мила/ }).check();
       await page.getByRole("button", { name: "Продължи" }).click();
     }
