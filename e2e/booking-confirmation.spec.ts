@@ -80,6 +80,12 @@ for (const path of ["staff-first", "time-first"] as const) {
             .getByRole("alert"),
         ).toContainText("Опитай отново");
         await expect(summary).toContainText("15:00–15:30");
+        await expect(summary).toContainText("Мила");
+        const failure = page
+          .getByRole("alert")
+          .filter({ hasText: "Не успяхме да потвърдим" });
+        await expect(failure).toHaveAttribute("data-variant", "error");
+        await expect(failure).toHaveAttribute("aria-atomic", "true");
         const review = page.getByRole("region", {
           name: "Преглед и потвърждение",
           exact: true,
@@ -106,6 +112,26 @@ for (const path of ["staff-first", "time-first"] as const) {
         await expect(
           page.getByRole("heading", { name: "Дата и час", exact: true }),
         ).toBeFocused();
+        const recovery = page
+          .getByRole("region", { name: "Дата и час", exact: true })
+          .getByRole("alert");
+        await expect(recovery).toHaveCount(1);
+        await expect(recovery).toHaveAttribute("data-variant", "error");
+        await expect(recovery).toHaveAttribute("aria-atomic", "true");
+        await expect(recovery).toContainText(
+          /[Дд]анните ти за контакт са запазени/,
+        );
+        for (const contact of [
+          "Демо Възстановяване",
+          "0888123456",
+          "recovery@example.com",
+          "Запази бележката.",
+        ])
+          await expect(recovery).not.toContainText(contact);
+        if (scenario === "conflict" && path === "staff-first")
+          await expect(
+            page.getByRole("radio", { name: "15:00", exact: true }),
+          ).toHaveCount(0);
         await expect(summary).not.toContainText("15:00–15:30");
         await expect(
           page.getByRole("radio", {

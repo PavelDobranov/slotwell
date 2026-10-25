@@ -37,6 +37,9 @@ test("path switches preserve valid choices and service edits explain only invali
     .filter({ hasText: "Запазихме избора ти" });
   await expect(preserved).toContainText("15:00");
   await expect(preserved).toContainText("Мила");
+  await expect(preserved).toHaveAttribute("data-variant", "info");
+  await expect(preserved).toHaveAttribute("aria-atomic", "true");
+  await expect(preserved).not.toContainText("demo@example.com");
   await expect(
     page.getByRole("radio", { name: "15:00", exact: true }),
   ).toBeChecked();
@@ -57,6 +60,11 @@ test("path switches preserve valid choices and service edits explain only invali
     .filter({ hasText: "Изборът е променен" });
   await expect(invalidated).toContainText("специалист е премахнат");
   await expect(invalidated).toContainText("Данните ти за контакт са запазени");
+  await expect(invalidated).toContainText("15:00 остава");
+  await expect(invalidated).toHaveAttribute("data-variant", "warning");
+  await expect(invalidated).toHaveAttribute("aria-atomic", "true");
+  for (const contact of ["Демо Клиент", "0888123456", "demo@example.com"])
+    await expect(invalidated).not.toContainText(contact);
   // The time is still valid with Ivan: only Mila must be cleared.
   const summary = page.getByRole("complementary", { name: "Твоят избор" });
   await expect(summary).toContainText("15:00–15:50");

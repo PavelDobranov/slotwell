@@ -292,7 +292,7 @@ export function BookingWizard() {
                 ? "Демо резервацията е потвърдена"
                 : stepLabels[state.step]}
             </h2>
-            {!confirmed && (
+            {!confirmed && !confirmationError && (
               <RecoveryNotice
                 state={state}
                 pathSwitched={pathSwitched}
@@ -302,7 +302,11 @@ export function BookingWizard() {
               />
             )}
             {confirmationError && !confirmed && (
-              <Alert variant="destructive" className="px-4 py-3">
+              <Alert
+                variant="error"
+                aria-atomic="true"
+                className="rounded-card px-4 py-3"
+              >
                 <CircleAlert aria-hidden="true" />
                 <AlertTitle>
                   {state.step === "details"

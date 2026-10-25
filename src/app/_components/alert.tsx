@@ -9,6 +9,7 @@ const alertVariants = cva(
     variants: {
       variant: {
         default: "bg-card text-card-foreground",
+        info: "border-border bg-muted text-foreground *:data-[slot=alert-description]:text-inherit",
         destructive:
           "border-error-border bg-error text-error-foreground *:data-[slot=alert-description]:text-inherit",
         error:

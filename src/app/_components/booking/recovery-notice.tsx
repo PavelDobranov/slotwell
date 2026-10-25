@@ -1,4 +1,4 @@
-import { CircleCheck, TriangleAlert } from "lucide-react";
+import { Info, TriangleAlert } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 import type { BookingState } from "@/app/_lib/booking/state";
@@ -22,13 +22,14 @@ export function RecoveryNotice({
   return (
     <Alert
       role={invalidated ? "alert" : "status"}
-      variant={invalidated ? "warning" : "default"}
-      className="px-4 py-3"
+      aria-atomic="true"
+      variant={invalidated ? "warning" : "info"}
+      className="rounded-card px-4 py-3"
     >
       {invalidated ? (
         <TriangleAlert aria-hidden="true" />
       ) : (
-        <CircleCheck aria-hidden="true" />
+        <Info aria-hidden="true" />
       )}
       <AlertTitle>
         {invalidated ? "Изборът е променен" : "Запазихме избора ти"}
@@ -40,19 +41,19 @@ export function RecoveryNotice({
           ) : (
             <>
               Валидният избор е запазен.
-              {state.start !== null && (
-                <>
-                  {" "}
-                  {formatBusinessDate(businessDateAt(state.start))} ·{" "}
-                  {formatBusinessTime(state.start)} остава.
-                </>
-              )}
-              {staffName && <> {staffName} остава избран.</>}
               {state.path === "time-first"
                 ? " След датата и часа потвърди специалиста."
                 : " След специалиста потвърди датата и часа."}
             </>
           )}
+          {state.start !== null && (
+            <>
+              {" "}
+              {formatBusinessDate(businessDateAt(state.start))} ·{" "}
+              {formatBusinessTime(state.start)} остава.
+            </>
+          )}
+          {staffName && <> {staffName} остава избран.</>}
         </output>
       </AlertDescription>
     </Alert>
