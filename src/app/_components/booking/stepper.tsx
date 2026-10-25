@@ -3,10 +3,51 @@ import { CheckIcon } from "lucide-react";
 import { MobileProgress } from "@/app/_components/booking/mobile-progress";
 import {
   type BookingPath,
+  type BookingState,
   type BookingStep,
   stepOrder,
 } from "@/app/_lib/booking/state";
+import { validateContact } from "@/app/_lib/booking/validation";
 import { cn } from "@/app/_lib/utils";
+
+export const milestoneLabels = [
+  "Услуги",
+  "Час и специалист",
+  "Вашите данни",
+  "Преглед",
+];
+
+/** Choices have already been revalidated by the booking reducer. This only maps
+ * its ordered screens to progress; it never grants forward navigation.
+ */
+export function bookingProgress(state: BookingState, review: boolean) {
+  const order = stepOrder(state.path);
+  const unresolved = order.findIndex(
+    (step) =>
+      (step === "services" && state.serviceIds.length === 0) ||
+      (step === "staff" && state.staffId === null) ||
+      (step === "time" && state.start === null),
+  );
+  const screen = Math.min(
+    order.indexOf(state.step),
+    unresolved < 0 ? 3 : unresolved,
+  );
+  const current =
+    screen === 0
+      ? 0
+      : screen < 3
+        ? 1
+        : review && Object.keys(validateContact(state.contact)).length === 0
+          ? 3
+          : 2;
+  const targets: (BookingStep | null)[] = [
+    current > 0 ? "services" : null,
+    current > 1 ? order[1] : null,
+    current > 2 ? "details" : null,
+    null,
+  ];
+  return { current, targets };
+}
 
 export const stepLabels: Record<BookingStep, string> = {
   services: "Услуги",
