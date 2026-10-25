@@ -53,6 +53,7 @@ export function DetailsStep({
   retryable,
   appointment,
   onBack,
+  onEditSelection,
   checked,
   onChecked,
   showPrimaryAction = true,
@@ -68,10 +69,14 @@ export function DetailsStep({
   appointment: {
     start: number;
     staffName: string;
+    services: { name: string; durationMinutes: number; priceCents: number }[];
+    salonName: string;
+    address: string;
     durationMinutes: number;
     priceCents: number;
   };
   onBack: () => void;
+  onEditSelection: (step: "services" | "staff" | "time") => void;
 }) {
   const [errors, setErrors] = useState<ContactErrors>({});
   const [noteOpen, setNoteOpen] = useState(draft.note !== "");
@@ -99,6 +104,7 @@ export function DetailsStep({
           pending={pending}
           retryable={retryable}
           onConfirm={onConfirm}
+          onEditSelection={onEditSelection}
           onEdit={() => {
             onChecked(false);
             requestAnimationFrame(() => {

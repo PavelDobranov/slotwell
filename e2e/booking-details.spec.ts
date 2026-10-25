@@ -2,6 +2,71 @@ import { expect, test } from "@playwright/test";
 
 test.use({ timezoneId: "America/New_York" });
 
+test("multi-service review reflects an edited time and an omitted note", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+  await page.setViewportSize({ width: 1280, height: 880 });
+  await page.goto("/");
+  await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+  await page.getByRole("checkbox", { name: /Измиване и оформяне/ }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("radio", { name: "15:00", exact: true }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("textbox", { name: "Име", exact: true }).fill("Демо");
+  await page
+    .getByRole("textbox", { name: "Телефон", exact: true })
+    .fill("+44 20 7946 0958");
+  await page
+    .getByRole("textbox", { name: "Имейл", exact: true })
+    .fill("demo@example.com");
+  await page.getByRole("button", { name: "Провери данните" }).click();
+  const review = page.getByRole("region", {
+    name: "Преглед и потвърждение",
+    exact: true,
+  });
+  const services = review.getByRole("region", { name: "Услуги", exact: true });
+  await expect(services.getByRole("listitem")).toHaveCount(2);
+  await expect(services.getByRole("listitem").nth(0)).toContainText(
+    /Подстригване · 30 мин.*23,00\s*€/,
+  );
+  await expect(services.getByRole("listitem").nth(1)).toContainText(
+    /Измиване и оформяне · 30 мин.*18,00\s*€/,
+  );
+  await expect(review).toContainText(/Общо 60 мин · 41,00\s*€/);
+  await expect(review).toContainText("15:00–16:00");
+  await expect(review).not.toContainText("16:15");
+  await expect(review).toContainText("Без бележка");
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 880 });
+    await page.screenshot({
+      path: `coverage/playwright/review-multi-${width}.png`,
+      fullPage: true,
+    });
+  }
+  await review
+    .getByRole("button", { name: "Промени датата и часа в прегледа" })
+    .click();
+  await page.getByRole("radio", { name: "16:00", exact: true }).check();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: "Продължи" }).click();
+  await expect(
+    page.getByRole("textbox", { name: "Име", exact: true }),
+  ).toHaveValue("Демо");
+  await expect(
+    page.getByRole("button", {
+      name: "Потвърди демо резервацията",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Провери данните" }).click();
+  await expect(review).toContainText("16:00–17:00");
+  await expect(review).not.toContainText("15:00–16:00");
+  await expect(review).toContainText(/Общо 60 мин · 41,00\s*€/);
+});
+
 for (const path of ["staff-first", "time-first"] as const) {
   test(`${path} details validate, preserve edits and keep contacts private`, async ({
     page,
@@ -134,6 +199,23 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(
       review.getByRole("heading", { name: "Провери и потвърди" }),
     ).toBeFocused();
+    for (const text of [
+      "Подстригване",
+      "Мила",
+      "1 юни 2026",
+      "15:00–15:30",
+      "Ателие Мента",
+      "измислен адрес",
+      "Само демонстрационна бележка.",
+    ]) {
+      await expect(review).toContainText(text);
+    }
+    await expect(
+      page.getByRole("button", {
+        name: "Потвърди демо резервацията",
+        exact: true,
+      }),
+    ).toHaveCount(1);
     await expect(review).toContainText("fictional-visitor@example.com");
     await expect(review).toContainText(/Общо 30 мин · 23,00\s*€/);
     await expect(review).toContainText("Часът не е задържан");
@@ -148,6 +230,22 @@ for (const path of ["staff-first", "time-first"] as const) {
       });
     }
     await page.setViewportSize({ width: 360, height: 800 });
+    for (const [action, heading] of [
+      ["Промени услугите в прегледа", "Услуги"],
+      ["Промени специалиста в прегледа", "Специалист"],
+      ["Промени датата и часа в прегледа", "Дата и час"],
+    ]) {
+      await review.getByRole("button", { name: action, exact: true }).click();
+      await expect(
+        page.getByRole("heading", { name: heading, exact: true }),
+      ).toBeFocused();
+      for (let step = 0; step < 3 && !(await name.isVisible()); step++) {
+        await page.getByRole("button", { name: "Продължи" }).click();
+      }
+      await expect(name).toHaveValue("  Демо Посетител  ");
+      await expect(note).toHaveValue("Само демонстрационна бележка.");
+      await check.click();
+    }
     await review
       .getByRole("button", { name: "Редактирай данните за контакт" })
       .click();
@@ -159,7 +257,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(name).toHaveAttribute("aria-invalid", "true");
     await expect(
       page.getByRole("button", {
-        name: "Потвърди демо резервация",
+        name: "Потвърди демо резервацията",
         exact: true,
       }),
     ).toHaveCount(0);

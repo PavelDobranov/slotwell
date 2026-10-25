@@ -484,6 +484,11 @@ export function BookingWizard() {
                     pending={pending}
                     retryable={Boolean(confirmationError)}
                     appointment={{
+                      services: salon.services.filter(({ id }) =>
+                        state.serviceIds.includes(id),
+                      ),
+                      salonName: salon.name,
+                      address: salon.address,
                       start: state.start,
                       staffName:
                         salon.staff.find(({ id }) => id === state.staffId)
@@ -492,6 +497,7 @@ export function BookingWizard() {
                     }}
                     onBack={() => dispatch({ type: "back" })}
                     onConfirm={confirm}
+                    onEditSelection={(step) => dispatch({ type: "edit", step })}
                     onChange={(draft) => dispatch({ type: "contact", draft })}
                   />
                 ) : (
@@ -579,7 +585,7 @@ export function BookingWizard() {
                         ? "Потвърждаваме…"
                         : confirmationError
                           ? "Опитай отново"
-                          : "Потвърди демо резервация"
+                          : "Потвърди демо резервацията"
                       : state.step === "details"
                         ? "Провери данните"
                         : "Продължи"}

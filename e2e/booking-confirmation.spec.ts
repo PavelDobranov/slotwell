@@ -66,7 +66,10 @@ for (const path of ["staff-first", "time-first"] as const) {
       if (scenario === "stale")
         await page.clock.setFixedTime(new Date("2026-06-01T11:30:00Z"));
       await page
-        .getByRole("button", { name: "Потвърди демо резервация", exact: true })
+        .getByRole("button", {
+          name: "Потвърди демо резервацията",
+          exact: true,
+        })
         .click();
       const summary = page.getByRole("complementary", { name: "Твоят избор" });
       await expect(summary).toContainText("Подстригване");
@@ -85,7 +88,7 @@ for (const path of ["staff-first", "time-first"] as const) {
         await expect(review).toContainText("Запази бележката.");
         await expect(
           review.getByRole("button", {
-            name: "Потвърди демо резервация",
+            name: "Потвърди демо резервацията",
             exact: true,
           }),
         ).toHaveCount(0);
@@ -132,7 +135,7 @@ for (const path of ["staff-first", "time-first"] as const) {
         await page.getByRole("button", { name: "Провери данните" }).click();
         await page
           .getByRole("button", {
-            name: "Потвърди демо резервация",
+            name: "Потвърди демо резервацията",
             exact: true,
           })
           .click();
@@ -219,9 +222,10 @@ for (const path of ["staff-first", "time-first"] as const) {
       .fill("Само демо бележка.");
     await page.getByRole("button", { name: "Провери данните" }).click();
     const confirm = page.getByRole("button", {
-      name: "Потвърди демо резервация",
+      name: "Потвърди демо резервацията",
       exact: true,
     });
+    await page.clock.pauseAt(new Date("2026-06-01T05:01:00Z"));
     await confirm.click();
     await expect(
       page.getByRole("button", { name: "Потвърждаваме…" }),
@@ -236,7 +240,27 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(
       review.getByRole("button", { name: "Редактирай данните за контакт" }),
     ).toBeDisabled();
+    for (const button of await review.getByRole("button").all()) {
+      await expect(button).toBeDisabled();
+    }
+    await expect(
+      page.getByRole("button", { name: "Назад", exact: true }),
+    ).toBeDisabled();
     await expect(review).toContainText("Демо Посетител");
+    await page.setViewportSize({ width: 1280, height: 880 });
+    const pendingSummary = page.getByRole("complementary", {
+      name: "Твоят избор",
+    });
+    for (const button of await pendingSummary.getByRole("button").all()) {
+      await expect(button).toBeDisabled();
+    }
+    await expect(
+      page
+        .getByRole("navigation", { name: "Стъпки на резервацията" })
+        .getByRole("link"),
+    ).toHaveCount(0);
+    await page.clock.runFor(300);
+    await page.setViewportSize({ width: 360, height: 800 });
     const heading = page.getByRole("heading", {
       name: "Демо резервацията е потвърдена",
       exact: true,
