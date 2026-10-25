@@ -152,7 +152,7 @@ export function Review({
           Провери и потвърди
         </h3>
         <output className="sr-only">
-          Данните са валидни за демонстрацията. Все още няма резервация.
+          Данните са валидни. Все още няма резервация.
         </output>
       </div>
       <Alert role="note" variant="success" className="px-4 py-3.5">
@@ -164,7 +164,7 @@ export function Review({
       </Alert>
       <Card className="gap-0 shadow-none [--card-spacing:--spacing(5)]">
         <CardHeader className="sr-only">
-          <CardTitle>Твоят демо час</CardTitle>
+          <CardTitle>Твоят час</CardTitle>
         </CardHeader>
         <CardContent className="flex min-w-0 flex-col gap-4">
           {rows.map((row) => (
@@ -203,9 +203,7 @@ export function Review({
         </CardContent>
       </Card>
       <p className="text-sm text-muted-foreground">
-        Това е само демонстрация, не реално записване. Няма плащане. Не
-        изпращаме имейл и не създаваме достъп за управление на резервация.
-        Записът изчезва при презареждане.
+        Плащането е на място — онлайн не плащате нищо.
       </p>
       {showPrimaryAction && (
         <Button
@@ -227,7 +225,7 @@ export function Review({
             ? "Потвърждаваме…"
             : retryable
               ? "Опитай отново"
-              : "Потвърди демо резервацията"}
+              : "Потвърди резервацията"}
         </Button>
       )}
       <output className="text-sm text-muted-foreground empty:hidden">

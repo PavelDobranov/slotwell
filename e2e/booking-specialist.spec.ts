@@ -161,7 +161,7 @@ for (const width of [390, 1440]) {
       page.getByRole("button", { name: "Продължи", exact: true }),
     ).toBeDisabled();
     // The entire row, including the name, activates its radio.
-    await group.getByText("Иван — демо специалист", { exact: true }).click();
+    await group.getByText("Иван", { exact: true }).click();
     await expect(ivan).toBeChecked();
     await expect(ivan.locator("..")).toHaveAttribute("data-checked", "true");
     await expect(

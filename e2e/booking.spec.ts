@@ -83,15 +83,12 @@ test("the Bulgarian shell has honest demo copy and keyboard access", async ({
   await expect(page).toHaveTitle("Запази час · Ателие Мента");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
-    /Демо.*салон/,
+    /Запазете час.*Ателие Мента/,
   );
   await expect(
     page.getByRole("heading", { name: "Запази време за себе си" }),
   ).toBeVisible();
-  await expect(page.getByText("Ателие Мента — демо салон")).toBeVisible();
-  await expect(
-    page.getByText("Демо версия — не се създава реална резервация."),
-  ).toBeVisible();
+  await expect(page.getByText("Ателие Мента")).toBeVisible();
   const progress = page.getByRole("navigation", {
     name: "Стъпки на резервацията",
   });
@@ -115,17 +112,12 @@ test("the Bulgarian shell has honest demo copy and keyboard access", async ({
   expect(external).toEqual([]);
 });
 
-test("the initial HTML is clock-independent and keeps the demo notice", async ({
-  browser,
-}) => {
+test("the initial HTML is clock-independent", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
   await page.goto("/");
   await expect(page.getByText("Подготвяме датата на салона…")).toBeVisible();
   await expect(page.locator("time")).toHaveCount(0);
-  await expect(
-    page.getByText("Демо версия — не се създава реална резервация."),
-  ).toBeVisible();
   await context.close();
 });
 
@@ -439,7 +431,7 @@ test("specialist-first date recovery, horizon, edits and keyboard times reach de
   ).toBeFocused();
   await expect(page.getByRole("complementary")).toContainText("09:00–09:30");
   await expect(page.getByRole("complementary")).toContainText(
-    "Ателие Мента — демо салон, ул. „Шипка“ 18, София (измислен адрес)",
+    "Ателие Мента, ул. „Шипка“ 18, София",
   );
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await expect(start).toBeChecked();
@@ -912,9 +904,6 @@ for (const width of [320, 360, 768, 1024, 1440]) {
     await expect(
       page.getByRole("heading", { name: "Изберете услуги", exact: true }),
     ).toBeVisible();
-    await expect(
-      page.getByText("Демо версия — не се създава реална резервация."),
-    ).toBeInViewport();
     await page.screenshot({
       path: `coverage/playwright/shell-${width}.png`,
       fullPage: true,

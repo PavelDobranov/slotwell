@@ -256,14 +256,14 @@ for (const { width, zoom } of reviewViewports) {
       await activate(page, button("Провери данните"));
       await verifyRendered("Проверени данни");
       await expectNoPersistence(page);
-      await activate(page, button(/^Потвърди демо резервация(?:та)?$/));
+      await activate(page, button(/^Потвърди резервация(?:та)?$/));
       await expect(button("Потвърждаваме…")).toBeDisabled();
       // Repeated keyboard activation while the first confirmation is pending.
       await page.keyboard.press("Enter");
       await page.keyboard.press("Space");
-      await verifyStep("Демо резервацията е потвърдена");
+      await verifyStep("Резервацията е потвърдена");
       await expectNoPersistence(page);
-      await activate(page, button("Нова демо резервация"));
+      await activate(page, button("Нова резервация"));
       await verifyStep("Изберете услуги");
       await expect(
         page.getByRole("checkbox", { name: /Подстригване/ }),

@@ -67,7 +67,7 @@ for (const path of ["staff-first", "time-first"] as const) {
         await page.clock.setFixedTime(new Date("2026-06-01T11:30:00Z"));
       await page
         .getByRole("button", {
-          name: "Потвърди демо резервацията",
+          name: "Потвърди резервацията",
           exact: true,
         })
         .click();
@@ -94,7 +94,7 @@ for (const path of ["staff-first", "time-first"] as const) {
         await expect(review).toContainText("Запази бележката.");
         await expect(
           review.getByRole("button", {
-            name: "Потвърди демо резервацията",
+            name: "Потвърди резервацията",
             exact: true,
           }),
         ).toHaveCount(0);
@@ -161,14 +161,14 @@ for (const path of ["staff-first", "time-first"] as const) {
         await page.getByRole("button", { name: "Провери данните" }).click();
         await page
           .getByRole("button", {
-            name: "Потвърди демо резервацията",
+            name: "Потвърди резервацията",
             exact: true,
           })
           .click();
       }
       await expect(
         page.getByRole("heading", {
-          name: "Демо резервацията е потвърдена",
+          name: "Резервацията е потвърдена",
           exact: true,
         }),
       ).toBeFocused();
@@ -250,7 +250,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await page.getByRole("textbox", { name: /Бележка/ }).fill(note);
     await page.getByRole("button", { name: "Провери данните" }).click();
     const confirm = page.getByRole("button", {
-      name: "Потвърди демо резервацията",
+      name: "Потвърди резервацията",
       exact: true,
     });
     await page.clock.pauseAt(new Date("2026-06-01T05:01:00Z"));
@@ -299,7 +299,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await page.clock.runFor(300);
     await page.setViewportSize({ width: 360, height: 800 });
     const heading = page.getByRole("heading", {
-      name: "Демо резервацията е потвърдена",
+      name: "Резервацията е потвърдена",
       exact: true,
     });
     await expect(heading).toBeFocused();
@@ -307,19 +307,13 @@ for (const path of ["staff-first", "time-first"] as const) {
     for (const text of ["Подстригване", "Мила", "15:00–15:30", "30 мин"])
       await expect(visit).toContainText(text);
     await expect(visit).toContainText(/23,00\s*€/);
-    await expect(
-      page.getByRole("heading", { name: "Какво означава „демо“?" }),
-    ).toBeVisible();
-    await expect(
-      page.getByText("Това не е реална резервация.", { exact: false }),
-    ).toBeVisible();
     const summary = page.getByRole("complementary", { name: "Вашата резервация" });
     for (const text of [
       "Подстригване",
       "Мила",
       "15:00–15:30",
       "30 мин",
-      "измислен адрес",
+      "ул. „Шипка“ 18",
     ])
       await expect(summary).toContainText(text);
     await expect(summary).toContainText(/23,00\s*€/);
@@ -329,15 +323,9 @@ for (const path of ["staff-first", "time-first"] as const) {
       page.getByRole("heading", { name: "Данни за контакт", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText(/Няма достъп за управление на резервация/),
-    ).toBeVisible();
-    await expect(
-      page.getByText(/Часът е зает само в тази демонстрация/),
-    ).toBeVisible();
-    await expect(
       page
         .getByRole("region", {
-          name: "Демо резервацията е потвърдена",
+          name: "Резервацията е потвърдена",
           exact: true,
         })
         .getByRole("link"),
@@ -363,7 +351,7 @@ for (const path of ["staff-first", "time-first"] as const) {
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(width);
       const success = page.getByRole("region", {
-        name: "Демо резервацията е потвърдена",
+        name: "Резервацията е потвърдена",
         exact: true,
       });
       expect(
@@ -406,7 +394,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       path: `coverage/playwright/confirmation-${path}-desktop.png`,
       fullPage: true,
     });
-    await page.getByRole("button", { name: "Нова демо резервация" }).click();
+    await page.getByRole("button", { name: "Нова резервация" }).click();
     await expect(
       page.getByRole("heading", { name: "Изберете услуги", exact: true }),
     ).toBeFocused();

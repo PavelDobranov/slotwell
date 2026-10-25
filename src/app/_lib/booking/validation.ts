@@ -33,7 +33,7 @@ export function validateContact(draft: ContactDraft): ContactErrors {
   else if (email.length > contactLimits.email)
     errors.email = "Имейлът трябва да е до 254 знака.";
   else if (!/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email))
-    errors.email = "Въведи валиден имейл, например demo@example.com.";
+    errors.email = "Въведи валиден имейл, например ivan@example.com.";
 
   if (draft.note.length > contactLimits.note)
     errors.note = "Бележката трябва да е до 1000 знака.";

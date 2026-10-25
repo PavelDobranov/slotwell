@@ -105,21 +105,21 @@ export function BookingWizard() {
       } else if (result === "retryable") {
         submissionLocked.current = false;
         setConfirmationError(
-          "Нещо прекъсна заявката. Демо резервация не е направена и нищо не е загубено. Опитай отново.",
+          "Нещо прекъсна заявката. Резервацията не е направена и нищо не е загубено. Опитай отново.",
         );
       } else {
         submissionLocked.current = false;
         dispatch({ type: result === "unavailable" ? "conflict" : "refresh" });
         setConfirmationError(
           result === "unavailable"
-            ? `${state.start === null ? "Избраният час" : formatBusinessTime(state.start)} вече е зает. Демо резервация не е направена. Услугите и данните ти за контакт са запазени. Избери нов час.`
-            : "Изборът вече не е валиден. Демо резервация не е направена. Данните ти за контакт са запазени. Провери специалиста и часа отново.",
+            ? `${state.start === null ? "Избраният час" : formatBusinessTime(state.start)} вече е зает. Резервацията не е направена. Услугите и данните ти за контакт са запазени. Избери нов час.`
+            : "Изборът вече не е валиден. Резервацията не е направена. Данните ти за контакт са запазени. Провери специалиста и часа отново.",
         );
       }
     } catch {
       submissionLocked.current = false;
       setConfirmationError(
-        "Нещо прекъсна заявката. Демо резервация не е направена и нищо не е загубено. Опитай отново.",
+        "Нещо прекъсна заявката. Резервацията не е направена и нищо не е загубено. Опитай отново.",
       );
     } finally {
       setPending(false);
@@ -194,7 +194,7 @@ export function BookingWizard() {
         : null;
   const nextStep = order[order.indexOf(state.step) + 1];
   const nextLabel = reviewing
-    ? "Демонстрация · няма плащане"
+    ? "Плащане на място"
     : state.step === "details"
       ? "Следва: преглед"
       : `Следва: ${stepLabels[nextStep]}`;
@@ -214,7 +214,7 @@ export function BookingWizard() {
       <BookingHeader
         subtitle={
           confirmed ? (
-            <span className="lg:hidden">Демо резервацията е потвърдена</span>
+            <span className="lg:hidden">Резервацията е потвърдена</span>
           ) : (
             <MobileProgress
               current={progress.current + 1}
@@ -272,7 +272,7 @@ export function BookingWizard() {
           >
             <p className="sr-only">
               {confirmed
-                ? "Демонстрацията е завършена"
+                ? "Резервацията е потвърдена"
                 : `Стъпка ${progress.current + 1} от 4`}
             </p>
             {confirmed && (
@@ -290,9 +290,7 @@ export function BookingWizard() {
                   : "rounded-sm text-[28px] leading-[34px] font-semibold lg:text-4xl lg:leading-[42px]"
               }
             >
-              {confirmed
-                ? "Демо резервацията е потвърдена"
-                : stepLabels[state.step]}
+              {confirmed ? "Резервацията е потвърдена" : stepLabels[state.step]}
             </h2>
             {!confirmed && !confirmationError && (
               <RecoveryNotice
@@ -506,7 +504,7 @@ export function BookingWizard() {
                   <p className="text-muted-foreground">
                     {noSpecialist
                       ? "Няма специалист за тази комбинация от услуги. Върни се и промени избора си."
-                      : "Изборът на конкретен специалист и свободен час ще бъде добавен в следващите стъпки на прототипа."}
+                      : "Подготвяме избора на специалист и свободен час…"}
                   </p>
                 )}
                 <Button
@@ -587,7 +585,7 @@ export function BookingWizard() {
                         ? "Потвърждаваме…"
                         : confirmationError
                           ? "Опитай отново"
-                          : "Потвърди демо резервацията"
+                          : "Потвърди резервацията"
                       : state.step === "details"
                         ? "Провери данните"
                         : "Продължи"}

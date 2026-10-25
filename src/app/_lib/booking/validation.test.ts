@@ -78,7 +78,7 @@ for (const email of [
   test(`rejects malformed email: ${email}`, () => {
     assert.equal(
       validateContact({ ...valid, email }).email,
-      "Въведи валиден имейл, например demo@example.com.",
+      "Въведи валиден имейл, например ivan@example.com.",
     );
   });
 }

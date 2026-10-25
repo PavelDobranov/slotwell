@@ -6,7 +6,7 @@ import { localStart } from "@/app/_lib/booking/time";
 
 test("the fictional catalog has distinct competencies, integer prices and trailing buffers", () => {
   const salon = createDemoSalon(() => Date.parse("2026-06-01T08:00:00Z"));
-  assert.match(salon.name, /демо/i);
+  assert.equal(salon.name, "Ателие Мента");
   assert.ok(salon.services.length >= 3);
   assert.ok(salon.staff.length >= 2);
   assert.equal(

@@ -57,7 +57,7 @@ test("multi-service review reflects an edited time and an omitted note", async (
   ).toHaveValue("Демо");
   await expect(
     page.getByRole("button", {
-      name: "Потвърди демо резервацията",
+      name: "Потвърди резервацията",
       exact: true,
     }),
   ).toHaveCount(0);
@@ -190,7 +190,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(summary).toContainText("15:00–15:30");
     await expect(summary).toContainText("30 мин");
     await expect(summary).toContainText(/23,00\s*€/);
-    await expect(summary).toContainText("измислен адрес");
+    await expect(summary).toContainText("ул. „Шипка“ 18");
     await expect(summary).not.toContainText("15:40");
     const review = page.getByRole("region", {
       name: "Преглед и потвърждение",
@@ -205,14 +205,14 @@ for (const path of ["staff-first", "time-first"] as const) {
       "1 юни 2026",
       "15:00–15:30",
       "Ателие Мента",
-      "измислен адрес",
+      "ул. „Шипка“ 18",
       "Само демонстрационна бележка.",
     ]) {
       await expect(review).toContainText(text);
     }
     await expect(
       page.getByRole("button", {
-        name: "Потвърди демо резервацията",
+        name: "Потвърди резервацията",
         exact: true,
       }),
     ).toHaveCount(1);
@@ -257,7 +257,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(name).toHaveAttribute("aria-invalid", "true");
     await expect(
       page.getByRole("button", {
-        name: "Потвърди демо резервацията",
+        name: "Потвърди резервацията",
         exact: true,
       }),
     ).toHaveCount(0);

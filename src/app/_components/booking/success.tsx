@@ -1,6 +1,5 @@
-import { Check, Info, MapPin, Plus } from "lucide-react";
+import { Check, MapPin, Plus } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 import { Avatar, AvatarFallback } from "@/app/_components/avatar";
 import { Button } from "@/app/_components/button";
 import {
@@ -36,8 +35,7 @@ export function Success({
   return (
     <>
       <p className="text-muted-foreground">
-        Това е демо потвърждение, не реална резервация. Ето твоя избор за
-        посещението.
+        Очакваме ви. Ето твоя избор за посещението.
       </p>
       <section aria-label="Твоето посещение">
         <aside aria-label="Вашата резервация">
@@ -146,26 +144,9 @@ export function Success({
           </Card>
         </aside>
       </section>
-      <Alert className="px-4 py-3">
-        <Info aria-hidden="true" />
-        <AlertTitle>
-          <h3>Какво означава „демо“?</h3>
-        </AlertTitle>
-        <AlertDescription>
-          <p>
-            Това не е реална резервация. Не изпращаме имейл или SMS и всичко се
-            изтрива при презареждане.
-          </p>
-          <p>
-            Часът е зает само в тази демонстрация, докато страницата е отворена.
-            Няма достъп за управление на резервация. Запиши си данните, ако ти
-            трябват.
-          </p>
-        </AlertDescription>
-      </Alert>
       <Button className="w-full sm:w-fit" onClick={onNewBooking}>
         <Plus aria-hidden="true" data-icon="inline-start" />
-        Нова демо резервация
+        Нова резервация
       </Button>
     </>
   );

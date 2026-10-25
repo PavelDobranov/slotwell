@@ -7,12 +7,6 @@ export default function Home() {
         Към резервацията
       </a>
       <BookingWizard />
-      <footer className="border-t text-sm text-muted-foreground">
-        <p className="px-4 py-4 lg:px-12">
-          Измислен салон и примерни услуги. Без реално записване и плащане.
-          Данните се пазят само докато страницата е отворена.
-        </p>
-      </footer>
     </div>
   );
 }

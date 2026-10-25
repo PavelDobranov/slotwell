@@ -134,9 +134,7 @@ export function BookingSummary({
               {euros.format((totals?.priceCents ?? 0) / 100)}
             </span>
           </p>
-          <p className="text-sm text-muted-foreground">
-            Демонстрация · няма плащане.
-          </p>
+          <p className="text-sm text-muted-foreground">Плащане на място.</p>
         </div>
         {salon !== null && (
           <div className="flex flex-col gap-1">

@@ -65,29 +65,29 @@ export function createDemoSalon(clock: Clock): DemoSalon {
   }
 
   return {
-    name: "Ателие Мента — демо салон",
-    address: "ул. „Шипка“ 18, София (измислен адрес)",
+    name: "Ателие Мента",
+    address: "ул. „Шипка“ 18, София",
     today,
     services,
     hours,
     staff: [
       {
         id: "mila",
-        name: "Мила — демо специалист",
+        name: "Мила",
         description: "Подстригване, измиване и оформяне",
         serviceIds: ["haircut", "wash"],
         hours,
       },
       {
         id: "ivan",
-        name: "Иван — демо специалист",
+        name: "Иван",
         description: "Подстригване и оформяне на брада",
         serviceIds: ["haircut", "beard"],
         hours: { ...hours, 3: [], 6: [] },
       },
       {
         id: "elena",
-        name: "Елена — демо специалист",
+        name: "Елена",
         description: "Боядисване, измиване и оформяне",
         serviceIds: ["color", "wash"],
         hours: { ...hours, 1: [{ startMinute: 600, endMinute: 1020 }] },

@@ -130,10 +130,8 @@ export function DetailsStep({
         >
           <h3 className="text-xl font-semibold">Твоите данни</h3>
           <p className="text-sm text-muted-foreground">
-            Всички полета без бележката са задължителни. Използвай измислени
-            данни за демонстрацията. Данните остават само в паметта на тази
-            страница. Не проверяваме самоличност или собственост на телефон и
-            имейл.
+            Всички полета без бележката са задължителни. Използваме ги само за
+            тази резервация.
           </p>
           {Object.keys(errors).length > 0 && (
             <Alert variant="destructive" className="px-4 py-3.5">
@@ -261,10 +259,6 @@ export function DetailsStep({
               </Button>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">
-            Това е само демонстрация, не реално записване. Не изпращаме имейл и
-            не създаваме достъп за управление на резервация.
-          </p>
         </form>
       )}
     </div>

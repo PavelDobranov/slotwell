@@ -48,12 +48,6 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
     await expect(page.locator("h1")).toHaveCount(1);
     await expect(page).toHaveTitle(/Ателие Мента/);
     await expect(page.getByRole("banner")).toContainText("Ателие Мента");
-    await expect(page.getByRole("banner")).toContainText(
-      "Демо версия — не се създава реална резервация.",
-    );
-    await expect(page.getByRole("contentinfo")).toContainText(
-      "Данните се пазят само докато страницата е отворена.",
-    );
     const main = page.getByRole("main");
     const gutter = width >= 1024 ? "48px" : "16px";
     await expect(main).toHaveCSS("padding-left", gutter);
@@ -106,8 +100,6 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
     });
     if (width < 1024) await expect(mobileProgress).toBeVisible();
     else await expect(mobileProgress).toBeHidden();
-    await page.getByRole("contentinfo").scrollIntoViewIfNeeded();
-    await expect(page.getByRole("contentinfo")).toBeInViewport();
     await page.screenshot({
       path: `coverage/playwright/shell-${width}.png`,
       fullPage: true,
@@ -163,7 +155,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
       await page.goto("/");
-      await expect(page.getByRole("banner")).toContainText("Демо");
+      await expect(page.getByRole("banner")).toContainText("Ателие Мента");
       const nav = page.getByRole("navigation", {
         name: "Стъпки на резервацията",
       });
@@ -317,7 +309,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       );
       await expect(
         page.getByRole("button", {
-          name: /^Потвърди демо резервация(?:та)?$/,
+          name: /^Потвърди резервация(?:та)?$/,
           exact: true,
         }),
       ).toHaveCount(0);
@@ -414,7 +406,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       } else if (recovery === "conflict") {
         await page
           .getByRole("button", {
-            name: /^Потвърди демо резервация(?:та)?$/,
+            name: /^Потвърди резервация(?:та)?$/,
             exact: true,
           })
           .click();
@@ -428,7 +420,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       await expect(nav.getByRole("link")).toHaveCount(1);
       await expect(
         page.getByRole("button", {
-          name: /^Потвърди демо резервация(?:та)?$/,
+          name: /^Потвърди резервация(?:та)?$/,
           exact: true,
         }),
       ).toHaveCount(0);
