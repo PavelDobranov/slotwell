@@ -3,6 +3,99 @@ import { expect, test } from "@playwright/test";
 import { auditRenderedControls } from "./rendered-audit";
 
 for (const width of [390, 1440]) {
+  test(`${width}px shared controls retain size and state throughout the wizard`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height: 940 });
+    await page.clock.install({ time: new Date("2026-06-01T05:00:00Z") });
+    await page.goto("/");
+    const next = page.getByRole("button", { name: "Продължи", exact: true });
+    await expect(next).toBeEnabled();
+    await expect(next).toHaveCSS("height", "52px");
+    const service = page.getByRole("checkbox", { name: /Подстригване/ });
+    await service.focus();
+    await expect(service.locator("..")).not.toHaveCSS("box-shadow", "none");
+    await page.keyboard.press("Space");
+    await expect(service).toBeChecked();
+    await next.click();
+    await page
+      .getByRole("radio", { name: "Първо дата и час", exact: true })
+      .check();
+    await expect(next).toBeDisabled();
+    await expect(next).toHaveCSS("opacity", "0.5");
+    const slot = page.getByRole("radio", { name: "15:00", exact: true });
+    // The associated label is the full target; the overlaid input sits inside its border.
+    await expect(slot.locator("..")).toHaveCSS("height", "48px");
+    await page.keyboard.press("Tab");
+    await slot.focus();
+    await expect(slot.locator("..")).toHaveCSS("outline-style", "solid");
+    await page.keyboard.press("Space");
+    await expect(slot).toBeChecked();
+    await expect(slot.locator("..").locator("svg")).toBeVisible();
+    const timeAudit = await auditRenderedControls(page);
+    expect(timeAudit.targets.filter(({ minimum44 }) => !minimum44)).toEqual([]);
+    await next.click();
+    await page.getByRole("radio", { name: /Мила/ }).check();
+    await next.click();
+    const name = page.getByRole("textbox", { name: "Име", exact: true });
+    for (const label of ["Име", "Телефон", "Имейл"]) {
+      await expect(
+        page.getByRole("textbox", { name: label, exact: true }),
+      ).toHaveCSS("height", "52px");
+    }
+    await name.focus();
+    await expect(name).not.toHaveCSS("box-shadow", "none");
+    const normalBorder = await name.evaluate(
+      (element) => getComputedStyle(element).borderColor,
+    );
+    await page.getByRole("button", { name: "Провери данните" }).click();
+    await expect(name).toHaveAttribute("aria-invalid", "true");
+    await expect(name).toBeFocused();
+    await expect(name).not.toHaveCSS("border-color", normalBorder);
+    await page.screenshot({
+      path: `coverage/playwright/control-errors-${width}.png`,
+      fullPage: true,
+    });
+    for (const [label, value] of [
+      ["Име", "Демо Клиент"],
+      ["Телефон", "0888123456"],
+      ["Имейл", "demo@example.com"],
+    ])
+      await page.getByRole("textbox", { name: label, exact: true }).fill(value);
+    await page.getByRole("button", { name: "Провери данните" }).click();
+    const reviewAudit = await auditRenderedControls(page);
+    expect(reviewAudit.targets.filter(({ minimum44 }) => !minimum44)).toEqual(
+      [],
+    );
+    await testInfo.attach("control-audit", {
+      body: JSON.stringify({ timeAudit, reviewAudit }),
+      contentType: "application/json",
+    });
+    // Pause the real demo confirmation timer so the pending appearance can be measured.
+    await page.clock.pauseAt(new Date("2026-06-01T05:01:00Z"));
+    await page
+      .getByRole("button", { name: "Потвърди демо резервация", exact: true })
+      .click();
+    const pending = page.getByRole("button", {
+      name: "Потвърждаваме…",
+      exact: true,
+    });
+    await expect(pending).toBeDisabled();
+    await expect(pending).toHaveCSS("height", "52px");
+    await expect(pending.locator("svg")).toBeVisible();
+    await page.screenshot({
+      path: `coverage/playwright/control-pending-${width}.png`,
+      fullPage: true,
+    });
+    await page.clock.runFor(300);
+    await expect(
+      page.getByRole("heading", {
+        name: "Демо резервацията е потвърдена",
+        exact: true,
+      }),
+    ).toBeFocused();
+  });
+
   test(`${width}px wrapped recovery actions meet the control scale`, async ({
     page,
   }) => {

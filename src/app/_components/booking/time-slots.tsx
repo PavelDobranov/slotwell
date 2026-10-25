@@ -39,7 +39,7 @@ export function TimeSlots({
             className="grid grid-cols-3 gap-2 sm:grid-cols-6"
           >
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((placeholder) => (
-              <Skeleton key={placeholder} className="h-10" />
+              <Skeleton key={placeholder} className="h-12" />
             ))}
           </div>
         </>
@@ -69,7 +69,7 @@ export function TimeSlots({
                   {group.map((slot) => (
                     <label
                       key={slot.start}
-                      className="relative flex min-h-11 cursor-pointer items-center justify-center gap-1 rounded-lg border border-input bg-background text-sm font-medium tabular-nums has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
+                      className="relative flex min-h-12 cursor-pointer items-center justify-center gap-1 rounded-slot border border-input bg-background text-sm font-medium tabular-nums has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
                     >
                       <input
                         type="radio"
