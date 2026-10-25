@@ -54,6 +54,13 @@ for (const path of ["staff-first", "time-first"] as const) {
     expect(
       await check.evaluate((element) => element.getBoundingClientRect().height),
     ).toBeGreaterThanOrEqual(44);
+    for (const control of [name, phone, email]) {
+      expect(
+        await control.evaluate(
+          (element) => element.getBoundingClientRect().height,
+        ),
+      ).toBe(52);
+    }
     await expect(note).not.toBeVisible();
     await check.click();
     await expect(name).toBeFocused();
@@ -106,6 +113,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(note).toHaveValue("н".repeat(1001));
     await expect(note).toHaveAccessibleDescription(/1000/);
     await note.fill("Само демонстрационна бележка.");
+    await expect(page.getByText("29 / 1000", { exact: true })).toBeVisible();
     await check.click();
     await expect(
       page.getByRole("status").filter({ hasText: "Данните са валидни" }),

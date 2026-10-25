@@ -112,7 +112,7 @@ export function DetailsStep({
           id="booking-contact"
           ref={form}
           noValidate
-          className="flex flex-col gap-5"
+          className="flex flex-col gap-6"
           onSubmit={(event) => {
             // Never allow native submission to put contact fields in the URL/network.
             event.preventDefault();
@@ -130,7 +130,7 @@ export function DetailsStep({
             имейл.
           </p>
           {Object.keys(errors).length > 0 && (
-            <Alert variant="destructive" className="px-4 py-3">
+            <Alert variant="destructive" className="px-4 py-3.5">
               <CircleAlert aria-hidden="true" />
               <AlertTitle>
                 Провери {Object.keys(errors).length}{" "}
@@ -166,7 +166,7 @@ export function DetailsStep({
               </AlertDescription>
             </Alert>
           )}
-          <FieldGroup className="gap-5">
+          <FieldGroup className="gap-6">
             {fields.map(({ key, label, ...input }) => (
               <Field key={key} data-invalid={Boolean(errors[key])}>
                 <FieldLabel htmlFor={`contact-${key}`}>{label}</FieldLabel>
@@ -175,7 +175,6 @@ export function DetailsStep({
                   id={`contact-${key}`}
                   name={key}
                   required
-                  className="min-h-11"
                   value={draft[key]}
                   onChange={(event) => change(key, event.target.value)}
                   aria-invalid={Boolean(errors[key])}
@@ -207,9 +206,14 @@ export function DetailsStep({
                 Добави бележка (по желание)
               </summary>
               <Field data-invalid={Boolean(errors.note)}>
-                <FieldLabel htmlFor="contact-note">
-                  Бележка (по желание)
-                </FieldLabel>
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <FieldLabel htmlFor="contact-note">
+                    Бележка (по желание)
+                  </FieldLabel>
+                  <span className="text-sm text-muted-foreground tabular-nums">
+                    {draft.note.length} / {contactLimits.note}
+                  </span>
+                </div>
                 <Textarea
                   id="contact-note"
                   name="note"
