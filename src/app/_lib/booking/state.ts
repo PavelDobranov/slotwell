@@ -42,7 +42,7 @@ type BookingContext = {
 
 export const initialBookingState: BookingState = {
   serviceIds: [],
-  path: "staff-first",
+  path: "time-first",
   step: "services",
   staffId: null,
   start: null,

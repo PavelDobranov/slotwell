@@ -318,57 +318,57 @@ export function BookingWizard() {
                   showPrimaryAction={false}
                   services={salon?.services ?? []}
                   serviceIds={state.serviceIds}
-                  path={state.path}
                   noSpecialist={noSpecialist}
                   onServices={(ids) => dispatch({ type: "services", ids })}
-                  onPath={(path) => dispatch({ type: "path", path })}
                   onNext={() => dispatch({ type: "next" })}
                 />
               </fieldset>
             ) : (
               <>
-                <fieldset className="flex min-w-0 flex-col gap-3">
-                  <legend id="path-label" className="mb-3 font-medium">
-                    Как предпочиташ да избереш?
-                  </legend>
-                  <RadioGroup
-                    aria-labelledby="path-label"
-                    value={state.path}
-                    onValueChange={(path) => {
-                      if (path === "staff-first" || path === "time-first")
-                        dispatch({ type: "path", path });
-                    }}
-                    className="flex flex-col gap-3 sm:flex-row"
-                  >
-                    {(
-                      [
-                        ["staff-first", "Първо специалист"],
-                        ["time-first", "Първо дата и час"],
-                      ] as const
-                    ).map(([path, label]) => (
-                      <div
-                        key={path}
-                        className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3"
-                      >
-                        <Radio.Root
-                          id={path}
-                          nativeButton
-                          render={<button type="button" />}
-                          value={path}
-                          className="flex size-5 shrink-0 items-center justify-center rounded-full border border-input bg-background text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                {(state.step === "staff" || state.step === "time") && (
+                  <fieldset className="flex min-w-0 flex-col gap-3">
+                    <legend id="path-label" className="mb-3 font-medium">
+                      Как предпочиташ да избереш?
+                    </legend>
+                    <RadioGroup
+                      aria-labelledby="path-label"
+                      value={state.path}
+                      onValueChange={(path) => {
+                        if (path === "staff-first" || path === "time-first")
+                          dispatch({ type: "path", path });
+                      }}
+                      className="flex flex-col gap-3 sm:flex-row"
+                    >
+                      {(
+                        [
+                          ["staff-first", "Първо специалист"],
+                          ["time-first", "Първо дата и час"],
+                        ] as const
+                      ).map(([path, label]) => (
+                        <div
+                          key={path}
+                          className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3"
                         >
-                          <Radio.Indicator className="size-2.5 rounded-full bg-current" />
-                        </Radio.Root>
-                        <label
-                          htmlFor={path}
-                          className="flex min-h-11 cursor-pointer items-center"
-                        >
-                          {label}
-                        </label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </fieldset>
+                          <Radio.Root
+                            id={path}
+                            nativeButton
+                            render={<button type="button" />}
+                            value={path}
+                            className="flex size-5 shrink-0 items-center justify-center rounded-full border border-input bg-background text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                          >
+                            <Radio.Indicator className="size-2.5 rounded-full bg-current" />
+                          </Radio.Root>
+                          <label
+                            htmlFor={path}
+                            className="flex min-h-11 cursor-pointer items-center"
+                          >
+                            {label}
+                          </label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </fieldset>
+                )}
                 {salon !== null &&
                 availabilityTime !== null &&
                 state.step === "staff" ? (

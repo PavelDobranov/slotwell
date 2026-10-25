@@ -24,6 +24,28 @@ const booked: BookingState = {
   contact: { name: "Тест", phone: "0888123456", email: "", note: "" },
 };
 
+test("new bookings start time-first without inventing a time or specialist", () => {
+  for (const state of [
+    initialBookingState,
+    bookingReducer(booked, { type: "new-booking" }, context),
+  ]) {
+    assert.equal(state.path, "time-first");
+    assert.equal(state.step, "services");
+    assert.equal(state.start, null);
+    assert.equal(state.staffId, null);
+    assert.deepEqual(state.serviceIds, []);
+    const selected = bookingReducer(
+      state,
+      { type: "services", ids: ["haircut"] },
+      context,
+    );
+    assert.equal(
+      bookingReducer(selected, { type: "next" }, context).step,
+      "time",
+    );
+  }
+});
+
 test("both route orders reach the same explicit service-staff-time combination", () => {
   for (const path of ["staff-first", "time-first"] as const) {
     let state = bookingReducer(
@@ -174,7 +196,7 @@ test("empty services cannot advance; totals treat services as a distinct set", (
   });
   assert.equal(
     bookingReducer(selected, { type: "next" }, context).step,
-    "staff",
+    "time",
   );
 });
 

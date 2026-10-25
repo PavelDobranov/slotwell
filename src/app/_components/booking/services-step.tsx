@@ -11,29 +11,23 @@ import {
   FieldSet,
 } from "@/app/_components/field";
 import { Separator } from "@/app/_components/separator";
-import { ToggleGroup, ToggleGroupItem } from "@/app/_components/toggle-group";
 import { serviceTotals } from "@/app/_lib/booking/fixtures";
 import { euros } from "@/app/_lib/booking/format";
-import type { BookingPath } from "@/app/_lib/booking/state";
 import type { Service } from "@/app/_lib/booking/types";
 
 export function ServicesStep({
   services,
   serviceIds,
-  path,
   noSpecialist,
   onServices,
-  onPath,
   onNext,
   showPrimaryAction = true,
 }: {
   showPrimaryAction?: boolean;
   services: readonly Service[];
   serviceIds: readonly string[];
-  path: BookingPath;
   noSpecialist: boolean;
   onServices: (ids: string[]) => void;
-  onPath: (path: BookingPath) => void;
   onNext: () => void;
 }) {
   const [attempts, setAttempts] = useState(0);
@@ -61,18 +55,6 @@ export function ServicesStep({
         Избери една или повече услуги. Всички се изпълняват от един специалист в
         едно посещение.
       </FieldDescription>
-      <ToggleGroup
-        variant="segmented"
-        aria-label="Как предпочиташ да избереш?"
-        value={[path]}
-        onValueChange={([value]) => {
-          if (value === "staff-first" || value === "time-first") onPath(value);
-        }}
-        className="max-w-full flex-wrap"
-      >
-        <ToggleGroupItem value="staff-first">Първо специалист</ToggleGroupItem>
-        <ToggleGroupItem value="time-first">Първо дата и час</ToggleGroupItem>
-      </ToggleGroup>
       <FieldSet
         ref={group}
         tabIndex={-1}
