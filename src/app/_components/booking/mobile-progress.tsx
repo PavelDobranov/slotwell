@@ -8,11 +8,11 @@ export function MobileProgress({
   label: string;
 }) {
   return (
-    <p className="text-sm sm:hidden">
+    <span className="text-sm text-foreground lg:hidden">
       <span className="text-muted-foreground">
         Стъпка {current} от {total} ·{" "}
       </span>
       <strong className="font-semibold">{label}</strong>
-    </p>
+    </span>
   );
 }

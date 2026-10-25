@@ -25,7 +25,7 @@ for (const width of [390, 1280]) {
       "font-family",
       /Geologica/,
     );
-    await expect(page.locator("header p").first()).toHaveCSS(
+    await expect(page.locator('header [data-slot="badge"] + p')).toHaveCSS(
       "font-family",
       /Golos Text/,
     );
@@ -38,7 +38,7 @@ for (const width of [390, 1280]) {
     const { root } = await cdp.send("DOM.getDocument");
     for (const [selector, family] of [
       ["#step-heading", "Geologica"],
-      ["header p", "Golos Text"],
+      ['header [data-slot="badge"] + p', "Golos Text"],
     ]) {
       const { nodeId } = await cdp.send("DOM.querySelector", {
         nodeId: root.nodeId,

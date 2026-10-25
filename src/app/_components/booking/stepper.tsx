@@ -1,6 +1,3 @@
-import { CheckIcon } from "lucide-react";
-
-import { MobileProgress } from "@/app/_components/booking/mobile-progress";
 import {
   type BookingState,
   type BookingStep,
@@ -68,13 +65,11 @@ export function Stepper({
 }) {
   const { current, targets } = bookingProgress(state, review);
   return (
-    <nav aria-label="Стъпки на резервацията" className="flex flex-col gap-2">
-      <MobileProgress
-        current={current + 1}
-        total={milestoneLabels.length}
-        label={milestoneLabels[current]}
-      />
-      <ol className="grid grid-cols-4 gap-1 sm:gap-2">
+    <nav aria-label="Стъпки на резервацията">
+      <p className="sr-only">
+        Стъпка {current + 1} от {milestoneLabels.length}
+      </p>
+      <ol className="grid grid-cols-4 gap-1.5 lg:gap-3">
         {milestoneLabels.map((label, index) => {
           const target = targets[index];
           const done = target !== null;
@@ -83,29 +78,18 @@ export function Stepper({
               <span
                 aria-hidden="true"
                 className={cn(
-                  "h-1 rounded-sm",
+                  "h-1 w-full rounded-[2px]",
                   index <= current ? "bg-primary" : "bg-border",
                 )}
               />
-              <span className="sr-only items-center gap-1.5 sm:not-sr-only sm:flex">
-                {done ? (
-                  <CheckIcon aria-hidden="true" className="size-3.5" />
-                ) : (
-                  <span
-                    aria-hidden="true"
-                    className="font-mono text-xs text-muted-foreground"
-                  >
-                    0{index + 1}
-                  </span>
-                )}
-                {label}
+              <span className="sr-only lg:not-sr-only lg:flex">
+                {index + 1}. {label}
                 {done && <span className="sr-only"> (готово)</span>}
               </span>
             </>
           );
           const className = cn(
-            "flex flex-col gap-2 rounded-sm text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-            done && !disabled ? "min-h-11" : "min-h-1 sm:min-h-11",
+            "flex min-h-11 flex-col justify-center gap-1.5 rounded-sm lg:justify-start text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
             index === current && "font-semibold",
             index > current && "text-muted-foreground",
           );

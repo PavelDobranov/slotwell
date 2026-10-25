@@ -10,11 +10,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 import { BookingHeader } from "@/app/_components/booking/booking-header";
 import { BookingSummary } from "@/app/_components/booking/booking-summary";
 import { DetailsStep } from "@/app/_components/booking/details-step";
+import { MobileProgress } from "@/app/_components/booking/mobile-progress";
 import { RecoveryNotice } from "@/app/_components/booking/recovery-notice";
 import { ServicesStep } from "@/app/_components/booking/services-step";
 import { SpecialistStep } from "@/app/_components/booking/specialist-step";
 import {
   bookingProgress,
+  milestoneLabels,
   Stepper,
   stepLabels,
 } from "@/app/_components/booking/stepper";
@@ -177,6 +179,17 @@ export function BookingWizard() {
   return (
     <>
       <BookingHeader
+        subtitle={
+          confirmed ? (
+            <span className="lg:hidden">Демо резервацията е потвърдена</span>
+          ) : (
+            <MobileProgress
+              current={progress.current + 1}
+              total={milestoneLabels.length}
+              label={milestoneLabels[progress.current]}
+            />
+          )
+        }
         disabled={pending}
         onBack={
           confirmed || state.step === "services"
@@ -242,7 +255,7 @@ export function BookingWizard() {
               className={
                 state.step === "details" && !confirmed
                   ? "sr-only"
-                  : "rounded-sm text-xl font-semibold"
+                  : "rounded-sm text-[28px] leading-[34px] font-semibold lg:text-4xl lg:leading-[42px]"
               }
             >
               {confirmed

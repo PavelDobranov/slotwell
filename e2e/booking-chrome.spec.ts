@@ -23,6 +23,10 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
     const gutter = width >= 1024 ? "48px" : "16px";
     await expect(main).toHaveCSS("padding-left", gutter);
     await expect(main).toHaveCSS("padding-right", gutter);
+    if (width >= 1024)
+      await expect(
+        page.getByRole("complementary", { name: "Твоят избор" }),
+      ).toHaveCSS("width", "340px");
     await page.keyboard.press("Tab");
     await expect(
       page.getByRole("link", { name: "Към резервацията" }),
@@ -32,6 +36,41 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(width);
+    const progress = page.getByRole("navigation", {
+      name: "Стъпки на резервацията",
+    });
+    const segments = progress.getByRole("listitem");
+    await expect(segments).toHaveCount(4);
+    await expect(progress.locator('[aria-current="step"]')).toHaveCount(1);
+    for (const [index, label] of [
+      "Услуги",
+      "Час и специалист",
+      "Вашите данни",
+      "Преглед",
+    ].entries()) {
+      const text = segments
+        .nth(index)
+        .getByText(`${index + 1}. ${label}`, { exact: true });
+      if (width >= 1024) await expect(text).toHaveCSS("position", "static");
+      else await expect(text).toHaveCSS("position", "absolute");
+    }
+    const bars = await progress
+      .locator('span[aria-hidden="true"]')
+      .evaluateAll((elements) =>
+        elements.map((element) => {
+          const { top, height } = element.getBoundingClientRect();
+          return { top, height };
+        }),
+      );
+    expect(bars).toHaveLength(4);
+    expect(
+      bars.every((bar) => bar.height === 4 && bar.top === bars[0].top),
+    ).toBe(true);
+    const mobileProgress = page.getByText("Стъпка 1 от 4 · Услуги", {
+      exact: true,
+    });
+    if (width < 1024) await expect(mobileProgress).toBeVisible();
+    else await expect(mobileProgress).toBeHidden();
     await page.getByRole("contentinfo").scrollIntoViewIfNeeded();
     await expect(page.getByRole("contentinfo")).toBeInViewport();
     await page.screenshot({
@@ -106,6 +145,8 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       const second = "Час и специалист";
       await expect(nav.locator('[aria-current="step"]')).toContainText(second);
       await expect(nav.getByRole("link")).toHaveCount(1);
+      const completedTarget = await nav.getByRole("link").boundingBox();
+      expect(completedTarget?.height).toBeGreaterThanOrEqual(44);
       await nav.getByRole("link", { name: /Услуги/ }).focus();
       await page.keyboard.press("Enter");
       await expect(
@@ -158,6 +199,26 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
         "Преглед",
       );
       await expect(nav.getByRole("link")).toHaveCount(3);
+      if (width < 1024) {
+        await page
+          .getByRole("banner")
+          .getByRole("button", { name: "Назад", exact: true })
+          .click();
+        await expect(nav.locator('[aria-current="step"]')).toContainText(
+          "Вашите данни",
+        );
+        await expect(
+          page.getByRole("heading", { name: "Данни и преглед", exact: true }),
+        ).toBeFocused();
+        await expect(
+          page.getByRole("textbox", { name: "Име", exact: true }),
+        ).toHaveValue("Demo Chrome");
+        await page.getByRole("button", { name: "Провери данните" }).click();
+      }
+      await page.screenshot({
+        path: `coverage/playwright/shell-review-${width}-${path}.png`,
+        fullPage: true,
+      });
       await nav.getByRole("link", { name: /Вашите данни/ }).click();
       await expect(
         page.getByRole("heading", { name: "Данни и преглед", exact: true }),

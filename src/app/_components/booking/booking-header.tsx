@@ -7,10 +7,12 @@ import { cn } from "@/app/_lib/utils";
 
 export function BookingHeader({
   children,
+  subtitle,
   onBack,
   disabled,
 }: {
   children: ReactNode;
+  subtitle: ReactNode;
   onBack?: () => void;
   disabled: boolean;
 }) {
@@ -45,7 +47,8 @@ export function BookingHeader({
               <span className="hidden lg:inline"> — демо салон</span>
             </span>
             <p className="text-sm text-muted-foreground">
-              ул. „Шипка“ 18, София
+              <span className="hidden lg:inline">ул. „Шипка“ 18, София</span>
+              {subtitle}
             </p>
           </div>
         </div>
