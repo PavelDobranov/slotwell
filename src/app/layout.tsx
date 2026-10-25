@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geologica, Golos_Text } from "next/font/google";
 
 import "@/app/globals.css";
 import { Providers } from "@/app/providers";
 
-// Self-hosted via next/font; Cyrillic subset so Bulgarian copy renders in Geist
-// with no layout shift. Exposed as CSS variables the --font-* tokens consume.
-const geistSans = Geist({
+// Build-time downloads, self-hosted at runtime. Preload both Bulgarian and
+// Latin glyphs; the token board's monospace specimen is not an app font.
+const golosText = Golos_Text({
   subsets: ["latin", "cyrillic"],
-  variable: "--font-geist-sans",
+  variable: "--font-golos-text",
   display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const geologica = Geologica({
   subsets: ["latin", "cyrillic"],
-  variable: "--font-geist-mono",
+  variable: "--font-geologica",
   display: "swap",
 });
 
@@ -28,7 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="bg"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${golosText.variable} ${geologica.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
