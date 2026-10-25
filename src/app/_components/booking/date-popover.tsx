@@ -43,7 +43,7 @@ export function DatePopover({
         <CalendarIcon data-icon="inline-start" />
         Календар
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 max-sm:w-[calc(100vw-2rem)]">
+      <PopoverContent align="end" className="w-90 max-sm:w-[calc(100vw-2rem)]">
         <PopoverTitle className="sr-only">Избери дата</PopoverTitle>
         <Calendar
           className="mx-auto max-sm:p-0"

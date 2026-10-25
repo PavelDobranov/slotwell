@@ -1,6 +1,51 @@
 import { expect, test } from "@playwright/test";
 
+import { auditRenderedControls } from "./rendered-audit";
+
 for (const width of [360, 1440]) {
+  test(`${width}px calendar and route targets meet the shared 44px floor`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+    await page.goto("/");
+    await expect(
+      page.getByRole("button", { name: "Продължи", exact: true }),
+    ).toBeEnabled();
+    const route = await auditRenderedControls(
+      page,
+      '[data-slot="toggle-group"]',
+    );
+    expect(route.targets.length).toBeGreaterThan(0);
+    expect(route.targets.filter(({ minimum44 }) => !minimum44)).toEqual([]);
+    await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+    await page.getByRole("button", { name: "Продължи", exact: true }).click();
+    await page
+      .getByRole("radio", { name: "Първо дата и час", exact: true })
+      .check();
+    await page.getByRole("button", { name: "Календар", exact: true }).click();
+    const popup = page.locator('[data-slot="popover-content"]');
+    await expect
+      .poll(async () =>
+        (
+          await auditRenderedControls(page, '[data-slot="popover-content"]')
+        ).targets.filter(({ minimum44 }) => !minimum44),
+      )
+      .toEqual([]);
+    const bounds = await popup.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    expect(
+      await popup.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(
+      page.getByRole("button", { name: "Календар", exact: true }),
+    ).toBeFocused();
+  });
   for (const path of ["staff-first", "time-first"] as const) {
     test(`${width}px ${path}: chrome navigation preserves selections and focuses headings`, async ({
       page,
