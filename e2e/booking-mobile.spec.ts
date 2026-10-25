@@ -2,6 +2,39 @@ import { expect, test } from "@playwright/test";
 
 import { auditRenderedControls } from "./rendered-audit";
 
+for (const width of [390, 1440]) {
+  test(`${width}px wrapped recovery actions meet the control scale`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 940 });
+    await page.clock.setFixedTime(new Date("2026-06-07T05:00:00Z"));
+    await page.goto("/");
+    await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
+    await page.getByRole("checkbox", { name: /Измиване и оформяне/ }).check();
+    await page.getByRole("button", { name: "Продължи", exact: true }).click();
+    const removal = page.getByRole("button", {
+      name: "Махни „Измиване и оформяне“",
+    });
+    expect((await removal.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await removal.click();
+    await page.getByRole("radio", { name: /Иван/ }).check();
+    await page.getByRole("button", { name: "Продължи", exact: true }).click();
+    await expect(
+      page.getByText("Няма свободни часове за тази дата."),
+    ).toBeVisible();
+    const recovery = page.getByRole("button", { name: /Към .*първи час/ });
+    expect((await recovery.boundingBox())!.height).toBeGreaterThanOrEqual(52);
+    await recovery.focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      page.getByRole("radio", { name: "15:00", exact: true }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+  });
+}
+
 for (const width of [360, 390]) {
   test(`${width}px M1–M6 fit without horizontal scroll and expose 44px targets`, async ({
     page,

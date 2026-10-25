@@ -174,7 +174,7 @@ export function TimeStep({
           <div className="flex flex-wrap gap-2">
             {nextDay ? (
               <Button
-                className="h-auto min-h-10 max-w-full whitespace-normal py-2 text-left"
+                className="h-auto min-h-13 max-w-full whitespace-normal py-2 text-left"
                 onClick={() => onDate(nextDay.date)}
               >
                 Към {formatBusinessDate(nextDay.date)} · първи час{" "}

@@ -81,7 +81,7 @@ export function SpecialistStep({
                 <Button
                   key={service.id}
                   variant="outline"
-                  className="h-auto min-h-10 whitespace-normal text-left"
+                  className="h-auto min-h-11 whitespace-normal text-left"
                   onClick={() =>
                     onServices(serviceIds.filter((id) => id !== service.id))
                   }
