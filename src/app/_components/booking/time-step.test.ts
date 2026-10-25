@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { TimeSlots } from "@/app/_components/booking/time-slots";
 import { TimeStep } from "@/app/_components/booking/time-step";
 import { availableSlots } from "@/app/_lib/booking/availability";
 import { createDemoSalon } from "@/app/_lib/booking/fixtures";
@@ -70,9 +71,43 @@ test("slot groups and selected range use salon time and exclude cleanup", () => 
   );
 });
 
+test("slot groups separate Sofia evenings and omit groups with no available starts", () => {
+  const slots = availableSlots({
+    ...availability,
+    serviceIds: ["haircut"],
+    date: "2026-06-01",
+  });
+  const eveningStart = localStart("2026-06-01", 17 * 60);
+  assert.ok(eveningStart !== null);
+  const html = renderToStaticMarkup(
+    createElement(TimeSlots, {
+      slots: slots.filter((slot) => slot.start >= eveningStart),
+      date: "2026-06-01",
+      start: null,
+      onSelect() {},
+    }),
+  );
+  assert.match(html, /Вечер/);
+  assert.doesNotMatch(html, /Сутрин|След обяд/);
+  assert.equal(
+    (html.match(/name="start-time"/g) ?? []).length,
+    slots.filter((slot) => slot.start >= eveningStart).length,
+  );
+  assert.doesNotMatch(html, /checked=""/);
+});
+
+test("loading uses the same responsive slot geometry and keeps navigation disabled", () => {
+  const html = render({ loading: true });
+  assert.match(html, /grid-cols-4 gap-2 sm:grid-cols-6/);
+  assert.match(html, /h-12 rounded-slot/);
+  assert.match(html, /<fieldset disabled=""/);
+});
+
 test("empty day offers a concrete nearest date, staff and services recovery", () => {
   const html = render({ selectedDate: "2026-06-03" });
   assert.match(html, /Няма свободни часове за тази дата/);
+  assert.match(html, /data-slot="alert"[^>]*role="status"/);
+  assert.doesNotMatch(html, /name="start-time"/);
   assert.match(html, /4 юни 2026/);
   assert.match(html, /първи час 09:00/);
   assert.match(html, /Смени специалиста/);

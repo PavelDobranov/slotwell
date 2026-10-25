@@ -1,5 +1,6 @@
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { CalendarXIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 import { DatePopover } from "@/app/_components/booking/date-popover";
 import { DayStrip } from "@/app/_components/booking/day-strip";
 import { TimeSlots } from "@/app/_components/booking/time-slots";
@@ -165,18 +166,20 @@ export function TimeStep({
           loading={loading}
         />
       ) : (
-        <div className="flex flex-col gap-4 rounded-lg border p-5">
-          <output className="font-medium">
-            Няма свободни часове за тази дата.
-          </output>
-          <p className="text-sm text-muted-foreground">
+        <Alert role="status" className="gap-y-3 rounded-card p-5">
+          <CalendarXIcon aria-hidden="true" />
+          <AlertTitle className="font-heading text-[17px] leading-[23px]">
+            <output>Няма свободни часове за тази дата.</output>
+          </AlertTitle>
+          <AlertDescription>
             {staff ? `${staff.name} няма` : "Няма"} {duration} последователни
             свободни минути на {formatBusinessDate(date)}.
-          </p>
-          <div className="flex flex-wrap gap-2">
+          </AlertDescription>
+          <div className="col-span-full flex flex-wrap gap-2">
             {nextDay ? (
               <Button
-                className="h-auto min-h-13 max-w-full whitespace-normal py-2 text-left"
+                variant="outline"
+                className="h-auto min-h-14 max-w-full whitespace-normal py-2 text-left"
                 onClick={() => onDate(nextDay.date)}
               >
                 Към {formatBusinessDate(nextDay.date)} · първи час{" "}
@@ -194,12 +197,12 @@ export function TimeStep({
           </div>
           <Button
             variant="link"
-            className="self-start"
+            className="col-span-full justify-self-start"
             onClick={onEditServices}
           >
             Промени избора на услуги
           </Button>
-        </div>
+        </Alert>
       )}
       {showPrimaryAction && (
         <Button

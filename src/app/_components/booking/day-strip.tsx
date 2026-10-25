@@ -50,7 +50,7 @@ export function DayStrip({
                 {date === value && <CheckIcon className="size-3" />}
               </span>
               <span aria-hidden="true" className="text-[11px] leading-[14px]">
-                {count > 0 ? `${count} часа` : "Заето"}
+                {count > 0 ? `${count} часа` : "Няма"}
               </span>
             </label>
           ))}
