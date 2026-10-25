@@ -19,9 +19,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Запази час · Студио Искра",
+  title: "Запази час · Ателие Мента",
   description:
-    "Демо резервация в измисления салон Студио Искра. Не се създава реална резервация.",
+    "Демо резервация в измисления салон Ателие Мента. Не се създава реална резервация.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

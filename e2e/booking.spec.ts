@@ -80,7 +80,7 @@ test("the Bulgarian shell has honest demo copy and keyboard access", async ({
   await page.goto("/");
 
   await expect(page.locator("html")).toHaveAttribute("lang", "bg");
-  await expect(page).toHaveTitle("Запази час · Студио Искра");
+  await expect(page).toHaveTitle("Запази час · Ателие Мента");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
     /Демо.*салон/,
@@ -88,7 +88,7 @@ test("the Bulgarian shell has honest demo copy and keyboard access", async ({
   await expect(
     page.getByRole("heading", { name: "Запази време за себе си" }),
   ).toBeVisible();
-  await expect(page.getByText("Студио Искра — демо салон")).toBeVisible();
+  await expect(page.getByText("Ателие Мента — демо салон")).toBeVisible();
   await expect(
     page.getByText("Демо версия — не се създава реална резервация."),
   ).toBeVisible();
@@ -347,6 +347,9 @@ test("specialist-first date recovery, horizon, edits and keyboard times reach de
     page.getByRole("heading", { name: "Данни и преглед", exact: true }),
   ).toBeFocused();
   await expect(page.getByRole("complementary")).toContainText("09:00–09:30");
+  await expect(page.getByRole("complementary")).toContainText(
+    "Ателие Мента — демо салон, ул. „Шипка“ 18, София (измислен адрес)",
+  );
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await expect(start).toBeChecked();
   await chooseDate(page, "2026-06-11");

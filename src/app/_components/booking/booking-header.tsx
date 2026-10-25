@@ -6,7 +6,7 @@ export function BookingHeader() {
       <div className="mx-auto flex min-h-14 max-w-280 flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-6">
         <div className="flex flex-col gap-0.5">
           <p className="text-sm font-semibold">
-            Студио Искра<span className="hidden sm:inline"> — демо салон</span>
+            Ателие Мента<span className="hidden sm:inline"> — демо салон</span>
           </p>
           <p className="hidden text-sm text-muted-foreground sm:block">
             София · Подстригване и грижа за косата

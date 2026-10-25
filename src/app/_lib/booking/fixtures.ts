@@ -65,8 +65,8 @@ export function createDemoSalon(clock: Clock): DemoSalon {
   }
 
   return {
-    name: "Студио Искра — демо салон",
-    address: "София, ул. „Демо“ № 1 (измислен адрес)",
+    name: "Ателие Мента — демо салон",
+    address: "ул. „Шипка“ 18, София (измислен адрес)",
     today,
     services,
     hours,
