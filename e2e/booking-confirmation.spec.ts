@@ -275,6 +275,11 @@ for (const path of ["staff-first", "time-first"] as const) {
       page.getByRole("button", { name: "Назад", exact: true }),
     ).toBeDisabled();
     await expect(review).toContainText("Демо Посетител");
+    await expect(review).toHaveAttribute("aria-busy", "true");
+    await page.screenshot({
+      path: `coverage/playwright/state-confirming-${path}-mobile.png`,
+      fullPage: true,
+    });
     await page.setViewportSize({ width: 1280, height: 880 });
     const pendingSummary = page.getByRole("complementary", {
       name: "Твоят избор",
@@ -287,6 +292,10 @@ for (const path of ["staff-first", "time-first"] as const) {
         .getByRole("navigation", { name: "Стъпки на резервацията" })
         .getByRole("link"),
     ).toHaveCount(0);
+    await page.screenshot({
+      path: `coverage/playwright/state-confirming-${path}-desktop.png`,
+      fullPage: true,
+    });
     await page.clock.runFor(300);
     await page.setViewportSize({ width: 360, height: 800 });
     const heading = page.getByRole("heading", {
