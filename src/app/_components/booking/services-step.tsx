@@ -25,7 +25,9 @@ export function ServicesStep({
   onServices,
   onPath,
   onNext,
+  showPrimaryAction = true,
 }: {
+  showPrimaryAction?: boolean;
   services: readonly Service[];
   serviceIds: readonly string[];
   path: BookingPath;
@@ -46,6 +48,7 @@ export function ServicesStep({
 
   return (
     <form
+      id="booking-services"
       noValidate
       className="flex min-w-0 flex-col gap-5"
       onSubmit={(event) => {
@@ -121,7 +124,7 @@ export function ServicesStep({
             {euros.format(totals.priceCents / 100)}
           </strong>
         </p>
-        <Button type="submit">Продължи</Button>
+        {showPrimaryAction && <Button type="submit">Продължи</Button>}
       </div>
     </form>
   );

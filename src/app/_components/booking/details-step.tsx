@@ -55,7 +55,9 @@ export function DetailsStep({
   onBack,
   checked,
   onChecked,
+  showPrimaryAction = true,
 }: {
+  showPrimaryAction?: boolean;
   checked: boolean;
   onChecked: (checked: boolean) => void;
   draft: ContactDraft;
@@ -91,6 +93,7 @@ export function DetailsStep({
     <div className="flex min-w-0 flex-col gap-6">
       {checked ? (
         <Review
+          showPrimaryAction={showPrimaryAction}
           contact={draft}
           {...appointment}
           pending={pending}
@@ -106,6 +109,7 @@ export function DetailsStep({
         />
       ) : (
         <form
+          id="booking-contact"
           ref={form}
           noValidate
           className="flex flex-col gap-5"
@@ -240,10 +244,12 @@ export function DetailsStep({
               <ArrowLeft aria-hidden="true" data-icon="inline-start" />
               Назад
             </Button>
-            <Button type="submit" className="min-h-11">
-              Провери данните
-              <ArrowRight aria-hidden="true" data-icon="inline-end" />
-            </Button>
+            {showPrimaryAction && (
+              <Button type="submit" className="min-h-11">
+                Провери данните
+                <ArrowRight aria-hidden="true" data-icon="inline-end" />
+              </Button>
+            )}
           </div>
           <p className="text-sm text-muted-foreground">
             Това е само демонстрация, не реално записване. Не изпращаме имейл и

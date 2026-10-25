@@ -26,7 +26,9 @@ export function TimeStep({
   onEditServices,
   onEditStaff,
   loading = false,
+  showPrimaryAction = true,
 }: {
+  showPrimaryAction?: boolean;
   availability: Omit<AvailabilityInput, "date">;
   start: number | null;
   selectedDate: string | null;
@@ -199,13 +201,15 @@ export function TimeStep({
           </Button>
         </div>
       )}
-      <Button
-        className="self-end"
-        disabled={loading || !slots.some((slot) => slot.start === start)}
-        onClick={onNext}
-      >
-        Продължи
-      </Button>
+      {showPrimaryAction && (
+        <Button
+          className="self-end"
+          disabled={loading || !slots.some((slot) => slot.start === start)}
+          onClick={onNext}
+        >
+          Продължи
+        </Button>
+      )}
     </div>
   );
 }

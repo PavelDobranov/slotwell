@@ -28,7 +28,9 @@ export function Review({
   retryable,
   onEdit,
   onConfirm,
+  showPrimaryAction = true,
 }: {
+  showPrimaryAction?: boolean;
   contact: ContactDraft;
   start: number;
   staffName: string;
@@ -119,27 +121,29 @@ export function Review({
             Записът изчезва при презареждане.
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              className="min-h-11"
-              disabled={pending}
-              onClick={onConfirm}
-            >
-              {pending ? (
-                <LoaderCircle
-                  aria-hidden="true"
-                  data-icon="inline-start"
-                  className="motion-safe:animate-spin"
-                />
-              ) : (
-                <Check aria-hidden="true" data-icon="inline-start" />
-              )}
-              {pending
-                ? "Потвърждаваме…"
-                : retryable
-                  ? "Опитай отново"
-                  : "Потвърди демо резервация"}
-            </Button>
+            {showPrimaryAction && (
+              <Button
+                type="button"
+                className="min-h-11"
+                disabled={pending}
+                onClick={onConfirm}
+              >
+                {pending ? (
+                  <LoaderCircle
+                    aria-hidden="true"
+                    data-icon="inline-start"
+                    className="motion-safe:animate-spin"
+                  />
+                ) : (
+                  <Check aria-hidden="true" data-icon="inline-start" />
+                )}
+                {pending
+                  ? "Потвърждаваме…"
+                  : retryable
+                    ? "Опитай отново"
+                    : "Потвърди демо резервация"}
+              </Button>
+            )}
             <span className="text-sm text-muted-foreground tabular-nums">
               Общо {durationMinutes} мин · {euros.format(priceCents / 100)}
             </span>

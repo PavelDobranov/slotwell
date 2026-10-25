@@ -22,7 +22,9 @@ export function SpecialistStep({
   onEditServices,
   onServices,
   onEditTime,
+  showPrimaryAction = true,
 }: {
+  showPrimaryAction?: boolean;
   salon: DemoSalon;
   serviceIds: readonly string[];
   staffId: string | null;
@@ -149,13 +151,15 @@ export function SpecialistStep({
           </AlertDescription>
         </Alert>
       )}
-      <Button
-        className="self-end"
-        disabled={!eligible.some(({ id }) => id === staffId)}
-        onClick={onNext}
-      >
-        Продължи
-      </Button>
+      {showPrimaryAction && (
+        <Button
+          className="self-end"
+          disabled={!eligible.some(({ id }) => id === staffId)}
+          onClick={onNext}
+        >
+          Продължи
+        </Button>
+      )}
     </>
   );
 }
