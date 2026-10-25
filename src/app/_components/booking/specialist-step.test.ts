@@ -53,8 +53,14 @@ test("specialist cards use the selected surface and keep the trailing radio expl
   assert.match(html, /data-disabled:bg-muted/);
   const ivan = html.slice(html.indexOf('for="specialist-ivan"'));
   assert.ok(ivan.indexOf('data-slot="avatar"') < ivan.indexOf('role="radio"'));
+  assert.match(ivan, /^for="specialist-ivan" data-checked="true"/);
   assert.match(ivan, /aria-checked="true"/);
   assert.doesNotMatch(render(["beard"]), /aria-checked="true"/);
+  assert.doesNotMatch(
+    render(["beard"], undefined, "mila"),
+    /aria-checked="true"/,
+  );
+  assert.doesNotMatch(render(["haircut"], [], "mila"), /aria-checked="true"/);
   assert.doesNotMatch(html, /Всеки свободен специалист/);
 });
 

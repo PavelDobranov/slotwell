@@ -178,6 +178,17 @@ export function BookingWizard() {
   const today =
     availabilityTime === null ? null : businessDateAt(availabilityTime);
   const order = stepOrder(state.path);
+  const firstSelectionStep = state.step === order[2] ? order[1] : null;
+  const selectedStaff = salon?.staff.find(({ id }) => id === state.staffId);
+  const firstSelection =
+    firstSelectionStep === "staff" && selectedStaff
+      ? { label: "Избран специалист", value: selectedStaff.name }
+      : firstSelectionStep === "time" && state.start !== null && salon
+        ? {
+            label: "Избран час",
+            value: `${formatBusinessDate(businessDateAt(state.start))} · ${formatBusinessTime(state.start)}–${formatBusinessTime(state.start + selectedTotals(state, salon).durationMinutes * 60_000)}`,
+          }
+        : null;
   const nextStep = order[order.indexOf(state.step) + 1];
   const nextLabel = reviewing
     ? "Демонстрация · няма плащане"
@@ -368,6 +379,34 @@ export function BookingWizard() {
                       ))}
                     </RadioGroup>
                   </fieldset>
+                )}
+                {firstSelection !== null && firstSelectionStep !== null && (
+                  <section
+                    aria-label="Първият ти избор"
+                    className="flex min-w-0 items-center gap-3 rounded-card bg-accent py-2.5 pr-2 pl-4 text-accent-foreground"
+                  >
+                    <CircleCheck
+                      aria-hidden="true"
+                      className="size-5 shrink-0"
+                    />
+                    <p className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="text-[13px] leading-[18px]">
+                        {firstSelection.label}
+                      </span>
+                      <span className="text-sm leading-[21px] font-semibold wrap-anywhere">
+                        {firstSelection.value}
+                      </span>
+                    </p>
+                    <Button
+                      variant="link"
+                      className="underline"
+                      onClick={() =>
+                        dispatch({ type: "edit", step: firstSelectionStep })
+                      }
+                    >
+                      Промени
+                    </Button>
+                  </section>
                 )}
                 {salon !== null &&
                 availabilityTime !== null &&
