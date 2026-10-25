@@ -162,7 +162,7 @@ for (const width of [390, 1440]) {
     // Pause the real demo confirmation timer so the pending appearance can be measured.
     await page.clock.pauseAt(new Date("2026-06-01T05:01:00Z"));
     await page
-      .getByRole("button", { name: "Потвърди демо резервация", exact: true })
+      .getByRole("button", { name: /^Потвърди демо резервация(?:та)?$/, exact: true })
       .click();
     const pending = page.getByRole("button", {
       name: "Потвърждаваме…",
@@ -286,7 +286,7 @@ for (const width of [360, 390]) {
     await page.getByRole("button", { name: "Провери данните" }).click();
     await verify("review");
     await page
-      .getByRole("button", { name: "Потвърди демо резервация", exact: true })
+      .getByRole("button", { name: /^Потвърди демо резервация(?:та)?$/, exact: true })
       .click();
     await expect(
       page.getByRole("heading", {

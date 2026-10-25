@@ -71,7 +71,7 @@ async function reachReview(
   await expect(review).toContainText("baseline@example.com");
   await expect(
     page.getByRole("button", {
-      name: "Потвърди демо резервация",
+      name: /^Потвърди демо резервация(?:та)?$/,
       exact: true,
     }),
   ).toBeEnabled();
@@ -125,7 +125,7 @@ for (const width of [360, 390, 1280]) {
         }
         await page
           .getByRole("button", {
-            name: "Потвърди демо резервация",
+            name: /^Потвърди демо резервация(?:та)?$/,
             exact: true,
           })
           .click();
@@ -151,7 +151,7 @@ for (const width of [360, 390, 1280]) {
         await reachReview(page, "staff-first");
         await page
           .getByRole("button", {
-            name: "Потвърди демо резервация",
+            name: /^Потвърди демо резервация(?:та)?$/,
             exact: true,
           })
           .click();

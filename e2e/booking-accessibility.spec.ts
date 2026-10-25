@@ -94,7 +94,7 @@ for (const width of [360, 1440]) {
         requests.push(`${request.url()} ${request.postData() ?? ""}`),
       );
       await page.goto("/");
-      const button = (name: string) =>
+      const button = (name: string | RegExp) =>
         page.getByRole("button", { name, exact: true });
       const heading = (name: string) =>
         page.getByRole("heading", { name, exact: true });
@@ -229,7 +229,7 @@ for (const width of [360, 1440]) {
       await activate(page, button("Провери данните"));
       await verifyRendered("Проверени данни");
       await expectNoPersistence(page);
-      await activate(page, button("Потвърди демо резервация"));
+      await activate(page, button(/^Потвърди демо резервация(?:та)?$/));
       await expect(button("Потвърждаваме…")).toBeDisabled();
       // Repeated keyboard activation while the first confirmation is pending.
       await page.keyboard.press("Enter");

@@ -317,7 +317,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       );
       await expect(
         page.getByRole("button", {
-          name: "Потвърди демо резервация",
+          name: /^Потвърди демо резервация(?:та)?$/,
           exact: true,
         }),
       ).toHaveCount(0);
@@ -414,7 +414,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       } else if (recovery === "conflict") {
         await page
           .getByRole("button", {
-            name: "Потвърди демо резервация",
+            name: /^Потвърди демо резервация(?:та)?$/,
             exact: true,
           })
           .click();
@@ -428,7 +428,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       await expect(nav.getByRole("link")).toHaveCount(1);
       await expect(
         page.getByRole("button", {
-          name: "Потвърди демо резервация",
+          name: /^Потвърди демо резервация(?:та)?$/,
           exact: true,
         }),
       ).toHaveCount(0);
