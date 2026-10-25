@@ -231,7 +231,7 @@ for (const width of [360, 390]) {
     const sheet = page.getByRole("dialog", { name: "Твоят избор" });
     await expect(sheet).toContainText("Подстригване");
     await expect(sheet).toContainText("15:00–15:30");
-    await expect(sheet).toContainText("Предстои — стъпка 3");
+    await expect(sheet).toContainText("Предстои — стъпка 2");
     for (let index = 0; index < 8; index++) {
       await page.keyboard.press("Tab");
       expect(

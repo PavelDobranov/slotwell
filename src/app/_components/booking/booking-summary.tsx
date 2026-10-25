@@ -113,9 +113,7 @@ export function BookingSummary({
         <div className="flex flex-col gap-1">
           {sectionHeading("staff", "Специалист", "Промени специалиста")}
           {state.staffId === null ? (
-            <p className="text-muted-foreground">
-              Предстои — стъпка {order.indexOf("staff") + 1}
-            </p>
+            <p className="text-muted-foreground">Предстои — стъпка 2</p>
           ) : (
             <p>{salon?.staff.find(({ id }) => id === state.staffId)?.name}</p>
           )}
@@ -123,9 +121,7 @@ export function BookingSummary({
         <div className="flex flex-col gap-1">
           {sectionHeading("time", "Дата и час", "Промени датата и часа")}
           {state.start === null ? (
-            <p className="text-muted-foreground">
-              Предстои — стъпка {order.indexOf("time") + 1}
-            </p>
+            <p className="text-muted-foreground">Предстои — стъпка 2</p>
           ) : (
             <p className="tabular-nums">
               {formatBusinessDate(businessDateAt(state.start))} ·{" "}
