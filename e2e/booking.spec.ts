@@ -156,6 +156,38 @@ for (const [instant, date, label] of [
   });
 }
 
+test("service cards retain catalog facts, checkbox ticks and wrapped narrow labels", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto("/");
+  const services = page.getByRole("group", { name: "Услуги", exact: true });
+  await expect(services.locator("legend")).not.toHaveClass(/sr-only/);
+  const cards = services.locator("label");
+  await expect(cards).toHaveCount(4);
+  const first = cards.first();
+  await expect(first).toContainText("Подстригване");
+  await expect(first).toContainText("30 мин");
+  await expect(first).toContainText(/23,00\s*€/);
+  await expect(first.getByRole("checkbox")).not.toBeChecked();
+  await expect(first.getByRole("checkbox")).toHaveCSS("width", "24px");
+  const box = await first.boundingBox();
+  expect(box?.height).toBeGreaterThanOrEqual(68);
+  await first.click();
+  await expect(first.getByRole("checkbox")).toBeChecked();
+  await expect(first.locator('[data-slot="checkbox-indicator"]')).toBeVisible();
+  await page.screenshot({ path: "coverage/playwright/service-card-one.png", fullPage: true });
+  // Layout stress only: leave fixture IDs, prices and selection state untouched.
+  const name = first.locator("span").filter({ hasText: "Подстригване" }).last();
+  await name.evaluate((element) => {
+    element.textContent = "Подстригване и индивидуално оформяне на много дълга коса";
+  });
+  const labelBox = await name.boundingBox();
+  expect(labelBox?.height).toBeGreaterThan(22);
+  expect(await name.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  await expect(first).toContainText(/23,00\s*€/);
+  await page.screenshot({ path: "coverage/playwright/service-card-long.png", fullPage: true });
+});
+
 test("keyboard service selection updates totals, navigation and focus without a route screen", async ({
   page,
 }) => {

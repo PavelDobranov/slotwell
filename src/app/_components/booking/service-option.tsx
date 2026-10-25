@@ -15,7 +15,7 @@ export function ServiceOption({
     <label
       htmlFor={`service-${service.id}`}
       data-checked={selected || undefined}
-      className="flex min-h-16 cursor-pointer items-center gap-3 rounded-lg border border-border bg-background p-3.5 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50 data-checked:border-primary data-checked:bg-muted data-checked:shadow-[inset_0_0_0_1px_var(--primary)] sm:gap-3.5 sm:p-4"
+      className="flex min-h-17 cursor-pointer items-center gap-3.5 rounded-card border border-border bg-card px-4 py-3 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50 data-checked:border-primary data-checked:bg-selected data-checked:shadow-[inset_0_0_0_1px_var(--primary)]"
     >
       <Checkbox
         id={`service-${service.id}`}
@@ -23,15 +23,17 @@ export function ServiceOption({
         render={<button type="button" />}
         checked={selected}
         onCheckedChange={onSelect}
-        className="size-5 sm:size-4.5"
+        className="size-6"
       />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-[15px] font-medium">{service.name}</span>
-        <span className="text-[13px] text-muted-foreground tabular-nums">
+        <span className="text-base leading-[22px] font-semibold wrap-anywhere">
+          {service.name}
+        </span>
+        <span className="text-[14px] leading-5 text-muted-foreground tabular-nums">
           {service.durationMinutes} мин
         </span>
       </span>
-      <span className="shrink-0 text-[15px] font-medium tabular-nums">
+      <span className="shrink-0 text-base leading-[22px] font-semibold tabular-nums">
         {euros.format(service.priceCents / 100)}
       </span>
     </label>

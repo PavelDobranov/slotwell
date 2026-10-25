@@ -85,7 +85,7 @@ export function ServicesStep({
         data-invalid={invalid || undefined}
         className="min-w-0 gap-2 rounded-lg focus:outline-2 focus:outline-offset-4 focus:outline-ring"
       >
-        <FieldLegend className="sr-only">Услуги</FieldLegend>
+        <FieldLegend>Услуги</FieldLegend>
         <FieldGroup className="gap-2">
           {services.map((service) => (
             <ServiceOption
