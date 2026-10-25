@@ -298,12 +298,12 @@ for (const width of [360, 390]) {
       page
         .getByRole("region", { name: "Твоето посещение" })
         .getByText("Специалист", { exact: true }),
-    ).toBeHidden();
+    ).toBeVisible();
     await expect(
       page
         .getByRole("region", { name: "Твоето посещение" })
         .getByText("Дата и час", { exact: true }),
-    ).toBeHidden();
+    ).toBeVisible();
     await verify("M6-success");
     expect(errors).toEqual([]);
   });

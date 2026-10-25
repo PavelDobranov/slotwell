@@ -1,10 +1,12 @@
-import { Info, Plus } from "lucide-react";
+import { Check, Info, MapPin, Plus } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
+import { Avatar, AvatarFallback } from "@/app/_components/avatar";
 import { Button } from "@/app/_components/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/app/_components/card";
@@ -17,7 +19,6 @@ import {
   formatBusinessTime,
 } from "@/app/_lib/booking/time";
 import type { DemoSalon } from "@/app/_lib/booking/types";
-import { cn } from "@/app/_lib/utils";
 
 export function Success({
   salon,
@@ -35,93 +36,135 @@ export function Success({
   return (
     <>
       <p className="text-muted-foreground">
-        {date} · <strong className="font-medium text-foreground">{time}</strong>{" "}
-        при {staffName}
+        Това е демо потвърждение, не реална резервация. Ето твоя избор за
+        посещението.
       </p>
-      <Card className="[--card-spacing:--spacing(4)] sm:[--card-spacing:--spacing(5)]">
-        <CardHeader className="hidden sm:grid">
-          <CardTitle>
-            <h3>Твоето посещение</h3>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex min-w-0 flex-col gap-5">
-          <section aria-label="Твоето посещение">
-            <aside aria-label="Твоят избор">
-              <dl className="grid grid-cols-[6rem_minmax(0,1fr)] gap-x-3 gap-y-3 text-sm sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:gap-x-4">
+      <section aria-label="Твоето посещение">
+        <aside aria-label="Твоят избор">
+          <Card className="pt-0 [--card-spacing:--spacing(5)]">
+            <CardHeader className="gap-3 bg-accent py-5">
+              <CardTitle>
+                <h3 className="sr-only">Твоето посещение</h3>
+              </CardTitle>
+              <dl className="flex flex-col gap-1">
+                <dt className="text-sm text-accent-foreground">Дата и час</dt>
+                <dd className="flex flex-col gap-2 text-accent-foreground">
+                  <span className="font-medium">{date}</span>
+                  <strong className="font-heading text-3xl leading-tight">
+                    {time}
+                  </strong>
+                </dd>
+              </dl>
+              <CardDescription>
+                {durationMinutes} мин · по българско време (Europe/Sofia)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex min-w-0 flex-col gap-5">
+              <div className="flex items-center gap-3">
+                <Avatar
+                  aria-hidden="true"
+                  className="size-11 shrink-0 border border-border"
+                >
+                  <AvatarFallback className="bg-accent text-accent-foreground">
+                    {staffName?.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <dl className="min-w-0">
+                  <dt className="text-sm text-muted-foreground">Специалист</dt>
+                  <dd className="font-medium wrap-anywhere">{staffName}</dd>
+                </dl>
+                <Check
+                  aria-hidden="true"
+                  className="ml-auto size-5 shrink-0 text-primary"
+                />
+              </div>
+              <Separator />
+              <dl className="flex flex-col gap-3">
+                {salon.services
+                  .filter(({ id }) => state.serviceIds.includes(id))
+                  .map((service) => (
+                    <div
+                      key={service.id}
+                      className="flex justify-between gap-4"
+                    >
+                      <dt className="wrap-anywhere">{service.name}</dt>
+                      <dd className="shrink-0 font-medium">
+                        {euros.format(service.priceCents / 100)}
+                      </dd>
+                    </div>
+                  ))}
+              </dl>
+              <Separator className="border-t border-dashed bg-transparent" />
+              <dl className="flex items-baseline justify-between gap-4">
+                <dt>
+                  <strong>Общо</strong>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · {durationMinutes} мин
+                  </span>
+                </dt>
+                <dd className="shrink-0 font-heading text-xl font-semibold">
+                  {euros.format(priceCents / 100)}
+                </dd>
+              </dl>
+              <Separator />
+              <div className="flex items-start gap-3">
+                <MapPin
+                  aria-hidden="true"
+                  className="size-5 shrink-0 text-primary"
+                />
+                <dl className="min-w-0">
+                  <dt className="sr-only">Място</dt>
+                  <dd className="flex flex-col gap-1 wrap-anywhere">
+                    <strong className="font-medium">{salon.name}</strong>
+                    <span className="text-muted-foreground">
+                      {salon.address}
+                    </span>
+                  </dd>
+                </dl>
+              </div>
+              <Separator />
+              <h3 className="font-medium">Данни за контакт</h3>
+              <dl className="grid grid-cols-[5rem_minmax(0,1fr)] gap-x-3 gap-y-3 sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:gap-x-4">
                 {[
-                  [
-                    "Услуги",
-                    salon.services
-                      .filter(({ id }) => state.serviceIds.includes(id))
-                      .map(({ name }) => name)
-                      .join(" · "),
-                  ],
-                  [
-                    "Общо",
-                    `${durationMinutes} мин · ${euros.format(priceCents / 100)}`,
-                  ],
-                  ["Специалист", staffName],
-                  ["Дата и час", `${date} · ${time} (Europe/Sofia)`],
-                  ["Място", `${salon.name}, ${salon.address}`],
+                  ["Име", state.contact.name],
+                  ["Телефон", state.contact.phone],
+                  ["Имейл", state.contact.email],
+                  ...(state.contact.note
+                    ? [["Бележка", state.contact.note]]
+                    : []),
                 ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className={cn(
-                      "contents",
-                      (label === "Специалист" || label === "Дата и час") &&
-                        "hidden sm:contents",
-                    )}
-                  >
+                  <div key={label} className="contents">
                     <dt className="text-muted-foreground">{label}</dt>
-                    <dd className="wrap-anywhere">{value}</dd>
+                    <dd className="whitespace-pre-wrap wrap-anywhere">
+                      {value}
+                    </dd>
                   </div>
                 ))}
               </dl>
-            </aside>
-          </section>
-          <Separator />
-          <h3 className="hidden font-medium sm:block">Данни за контакт</h3>
-          <dl className="grid grid-cols-[6rem_minmax(0,1fr)] gap-x-3 gap-y-3 text-sm sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:gap-x-4">
-            {[
-              ["Име", state.contact.name],
-              ["Телефон", state.contact.phone],
-              ["Имейл", state.contact.email],
-              ...(state.contact.note ? [["Бележка", state.contact.note]] : []),
-            ].map(([label, value]) => (
-              <div key={label} className="contents">
-                <dt className="text-muted-foreground">{label}</dt>
-                <dd className="whitespace-pre-wrap wrap-anywhere">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </aside>
+      </section>
       <Alert className="px-4 py-3">
         <Info aria-hidden="true" />
         <AlertTitle>
           <h3>Какво означава „демо“?</h3>
         </AlertTitle>
         <AlertDescription>
-          Това не е реална резервация. Не изпращаме имейл или SMS и всичко се
-          изтрива при презареждане.
-          <span className="hidden sm:inline">
-            {" "}
+          <p>
+            Това не е реална резервация. Не изпращаме имейл или SMS и всичко се
+            изтрива при презареждане.
+          </p>
+          <p>
             Часът е зает само в тази демонстрация, докато страницата е отворена.
             Няма достъп за управление на резервация. Запиши си данните, ако ти
             трябват.
-          </span>
+          </p>
         </AlertDescription>
       </Alert>
-      <Button
-        variant="outline"
-        className="min-h-11 w-full sm:w-fit"
-        onClick={onNewBooking}
-      >
-        <Plus
-          aria-hidden="true"
-          data-icon="inline-start"
-          className="hidden sm:block"
-        />
+      <Button className="w-full sm:w-fit" onClick={onNewBooking}>
+        <Plus aria-hidden="true" data-icon="inline-start" />
         Нова демо резервация
       </Button>
     </>

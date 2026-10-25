@@ -4,6 +4,7 @@ import { Radio } from "@base-ui/react/radio";
 import { RadioGroup } from "@base-ui/react/radio-group";
 import {
   ArrowRight,
+  Check,
   CircleAlert,
   CircleCheck,
   LoaderCircle,
@@ -273,10 +274,9 @@ export function BookingWizard() {
                 : `Стъпка ${progress.current + 1} от 4`}
             </p>
             {confirmed && (
-              <CircleCheck
-                aria-hidden="true"
-                className="size-11 fill-primary text-primary-foreground"
-              />
+              <div className="flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <Check aria-hidden="true" className="size-7" />
+              </div>
             )}
             <h2
               id="step-heading"

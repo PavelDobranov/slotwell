@@ -217,9 +217,11 @@ for (const path of ["staff-first", "time-first"] as const) {
     await page
       .getByText("Добави бележка (по желание)", { exact: true })
       .click();
-    await page
-      .getByRole("textbox", { name: /Бележка/ })
-      .fill("Само демо бележка.");
+    const note =
+      path === "staff-first"
+        ? `Само демо бележка.\n${"ДългаБележка".repeat(80)}\nКрай на бележката.`
+        : "Само демо бележка.";
+    await page.getByRole("textbox", { name: /Бележка/ }).fill(note);
     await page.getByRole("button", { name: "Провери данните" }).click();
     const confirm = page.getByRole("button", {
       name: "Потвърди демо резервацията",
@@ -286,11 +288,30 @@ for (const path of ["staff-first", "time-first"] as const) {
     ])
       await expect(summary).toContainText(text);
     await expect(summary).toContainText(/23,00\s*€/);
+    await expect(visit.getByText("Специалист", { exact: true })).toBeVisible();
+    await expect(visit.getByText("Дата и час", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Данни за контакт", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Няма достъп за управление на резервация/),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Часът е зает само в тази демонстрация/),
+    ).toBeVisible();
+    await expect(
+      page
+        .getByRole("region", {
+          name: "Демо резервацията е потвърдена",
+          exact: true,
+        })
+        .getByRole("link"),
+    ).toHaveCount(0);
     for (const text of [
       "Демо Посетител",
       "0888123456",
       "demo@example.com",
-      "Само демо бележка.",
+      note,
     ])
       await expect(page.getByText(text, { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /Промени/ })).toHaveCount(0);
@@ -301,11 +322,50 @@ for (const path of ["staff-first", "time-first"] as const) {
       path: `coverage/playwright/confirmation-${path}-mobile.png`,
       fullPage: true,
     });
-    for (const width of [320, 768, 1024, 1440]) {
+    for (const width of [320, 390, 768, 1024, 1280, 1440]) {
       await page.setViewportSize({ width, height: 1000 });
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(width);
+      const success = page.getByRole("region", {
+        name: "Демо резервацията е потвърдена",
+        exact: true,
+      });
+      expect(
+        await success.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          return Array.from(element.children).flatMap((child) => {
+            if (getComputedStyle(child).position === "absolute") return [];
+            const childBounds = child.getBoundingClientRect();
+            if (childBounds.width === 0) return [];
+            return childBounds.left < bounds.left - 1 ||
+              childBounds.right > bounds.right + 1 ||
+              child.scrollWidth > child.clientWidth
+              ? [
+                  {
+                    tag: child.tagName,
+                    width: childBounds.width,
+                    parentWidth: bounds.width,
+                  },
+                ]
+              : [];
+          });
+        }),
+      ).toEqual([]);
+      const displayedNote = page.getByText(note, { exact: true });
+      await expect(displayedNote).toBeVisible();
+      expect(
+        await displayedNote.evaluate(
+          (element) =>
+            element.scrollWidth <= element.clientWidth &&
+            element.scrollHeight <= element.clientHeight,
+        ),
+      ).toBe(true);
+      if (width === 390 || width === 1280)
+        await page.screenshot({
+          path: `coverage/playwright/confirmation-${path}-${width}.png`,
+          fullPage: true,
+        });
     }
     await page.screenshot({
       path: `coverage/playwright/confirmation-${path}-desktop.png`,
@@ -315,6 +375,9 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(
       page.getByRole("heading", { name: "Услуги", exact: true }),
     ).toBeFocused();
+    await expect(
+      page.getByRole("checkbox", { name: /Подстригване/ }),
+    ).not.toBeChecked();
     await chooseServiceAndStaff();
     await expect(
       page.getByRole("radio", { name: "15:00", exact: true }),
@@ -351,6 +414,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       "0888123456",
       "demo@example.com",
       "Само демо бележка.",
+      note,
     ])
       expect(decodeURIComponent(requests.join("\n"))).not.toContain(contact);
     expect(errors).toEqual([]);
