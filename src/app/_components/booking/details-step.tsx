@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Check, CircleAlert, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, CircleAlert, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
@@ -53,7 +53,11 @@ export function DetailsStep({
   retryable,
   appointment,
   onBack,
+  checked,
+  onChecked,
 }: {
+  checked: boolean;
+  onChecked: (checked: boolean) => void;
   draft: ContactDraft;
   onChange: (draft: Partial<ContactDraft>) => void;
   onConfirm: () => void;
@@ -68,7 +72,6 @@ export function DetailsStep({
   onBack: () => void;
 }) {
   const [errors, setErrors] = useState<ContactErrors>({});
-  const [checked, setChecked] = useState(false);
   const [noteOpen, setNoteOpen] = useState(draft.note !== "");
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
@@ -81,38 +84,11 @@ export function DetailsStep({
     }
   }, [errors]);
   function change(key: keyof ContactDraft, value: string) {
-    setChecked(false);
+    onChecked(false);
     onChange({ [key]: value });
   }
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <ol
-        aria-label="Данни и потвърждение"
-        className="flex flex-wrap items-center gap-3 text-xs"
-      >
-        <li
-          aria-current={!checked ? "step" : undefined}
-          className="flex items-center gap-2"
-        >
-          <span className="flex size-5 items-center justify-center rounded-full border bg-primary text-primary-foreground">
-            {checked ? <Check aria-hidden="true" className="size-3" /> : "1"}
-          </span>
-          Данни
-        </li>
-        <li aria-hidden="true" className="h-px w-6 bg-border" />
-        <li
-          aria-current={checked ? "step" : undefined}
-          className="flex items-center gap-2"
-        >
-          <span
-            data-active={checked}
-            className="flex size-5 items-center justify-center rounded-full border data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
-          >
-            2
-          </span>
-          Преглед и потвърждение
-        </li>
-      </ol>
       {checked ? (
         <Review
           contact={draft}
@@ -121,7 +97,7 @@ export function DetailsStep({
           retryable={retryable}
           onConfirm={onConfirm}
           onEdit={() => {
-            setChecked(false);
+            onChecked(false);
             requestAnimationFrame(() => {
               const control = form.current?.elements.namedItem("name");
               if (control instanceof HTMLElement) control.focus();
@@ -138,7 +114,7 @@ export function DetailsStep({
             event.preventDefault();
             const nextErrors = validateContact(draft);
             setErrors(nextErrors);
-            setChecked(Object.keys(nextErrors).length === 0);
+            onChecked(Object.keys(nextErrors).length === 0);
             if (nextErrors.note) setNoteOpen(true);
           }}
         >

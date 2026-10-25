@@ -2,7 +2,6 @@ import { CheckIcon } from "lucide-react";
 
 import { MobileProgress } from "@/app/_components/booking/mobile-progress";
 import {
-  type BookingPath,
   type BookingState,
   type BookingStep,
   stepOrder,
@@ -57,28 +56,28 @@ export const stepLabels: Record<BookingStep, string> = {
 };
 
 export function Stepper({
-  path,
-  step,
+  state,
+  review,
   disabled,
   onNavigate,
 }: {
-  path: BookingPath;
-  step: BookingStep;
+  state: BookingState;
+  review: boolean;
   disabled: boolean;
   onNavigate: (step: BookingStep) => void;
 }) {
-  const order = stepOrder(path);
-  const current = order.indexOf(step);
+  const { current, targets } = bookingProgress(state, review);
   return (
     <nav aria-label="Стъпки на резервацията" className="flex flex-col gap-2">
       <MobileProgress
         current={current + 1}
-        total={order.length}
-        label={stepLabels[step]}
+        total={milestoneLabels.length}
+        label={milestoneLabels[current]}
       />
       <ol className="grid grid-cols-4 gap-1 sm:gap-2">
-        {order.map((item, index) => {
-          const done = index < current;
+        {milestoneLabels.map((label, index) => {
+          const target = targets[index];
+          const done = target !== null;
           const content = (
             <>
               <span
@@ -99,7 +98,7 @@ export function Stepper({
                     0{index + 1}
                   </span>
                 )}
-                {stepLabels[item]}
+                {label}
                 {done && <span className="sr-only"> (готово)</span>}
               </span>
             </>
@@ -111,14 +110,17 @@ export function Stepper({
             index > current && "text-muted-foreground",
           );
           return (
-            <li key={item} aria-current={item === step ? "step" : undefined}>
+            <li
+              key={label}
+              aria-current={index === current ? "step" : undefined}
+            >
               {done && !disabled ? (
                 <a
                   href="#step-heading"
                   className={className}
                   onClickCapture={(event) => {
                     event.preventDefault();
-                    onNavigate(item);
+                    if (target !== null) onNavigate(target);
                   }}
                 >
                   {content}

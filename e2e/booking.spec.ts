@@ -212,7 +212,7 @@ test("keyboard service selection updates totals, navigation and focus without a 
     page.getByRole("heading", { name: "Дата и час", exact: true }),
   ).toBeFocused();
   await expect(page.locator('[aria-current="step"]')).toContainText(
-    "Дата и час",
+    "Час и специалист",
   );
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),

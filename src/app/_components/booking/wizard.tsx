@@ -12,7 +12,11 @@ import { DetailsStep } from "@/app/_components/booking/details-step";
 import { RecoveryNotice } from "@/app/_components/booking/recovery-notice";
 import { ServicesStep } from "@/app/_components/booking/services-step";
 import { SpecialistStep } from "@/app/_components/booking/specialist-step";
-import { Stepper, stepLabels } from "@/app/_components/booking/stepper";
+import {
+  bookingProgress,
+  Stepper,
+  stepLabels,
+} from "@/app/_components/booking/stepper";
 import { Success } from "@/app/_components/booking/success";
 import { TimeStep } from "@/app/_components/booking/time-step";
 import { Button } from "@/app/_components/button";
@@ -27,7 +31,6 @@ import {
   bookingReducer,
   initialBookingState,
   selectedTotals,
-  stepOrder,
 } from "@/app/_lib/booking/state";
 import {
   businessDateAt,
@@ -41,6 +44,7 @@ export function BookingWizard() {
   const submissionLocked = useRef(false);
   const [pending, setPending] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [reviewRequested, setReviewRequested] = useState(false);
   const [pathSwitched, setPathSwitched] = useState(false);
   const [confirmationError, setConfirmationError] = useState("");
   const [referenceTime, setReferenceTime] = useState<number | null>(null);
@@ -64,6 +68,9 @@ export function BookingWizard() {
   );
   function dispatch(action: BookingAction) {
     const now = Date.now();
+    // Any explicit edit/navigation requires a fresh contact review. A clock
+    // refresh keeps review only while the reducer still has valid choices.
+    if (action.type !== "refresh") setReviewRequested(false);
     if (action.type !== "contact") setConfirmationError("");
     if (action.type !== "contact" && action.type !== "refresh")
       setPathSwitched(
@@ -157,7 +164,8 @@ export function BookingWizard() {
     if (confirmed) heading.current?.focus();
   }, [confirmed]);
 
-  const order = stepOrder(state.path);
+  const progress = bookingProgress(state, reviewRequested);
+  const reviewing = progress.current === 3;
   const today =
     availabilityTime === null ? null : businessDateAt(availabilityTime);
   const noSpecialist =
@@ -169,10 +177,13 @@ export function BookingWizard() {
     <>
       {!confirmed && (
         <Stepper
-          path={state.path}
-          step={state.step}
+          state={state}
+          review={reviewing}
           disabled={pending}
-          onNavigate={(step) => dispatch({ type: "edit", step })}
+          onNavigate={(step) => {
+            dispatch({ type: "edit", step });
+            requestAnimationFrame(() => heading.current?.focus());
+          }}
         />
       )}
       <fieldset
@@ -195,7 +206,7 @@ export function BookingWizard() {
           <p className="sr-only">
             {confirmed
               ? "Демонстрацията е завършена"
-              : `Стъпка ${order.indexOf(state.step) + 1} от 4`}
+              : `Стъпка ${progress.current + 1} от 4`}
           </p>
           {confirmed && (
             <CircleCheck
@@ -368,6 +379,12 @@ export function BookingWizard() {
                 state.start !== null ? (
                 <DetailsStep
                   draft={state.contact}
+                  checked={reviewing}
+                  onChecked={(checked) => {
+                    // Revalidate against the live clock before entering review.
+                    if (checked) dispatch({ type: "refresh" });
+                    setReviewRequested(checked);
+                  }}
                   pending={pending}
                   retryable={Boolean(confirmationError)}
                   appointment={{
