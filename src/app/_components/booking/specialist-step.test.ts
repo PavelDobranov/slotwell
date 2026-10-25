@@ -7,13 +7,17 @@ import { SpecialistStep } from "@/app/_components/booking/specialist-step";
 import { createDemoSalon } from "@/app/_lib/booking/fixtures";
 
 const salon = createDemoSalon(() => Date.UTC(2026, 5, 1));
-function render(serviceIds: string[], availableStaffIds?: string[]) {
+function render(
+  serviceIds: string[],
+  availableStaffIds?: string[],
+  staffId: string | null = null,
+) {
   return renderToStaticMarkup(
     createElement(SpecialistStep, {
       salon,
       serviceIds,
       availableStaffIds,
-      staffId: null,
+      staffId,
       onSelect: () => {},
       onNext: () => {},
       onEditServices: () => {},
@@ -40,6 +44,18 @@ test("no specialist warning offers only single-service removals that restore eli
   assert.match(html, /Махни „Измиване и оформяне“/);
   assert.match(html, /Към услугите/);
   assert.doesNotMatch(render(["haircut", "beard", "wash", "color"]), /Махни/);
+});
+
+test("specialist cards use the selected surface and keep the trailing radio explicit", () => {
+  const html = render(["beard"], undefined, "ivan");
+  assert.match(html, /rounded-card/);
+  assert.match(html, /data-checked:bg-selected/);
+  assert.match(html, /data-disabled:bg-muted/);
+  const ivan = html.slice(html.indexOf('for="specialist-ivan"'));
+  assert.ok(ivan.indexOf('data-slot="avatar"') < ivan.indexOf('role="radio"'));
+  assert.match(ivan, /aria-checked="true"/);
+  assert.doesNotMatch(render(["beard"]), /aria-checked="true"/);
+  assert.doesNotMatch(html, /Всеки свободен специалист/);
 });
 
 test("time-first unavailability is distinct from missing service coverage", () => {

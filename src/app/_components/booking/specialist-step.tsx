@@ -101,6 +101,7 @@ export function SpecialistStep({
       <FieldSet className="min-w-0 gap-2">
         <FieldLegend className="sr-only">Избери специалист</FieldLegend>
         <RadioGroup
+          className="gap-3"
           aria-label="Специалисти"
           aria-describedby="specialists-description"
           value={eligible.some(({ id }) => id === staffId) ? staffId : null}
