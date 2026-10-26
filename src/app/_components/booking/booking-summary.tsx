@@ -15,6 +15,7 @@ import {
   SheetTrigger,
 } from "@/app/_components/sheet";
 import {
+  formatDuration,
   formatServicePrice,
   formatTotalPrice,
 } from "@/app/_lib/booking/format";
@@ -31,13 +32,6 @@ import {
 } from "@/app/_lib/booking/time";
 import type { DemoSalon } from "@/app/_lib/booking/types";
 import { cn } from "@/app/_lib/utils";
-
-const compactEuros = new Intl.NumberFormat("bg-BG", {
-  style: "currency",
-  currency: "EUR",
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-});
 
 export function BookingSummary({
   salon,
@@ -61,6 +55,8 @@ export function BookingSummary({
   const totals = salon === null ? null : selectedTotals(state, salon);
   const order = stepOrder(state.path);
   const timeDesign = state.step === "time" && !confirmed;
+  const servicesDesign = state.step === "services" && !confirmed;
+  const referenceDesign = timeDesign || servicesDesign;
   const canEdit = (step: BookingStep) =>
     !confirmed &&
     (timeDesign || order.indexOf(step) < order.indexOf(state.step));
@@ -69,13 +65,14 @@ export function BookingSummary({
       <div
         className={cn(
           "relative flex items-center justify-between gap-2",
-          timeDesign ? "min-h-4.5 pr-20" : "min-h-8",
+          referenceDesign ? "min-h-4.5" : "min-h-8",
+          timeDesign && "pr-20",
         )}
       >
         <span
           className={cn(
             "text-xs tracking-wide text-muted-foreground uppercase",
-            timeDesign ? "font-semibold" : "font-medium",
+            referenceDesign ? "font-semibold" : "font-medium",
           )}
         >
           {label}
@@ -106,14 +103,15 @@ export function BookingSummary({
     <Card
       className={cn(
         "shadow-none [--card-spacing:--spacing(6)]",
-        timeDesign && "rounded-[18px] text-base leading-5",
+        referenceDesign && "rounded-[18px] text-base leading-5",
+        servicesDesign && "gap-4",
       )}
     >
       <CardHeader className="hidden lg:grid">
         <h2 className="text-lg font-semibold">Вашата резервация</h2>
       </CardHeader>
       <CardContent
-        className={cn("flex flex-col", timeDesign ? "gap-3.5" : "gap-4")}
+        className={cn("flex flex-col", referenceDesign ? "gap-3.5" : "gap-4")}
       >
         <div className={cn("flex flex-col", timeDesign ? "gap-5" : "gap-2")}>
           {sectionHeading("services", "Услуги", "Промени услугите")}
@@ -122,24 +120,29 @@ export function BookingSummary({
               Все още няма избрани услуги.
             </p>
           ) : (
-            <ul className="flex flex-col gap-2">
+            <ul
+              className={cn(
+                "flex flex-col",
+                servicesDesign ? "gap-1.5" : "gap-2",
+              )}
+            >
               {selected.map((service) => (
                 <li
                   key={service.id}
                   className="flex flex-wrap justify-between gap-x-3 gap-y-1"
                 >
-                  {timeDesign ? (
+                  {referenceDesign ? (
                     <>
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span>{service.name}</span>
                         <span className="text-sm text-muted-foreground">
-                          {service.durationMinutes} мин
+                          {servicesDesign
+                            ? formatDuration(service.durationMinutes)
+                            : `${service.durationMinutes} мин`}
                         </span>
                       </span>
                       <span className="tabular-nums">
-                        {service.priceCents === null
-                          ? "на място"
-                          : compactEuros.format(service.priceCents / 100)}
+                        {formatServicePrice(service.priceCents, true)}
                       </span>
                     </>
                   ) : (
@@ -163,10 +166,10 @@ export function BookingSummary({
             <p
               className={cn(
                 "text-muted-foreground",
-                timeDesign && "font-semibold",
+                referenceDesign && "font-semibold",
               )}
             >
-              {timeDesign ? "Не е избран" : "Предстои — стъпка 2"}
+              {referenceDesign ? "Не е избран" : "Предстои — стъпка 2"}
             </p>
           ) : (
             <p>{salon?.staff.find(({ id }) => id === state.staffId)?.name}</p>
@@ -178,10 +181,10 @@ export function BookingSummary({
             <p
               className={cn(
                 "text-muted-foreground",
-                timeDesign && "font-semibold",
+                referenceDesign && "font-semibold",
               )}
             >
-              {timeDesign ? "Не е избран" : "Предстои — стъпка 2"}
+              {referenceDesign ? "Не е избран" : "Предстои — стъпка 2"}
             </p>
           ) : (
             <p className="tabular-nums">
@@ -196,27 +199,37 @@ export function BookingSummary({
         <div
           className={cn(
             "flex flex-col rounded-xl px-4",
-            timeDesign ? "gap-1.5 bg-background py-3" : "gap-2 bg-muted py-3.5",
+            referenceDesign
+              ? "gap-1.5 bg-background py-3"
+              : "gap-2 bg-muted py-3.5",
           )}
           aria-live="polite"
         >
           <p className="flex flex-wrap items-center justify-between gap-2 font-semibold">
-            <span>Общо · {totals?.durationMinutes ?? 0} мин</span>
+            <span>
+              Общо ·{" "}
+              {servicesDesign
+                ? formatDuration(totals?.durationMinutes ?? 0)
+                : `${totals?.durationMinutes ?? 0} мин`}
+            </span>
             <span className="font-heading text-xl tabular-nums">
-              {timeDesign && !totals?.hasVariablePrice
-                ? compactEuros.format((totals?.priceCents ?? 0) / 100)
-                : formatTotalPrice({
-                    priceCents: totals?.priceCents ?? 0,
-                    hasVariablePrice: totals?.hasVariablePrice ?? false,
-                  })}
+              {formatTotalPrice(
+                {
+                  priceCents: totals?.priceCents ?? 0,
+                  hasVariablePrice: totals?.hasVariablePrice ?? false,
+                },
+                servicesDesign || (timeDesign && !totals?.hasVariablePrice),
+              )}
             </span>
           </p>
           <p className="text-sm text-muted-foreground">
-            {timeDesign ? "Плащане на място в салона." : "Плащане на място."}
+            {referenceDesign
+              ? "Плащане на място в салона."
+              : "Плащане на място."}
           </p>
         </div>
         {salon !== null &&
-          (timeDesign ? (
+          (referenceDesign ? (
             <p className="flex items-center gap-2 text-sm text-secondary-foreground">
               <MapPin aria-hidden="true" className="size-5 shrink-0" />
               {salon.address}

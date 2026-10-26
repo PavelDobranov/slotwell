@@ -208,11 +208,13 @@ export function BookingWizard() {
     qualifiedStaff(salon, state.serviceIds).length === 0;
 
   const timeDesign = state.step === "time" && !confirmed;
+  const servicesDesign = state.step === "services" && !confirmed;
+  const referenceDesign = timeDesign || servicesDesign;
 
   return (
     <>
       <BookingHeader
-        timeDesign={timeDesign}
+        referenceDesign={referenceDesign}
         subtitle={
           confirmed ? (
             <span className="lg:hidden">Резервацията е потвърдена</span>
@@ -253,7 +255,11 @@ export function BookingWizard() {
         tabIndex={-1}
         className={cn(
           "flex w-full flex-1 flex-col gap-5 px-4 pt-5 pb-7 lg:gap-6 lg:pt-10 lg:pb-14",
-          timeDesign ? "lg:px-[4.8%]" : "lg:px-12",
+          timeDesign
+            ? "lg:px-[4.8%]"
+            : servicesDesign
+              ? "lg:pl-12 lg:pr-19"
+              : "lg:px-12",
         )}
       >
         <h1 className="sr-only">Запази време за себе си</h1>
@@ -264,8 +270,11 @@ export function BookingWizard() {
             "grid min-w-0 items-start gap-8",
             confirmed
               ? "mx-auto max-w-170"
-              : timeDesign
-                ? "gap-y-0 lg:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)] lg:gap-x-12 lg:gap-y-6"
+              : referenceDesign
+                ? cn(
+                    "gap-y-0 lg:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)] lg:gap-x-12",
+                    servicesDesign ? "lg:gap-y-8" : "lg:gap-y-6",
+                  )
                 : "gap-y-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-x-12 lg:gap-y-6",
           )}
         >
@@ -276,7 +285,7 @@ export function BookingWizard() {
             aria-labelledby="step-heading"
             className={cn(
               "mb-6 flex min-w-0 flex-col lg:mb-0",
-              timeDesign ? "gap-5" : "gap-4 py-2",
+              timeDesign ? "gap-5" : servicesDesign ? "gap-3" : "gap-4 py-2",
             )}
           >
             <p className="sr-only">
@@ -571,7 +580,7 @@ export function BookingWizard() {
                   }
                   className={cn(
                     "h-auto min-h-13 w-full whitespace-normal lg:w-auto lg:min-w-65",
-                    timeDesign && "font-semibold disabled:opacity-100",
+                    referenceDesign && "font-semibold disabled:opacity-100",
                   )}
                   onClick={
                     reviewing

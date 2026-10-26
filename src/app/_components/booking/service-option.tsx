@@ -23,7 +23,7 @@ export function ServiceOption({
         render={<button type="button" />}
         checked={selected}
         onCheckedChange={onSelect}
-        className="size-6"
+        className="size-6 rounded-sm border-2"
       />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-base leading-[22px] font-semibold wrap-anywhere">
@@ -39,7 +39,7 @@ export function ServiceOption({
         data-variable={service.priceCents === null || undefined}
         className="shrink-0 text-base leading-[22px] font-semibold tabular-nums data-variable:font-medium data-variable:text-muted-foreground"
       >
-        {formatServicePrice(service.priceCents)}
+        {formatServicePrice(service.priceCents, true)}
       </span>
     </label>
   );

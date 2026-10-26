@@ -42,14 +42,17 @@ export function ServicesStep({
     <form
       id="booking-services"
       noValidate
-      className="flex min-w-0 flex-col gap-5"
+      className="flex min-w-0 flex-col gap-6"
       onSubmit={(event) => {
         event.preventDefault();
         setAttempts((count) => count + 1);
         if (serviceIds.length > 0) onNext();
       }}
     >
-      <FieldDescription id="services-description">
+      <FieldDescription
+        id="services-description"
+        className="text-base leading-6"
+      >
         Може да изберете няколко. Правят се последователно, в едно посещение, от
         един специалист.
       </FieldDescription>
@@ -63,7 +66,7 @@ export function ServicesStep({
             : "services-description"
         }
         data-invalid={invalid || undefined}
-        className="min-w-0 gap-6 rounded-lg focus:outline-2 focus:outline-offset-4 focus:outline-ring"
+        className="min-w-0 gap-5 rounded-lg focus:outline-2 focus:outline-offset-4 focus:outline-ring"
       >
         <FieldLegend className="sr-only">Услуги</FieldLegend>
         {invalid && (
@@ -82,10 +85,10 @@ export function ServicesStep({
         )}
         {categories.map((category) => (
           <fieldset key={category} className="flex min-w-0 flex-col gap-2.5">
-            <legend className="text-[13px] leading-[18px] font-semibold tracking-[0.05em] text-muted-foreground uppercase">
+            <legend className="mb-3 text-[13px] leading-[18px] font-semibold tracking-[0.05em] text-muted-foreground uppercase">
               {category}
             </legend>
-            <FieldGroup className="gap-2">
+            <FieldGroup className="gap-2.5">
               {services
                 .filter((service) => service.category === category)
                 .map((service) => (

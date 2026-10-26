@@ -19,7 +19,7 @@ export function formatDuration(minutes: number): string {
   return rest ? `${hours} ч ${rest} мин` : `${hours} ч`;
 }
 
-/** A single service's price, or "на място" when it is settled on site. */
+/** A service's price or "на място"; compact omits unnecessary euro decimals. */
 export function formatServicePrice(
   priceCents: number | null,
   compact = false,
@@ -29,7 +29,7 @@ export function formatServicePrice(
     : (compact ? compactEuros : euros).format(priceCents / 100);
 }
 
-/** Selected total: exact sum, "от X" when a picked service is priced on site, else "на място". */
+/** Exact sum, "от X" with on-site pricing, else "на място"; compact omits unnecessary decimals. */
 export function formatTotalPrice(
   totals: {
     priceCents: number;
