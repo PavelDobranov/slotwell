@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { test } from "node:test";
 
 import { qualifiedStaff } from "@/app/_lib/booking/availability";
 import { createDemoSalon } from "@/app/_lib/booking/fixtures";
+import {
+  businessDateAt,
+  businessWeekday,
+  localStart,
+} from "@/app/_lib/booking/time";
 
 test("wellness studio has exactly the requested team and separates hair from massage", () => {
   const salon = createDemoSalon(() => Date.parse("2026-06-01T05:00:00Z"));
@@ -21,6 +27,10 @@ test("wellness studio has exactly the requested team and separates hair from mas
     qualifiedStaff(salon, ["cut_m"]).map(({ id }) => id),
     ["mimi", "pavel"],
   );
+  for (const member of salon.staff) {
+    assert.ok(member.imageUrl?.startsWith("/staff/"));
+    assert.ok(existsSync(`public${member.imageUrl}`));
+  }
   for (const service of salon.services) {
     const providers = qualifiedStaff(salon, [service.id]);
     assert.ok(providers.length > 0);
@@ -32,6 +42,51 @@ test("wellness studio has exactly the requested team and separates hair from mas
       assert.deepEqual(qualifiedStaff(salon, ["cut_m", service.id]), []);
     } else {
       assert.ok(providers.every(({ id }) => id !== "emil"));
+    }
+  }
+});
+
+test("rolling visits fit real shifts without overlap across DST and year boundaries", () => {
+  for (const now of [
+    "2026-06-01T05:00:00Z",
+    "2026-03-28T08:00:00Z",
+    "2026-10-24T08:00:00Z",
+    "2026-12-31T08:00:00Z",
+  ]) {
+    const salon = createDemoSalon(() => Date.parse(now));
+    assert.ok(salon.occupied.length > 20);
+    assert.equal(new Set(salon.occupied.map(({ staffId }) => staffId)).size, 3);
+    for (const visit of salon.occupied) {
+      const member = salon.staff.find(({ id }) => id === visit.staffId);
+      assert.ok(member);
+      const date = businessDateAt(visit.start);
+      assert.equal(businessDateAt(visit.end), date);
+      assert.ok(visit.end > visit.start);
+      assert.ok(
+        !salon.exceptions.some(
+          (exception) =>
+            exception.date === date && exception.hours.length === 0,
+        ),
+      );
+      for (const hours of [salon.hours, member.hours]) {
+        assert.ok(
+          hours[businessWeekday(date) as 0 | 1 | 2 | 3 | 4 | 5 | 6].some(
+            (window) =>
+              visit.start >=
+                (localStart(date, window.startMinute) ?? Infinity) &&
+              visit.end <= (localStart(date, window.endMinute) ?? -Infinity),
+          ),
+        );
+      }
+      assert.ok(
+        !salon.occupied.some(
+          (other) =>
+            other !== visit &&
+            other.staffId === visit.staffId &&
+            other.start < visit.end &&
+            other.end > visit.start,
+        ),
+      );
     }
   }
 });

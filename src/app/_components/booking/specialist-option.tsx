@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback } from "@/app/_components/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/app/_components/avatar";
 import { RadioGroupItem } from "@/app/_components/radio-group";
 import type { Staff } from "@/app/_lib/booking/types";
 
@@ -25,8 +25,12 @@ export function SpecialistOption({
         className="size-11 shrink-0 border border-border"
         aria-hidden="true"
       >
+        {member.imageUrl && <AvatarImage src={member.imageUrl} alt="" />}
         <AvatarFallback className="bg-accent text-accent-foreground">
-          {member.name.charAt(0)}
+          {member.name
+            .split(" ")
+            .map((part) => part.charAt(0))
+            .join("")}
         </AvatarFallback>
       </Avatar>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">

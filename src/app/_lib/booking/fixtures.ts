@@ -7,6 +7,7 @@ import {
 import type {
   Clock,
   DemoSalon,
+  OccupiedInterval,
   Service,
   WeeklyHours,
 } from "@/app/_lib/booking/types";
@@ -132,6 +133,37 @@ export function createDemoSalon(clock: Clock): DemoSalon {
     throw new RangeError("Unresolvable demo hours");
   }
 
+  const occupied: OccupiedInterval[] = [
+    { staffId: "mimi", start, end },
+    { staffId: "pavel", start: start + 90 * 60_000, end: end + 90 * 60_000 },
+  ];
+  // A rolling fortnight of visits, including cleanup; never expose client identities.
+  for (let offset = 0; offset < 14; offset += 1) {
+    const date = addCalendarDays(today, offset);
+    const weekday = businessWeekday(date);
+    if (weekday === 0 || date === addCalendarDays(monday, 1)) continue;
+    const visits = [
+      { staffId: "mimi", from: 600, to: 655 },
+      { staffId: "pavel", from: 690, to: 730 },
+      { staffId: "emil", from: 780, to: 870 },
+    ];
+    for (const visit of visits) {
+      if (visit.staffId === "pavel" && (weekday === 3 || weekday === 6))
+        continue;
+      if (date === monday && visit.staffId !== "emil") continue;
+      const visitStart = localStart(date, visit.from);
+      const visitEnd = localStart(date, visit.to);
+      if (visitStart === null || visitEnd === null) {
+        throw new RangeError("Unresolvable demo visit");
+      }
+      occupied.push({
+        staffId: visit.staffId,
+        start: visitStart,
+        end: visitEnd,
+      });
+    }
+  }
+
   return {
     name: "Wellness Studio",
     address: "ул. „Шипка“ 18, София",
@@ -142,6 +174,7 @@ export function createDemoSalon(clock: Clock): DemoSalon {
       {
         id: "mimi",
         name: "Мими Ибрамова",
+        imageUrl: "/staff/mimi-ibramova.jpg",
         description:
           "Дамско и мъжко подстригване, грижа и възстановяване на косата",
         serviceIds: ["cut_w", "cut_m", "keratin", "cut_child", "scalp"],
@@ -150,6 +183,7 @@ export function createDemoSalon(clock: Clock): DemoSalon {
       {
         id: "pavel",
         name: "Павел Добранов",
+        imageUrl: "/staff/pavel-dobranov.png",
         description: "Мъжко подстригване и оформяне",
         serviceIds: ["cut_m", "blowdry", "cut_child", "beard"],
         hours: { ...hours, 3: [], 6: [] },
@@ -157,6 +191,7 @@ export function createDemoSalon(clock: Clock): DemoSalon {
       {
         id: "emil",
         name: "Емил Стойков",
+        imageUrl: "/staff/emil-stoykov.jpg",
         description:
           "Релаксиращи и дълбокотъканни масажи за възстановяване и отмора",
         serviceIds: [
@@ -169,10 +204,7 @@ export function createDemoSalon(clock: Clock): DemoSalon {
         hours: { ...hours, 1: [{ startMinute: 600, endMinute: 1020 }] },
       },
     ],
-    occupied: [
-      { staffId: "mimi", start, end },
-      { staffId: "pavel", start: start + 90 * 60_000, end: end + 90 * 60_000 },
-    ],
+    occupied,
     exceptions: [{ date: addCalendarDays(monday, 1), hours: [] }],
   };
 }

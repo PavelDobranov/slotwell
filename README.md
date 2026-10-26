@@ -12,6 +12,22 @@ npm run dev
 
 ## Booking demo
 
+The Bulgarian demo represents **Wellness Studio**, with 12 illustrative hair and
+massage services. Мими Ибрамова and Павел Добранов provide haircuts and complementary
+hair services; Емил Стойков provides massages. Portraits supplied for the demo are
+stored in `public/staff/` so rendering does not depend on expiring CDN links.
+Prices, address, working hours and visits are sample data, not a real price list.
+
+`src/app/_lib/booking/fixtures.ts` generates a rolling fortnight of occupied visits
+from the injected Sofia date, alongside shorter shifts, days off and a dated
+studio closure. Occupancy includes cleanup and contains no client identities.
+Hair and massage services cannot be combined in one booking because the wizard
+requires one specialist to perform every selected service. Bookings remain in
+page memory only; reloading resets the demo session.
+
+Focused browser verification: `npx playwright test e2e/booking-wellness.spec.ts`
+(after `npm run build`).
+
 The date/time step follows D3 and S1/S2/S6 in `docs/booking-wizard-design.html`:
 - Seven-day paging and a Bulgarian calendar share the existing availability selector (one-hour lead time, today through 60 days ahead).
 - Morning/afternoon counts and the selected visit range use Sofia time; the displayed end excludes cleanup.

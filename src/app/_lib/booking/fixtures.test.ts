@@ -105,7 +105,7 @@ test("walkthrough occupancy and dated closure follow the injected Sofia date, no
     assert.equal(salon.today, expectedToday);
     assert.equal(salon.exceptions[0].date, closure);
     assert.deepEqual(salon.exceptions[0].hours, []);
-    assert.deepEqual(salon.occupied, [
+    assert.deepEqual(salon.occupied.slice(0, 2), [
       {
         staffId: "mimi",
         start: localStart(nextMonday, 600),
