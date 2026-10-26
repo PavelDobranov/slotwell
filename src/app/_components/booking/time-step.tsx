@@ -131,7 +131,7 @@ export function TimeStep({
             variant="outline"
             size="icon"
             aria-label="Предишни дни"
-            className="shrink-0"
+            className="h-18 shrink-0 bg-card"
             disabled={loading || offset === 0}
             onClick={() =>
               setPage({ date, today, offset: Math.max(0, offset - 7) })
@@ -154,7 +154,7 @@ export function TimeStep({
             variant="outline"
             size="icon"
             aria-label="Следващи дни"
-            className="shrink-0"
+            className="h-18 shrink-0 bg-card"
             disabled={loading || offset + 7 > 60}
             onClick={() => setPage({ date, today, offset: offset + 7 })}
           >

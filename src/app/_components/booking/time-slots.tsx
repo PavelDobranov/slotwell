@@ -68,7 +68,7 @@ export function TimeSlots({
                   {group.map((slot) => (
                     <label
                       key={slot.start}
-                      className="relative flex min-h-12 cursor-pointer items-center justify-center gap-1 rounded-slot border border-input bg-background text-[15px] font-semibold tabular-nums has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
+                      className="relative flex min-h-12 cursor-pointer items-center justify-center gap-1 rounded-slot border border-border bg-card text-[15px] font-semibold tabular-nums has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
                     >
                       <input
                         type="radio"
