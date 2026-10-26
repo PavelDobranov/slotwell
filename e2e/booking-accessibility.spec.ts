@@ -112,8 +112,8 @@ for (const { width, zoom } of reviewViewports) {
           document.documentElement.style.zoom = "2";
         });
         expect(
-          await page.evaluate(() =>
-            matchMedia("(prefers-reduced-motion: reduce)").matches,
+          await page.evaluate(
+            () => matchMedia("(prefers-reduced-motion: reduce)").matches,
           ),
         ).toBe(true);
       }
@@ -143,7 +143,12 @@ for (const { width, zoom } of reviewViewports) {
         });
       }
       async function verifyStep(name: string) {
-        await expect(heading(name)).toBeFocused();
+        // The time and specialist screens share one milestone heading.
+        const headingName =
+          name === "Дата и час" || name === "Специалист"
+            ? "Кога и с кого"
+            : name;
+        await expect(heading(headingName)).toBeFocused();
         await verifyRendered(name);
       }
       await expect(page.locator("html")).toHaveAttribute("lang", "bg");
@@ -155,7 +160,7 @@ for (const { width, zoom } of reviewViewports) {
         await expect(checkbox.locator("svg")).toBeVisible();
       }
       await verifyRendered("Избрани услуги");
-      await activate(page, button("Продължи"));
+      await activate(page, button(/^(Продължи|Напред:)/));
       const staffPath = page.getByRole("radio", {
         name: "Специалист",
         exact: true,
@@ -190,11 +195,11 @@ for (const { width, zoom } of reviewViewports) {
           page.getByRole("radio", { name: /Иван/ }),
           "Space",
         );
-        await activate(page, button("Продължи"));
+        await activate(page, button(/^(Продължи|Напред:)/));
         await verifyStep("Дата и час");
       }
       await chooseTime(page, "15:00");
-      await activate(page, button("Продължи"));
+      await activate(page, button(/^(Продължи|Напред:)/));
       if (path === "time-first") {
         await verifyStep("Специалист");
         await activate(
@@ -202,7 +207,7 @@ for (const { width, zoom } of reviewViewports) {
           page.getByRole("radio", { name: /Иван/ }),
           "Space",
         );
-        await activate(page, button("Продължи"));
+        await activate(page, button(/^(Продължи|Напред:)/));
       }
       await verifyStep("Данни и преглед");
       await activate(page, button("Провери данните"));
@@ -232,24 +237,28 @@ for (const { width, zoom } of reviewViewports) {
       await activate(page, button("Промени датата и часа"));
       await verifyStep("Дата и час");
       await activate(page, button("Назад"));
-      await verifyStep(path === "staff-first" ? "Специалист" : "Изберете услуги");
-      await activate(page, button("Продължи"));
+      await verifyStep(
+        path === "staff-first" ? "Специалист" : "Изберете услуги",
+      );
+      await activate(page, button(/^(Продължи|Напред:)/));
       await verifyStep("Дата и час");
       await chooseTime(page, "15:15");
       await expect(
         page.getByRole("radio", { name: "15:15", exact: true }),
       ).toBeChecked();
-      await activate(page, button("Продължи"));
+      await activate(page, button(/^(Продължи|Напред:)/));
       if (path === "time-first") {
         await verifyStep("Специалист");
-        await activate(page, button("Продължи"));
+        await activate(page, button(/^(Продължи|Напред:)/));
       }
       await verifyStep("Данни и преглед");
       await expect(name).toHaveValue("Demo Keyboard");
       await expect(
         page.getByRole("textbox", { name: "Имейл", exact: true }),
       ).toHaveValue("keyboard@example.com");
-      const summary = page.getByRole("complementary", { name: "Вашата резервация" });
+      const summary = page.getByRole("complementary", {
+        name: "Вашата резервация",
+      });
       await expect(summary).toContainText("50 мин");
       await expect(summary).toContainText(/35,00\s*€/);
       await expect(summary).toContainText("15:15–16:05");

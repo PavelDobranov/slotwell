@@ -15,7 +15,7 @@ const salon = createDemoSalon(() => now);
 const context = { salon, now };
 const booked: BookingState = {
   ...initialBookingState,
-  serviceIds: ["haircut"],
+  serviceIds: ["cut_m"],
   path: "staff-first",
   step: "details",
   staffId: "mila",
@@ -36,7 +36,7 @@ test("new bookings start time-first without inventing a time or specialist", () 
     assert.deepEqual(state.serviceIds, []);
     const selected = bookingReducer(
       state,
-      { type: "services", ids: ["haircut"] },
+      { type: "services", ids: ["cut_m"] },
       context,
     );
     assert.equal(
@@ -50,7 +50,7 @@ test("both route orders reach the same explicit service-staff-time combination",
   for (const path of ["staff-first", "time-first"] as const) {
     let state = bookingReducer(
       initialBookingState,
-      { type: "services", ids: ["haircut"] },
+      { type: "services", ids: ["cut_m"] },
       context,
     );
     state = bookingReducer(state, { type: "path", path }, context);
@@ -185,13 +185,14 @@ test("empty services cannot advance; totals treat services as a distinct set", (
   );
   const selected = bookingReducer(
     initialBookingState,
-    { type: "services", ids: ["haircut", "beard", "haircut", "unknown"] },
+    { type: "services", ids: ["cut_m", "blowdry", "cut_m", "unknown"] },
     context,
   );
-  assert.deepEqual(selected.serviceIds, ["haircut", "beard"]);
+  assert.deepEqual(selected.serviceIds, ["cut_m", "blowdry"]);
   assert.deepEqual(selectedTotals(selected, salon), {
-    priceCents: 3500,
-    durationMinutes: 50,
+    priceCents: 3300,
+    hasVariablePrice: false,
+    durationMinutes: 60,
     cleanupMinutes: 15,
   });
   assert.equal(
@@ -208,7 +209,7 @@ test("back, edit, path switches and contact updates preserve valid choices", () 
   );
   const unchanged = bookingReducer(
     edited,
-    { type: "services", ids: ["haircut", "wash"] },
+    { type: "services", ids: ["cut_m", "cut_w"] },
     context,
   );
   assert.equal(unchanged.staffId, "mila");
@@ -255,7 +256,7 @@ test("longer services clear a time that no longer fits and return to time choice
   const late = { ...booked, start: localStart("2026-06-01", 1035) };
   const result = bookingReducer(
     late,
-    { type: "services", ids: ["haircut", "wash"] },
+    { type: "services", ids: ["cut_m", "cut_w"] },
     context,
   );
   assert.equal(result.staffId, "mila");
@@ -267,7 +268,7 @@ test("longer services clear a time that no longer fits and return to time choice
 test("time-first returns to earliest unresolved choice; empty services clear both", () => {
   const result = bookingReducer(
     { ...booked, path: "time-first" },
-    { type: "services", ids: ["color", "beard"] },
+    { type: "services", ids: ["color", "blowdry"] },
     context,
   );
   assert.equal(result.step, "time");

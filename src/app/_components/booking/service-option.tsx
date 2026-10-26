@@ -1,5 +1,5 @@
 import { Checkbox } from "@/app/_components/checkbox";
-import { euros } from "@/app/_lib/booking/format";
+import { formatDuration, formatServicePrice } from "@/app/_lib/booking/format";
 import type { Service } from "@/app/_lib/booking/types";
 
 export function ServiceOption({
@@ -30,11 +30,16 @@ export function ServiceOption({
           {service.name}
         </span>
         <span className="text-[14px] leading-5 text-muted-foreground tabular-nums">
-          {service.durationMinutes} мин
+          {formatDuration(service.durationMinutes)}
+          {service.priceCents === null &&
+            " · цената зависи от дължината на косата"}
         </span>
       </span>
-      <span className="shrink-0 text-base leading-[22px] font-semibold tabular-nums">
-        {euros.format(service.priceCents / 100)}
+      <span
+        data-variable={service.priceCents === null || undefined}
+        className="shrink-0 text-base leading-[22px] font-semibold tabular-nums data-variable:font-medium data-variable:text-muted-foreground"
+      >
+        {formatServicePrice(service.priceCents)}
       </span>
     </label>
   );

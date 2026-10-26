@@ -21,7 +21,7 @@ for (const path of ["staff-first", "time-first"] satisfies BookingPath[]) {
             ...initialBookingState,
             path,
             step,
-            serviceIds: ["haircut"],
+            serviceIds: ["cut_m"],
             staffId: "ivan",
             start: 1,
           },
@@ -45,7 +45,7 @@ for (const path of ["staff-first", "time-first"] satisfies BookingPath[]) {
             ...initialBookingState,
             path,
             step: "details",
-            serviceIds: ["haircut"],
+            serviceIds: ["cut_m"],
             staffId: "ivan",
             start: 1,
             contact: {

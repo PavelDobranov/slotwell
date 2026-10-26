@@ -9,16 +9,14 @@ test("360px booking bar owns one action and remains in flow with a short keyboar
   await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
   await page.goto("/");
   const summary = page.getByRole("button", { name: /Обобщение/ });
-  const next = page.getByRole("button", { name: "Продължи", exact: true });
+  const next = page.getByRole("button", { name: /^(Продължи|Напред:)/ });
   await expect(next).toHaveCount(1);
   await expect(summary).toContainText("Няма избрани услуги");
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
   await expect(summary).toContainText("1 услуга · 30 мин");
   await expect(summary).toContainText("23,00");
   await next.click();
-  await page
-    .getByRole("radio", { name: "Специалист", exact: true })
-    .check();
+  await page.getByRole("radio", { name: "Специалист", exact: true }).check();
   await expect(next).toBeDisabled();
   await page.getByRole("radio", { name: /Мила/ }).check();
   await next.click();
@@ -97,7 +95,7 @@ for (const width of [360, 390, 1280, 1440]) {
     await page.setViewportSize({ width, height: 940 });
     await page.clock.install({ time: new Date("2026-06-01T05:00:00Z") });
     await page.goto("/");
-    const next = page.getByRole("button", { name: "Продължи", exact: true });
+    const next = page.getByRole("button", { name: /^(Продължи|Напред:)/ });
     await expect(next).toBeEnabled();
     await expect(next).toHaveCSS("height", "52px");
     const service = page.getByRole("checkbox", { name: /Подстригване/ });
@@ -106,9 +104,7 @@ for (const width of [360, 390, 1280, 1440]) {
     await page.keyboard.press("Space");
     await expect(service).toBeChecked();
     await next.click();
-    await page
-      .getByRole("radio", { name: "Дата и час", exact: true })
-      .check();
+    await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
     await expect(next).toBeDisabled();
     await expect(next).toHaveCSS("opacity", "0.5");
     const slot = page.getByRole("radio", { name: "15:00", exact: true });
@@ -162,7 +158,10 @@ for (const width of [360, 390, 1280, 1440]) {
     // Pause the real demo confirmation timer so the pending appearance can be measured.
     await page.clock.pauseAt(new Date("2026-06-01T05:01:00Z"));
     await page
-      .getByRole("button", { name: /^Потвърди резервация(?:та)?$/, exact: true })
+      .getByRole("button", {
+        name: /^Потвърди резервация(?:та)?$/,
+        exact: true,
+      })
       .click();
     const pending = page.getByRole("button", {
       name: "Потвърждаваме…",
@@ -192,17 +191,15 @@ for (const width of [360, 390, 1280, 1440]) {
     await page.goto("/");
     await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
     await page.getByRole("checkbox", { name: /Измиване и оформяне/ }).check();
-    await page.getByRole("button", { name: "Продължи", exact: true }).click();
-    await page
-      .getByRole("radio", { name: "Специалист", exact: true })
-      .check();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
+    await page.getByRole("radio", { name: "Специалист", exact: true }).check();
     const removal = page.getByRole("button", {
       name: "Махни „Измиване и оформяне“",
     });
     expect((await removal.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await removal.click();
     await page.getByRole("radio", { name: /Иван/ }).check();
-    await page.getByRole("button", { name: "Продължи", exact: true }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await expect(
       page.getByText("Няма свободни часове за тази дата."),
     ).toBeVisible();
@@ -248,33 +245,19 @@ for (const width of [360, 390]) {
         fullPage: true,
       });
     }
-    await expect(page.getByRole("button", { name: "Продължи" })).toBeEnabled();
+    await expect(
+      page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
+    ).toBeEnabled();
     await verify("M1-services");
     await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
     await verify("M2-time");
-    await page.getByRole("button", { name: "Календар", exact: true }).click();
-    // The popup scales in; measure settled hit areas rather than an animation frame.
-    await expect
-      .poll(async () =>
-        (
-          await auditRenderedControls(page, '[data-slot="popover-content"]')
-        ).targets.filter(({ minimum44 }) => !minimum44),
-      )
-      .toEqual([]);
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth),
-    ).toBeLessThanOrEqual(width);
-    await page.screenshot({
-      path: `coverage/playwright/mobile-calendar-${width}.png`,
-    });
-    await page.keyboard.press("Escape");
     await page.getByRole("radio", { name: "15:00", exact: true }).check();
-    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await verify("M4-staff");
     await page.getByRole("radio", { name: /Мила/ }).check();
-    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await page.getByRole("button", { name: "Провери данните" }).click();
     await verify("M5-details-errors");
     for (const [name, value] of [
@@ -286,7 +269,10 @@ for (const width of [360, 390]) {
     await page.getByRole("button", { name: "Провери данните" }).click();
     await verify("review");
     await page
-      .getByRole("button", { name: /^Потвърди резервация(?:та)?$/, exact: true })
+      .getByRole("button", {
+        name: /^Потвърди резервация(?:та)?$/,
+        exact: true,
+      })
       .click();
     await expect(
       page.getByRole("heading", {
@@ -314,7 +300,7 @@ for (const width of [360, 390]) {
     await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
     await page.goto("/");
     await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
     await page.getByRole("radio", { name: "15:00", exact: true }).check();
     const trigger = page.getByRole("button", { name: "Виж избора" });

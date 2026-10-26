@@ -12,14 +12,12 @@ test("path switches preserve valid choices and service edits explain only invali
   await page.setViewportSize({ width: 360, height: 844 });
   await page.goto("/");
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
-  await page
-    .getByRole("radio", { name: "Специалист", exact: true })
-    .check();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
+  await page.getByRole("radio", { name: "Специалист", exact: true }).check();
   await page.getByRole("radio", { name: /Мила/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "15:00", exact: true }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page
     .getByRole("textbox", { name: "Име", exact: true })
     .fill("Демо Клиент");
@@ -34,7 +32,7 @@ test("path switches preserve valid choices and service edits explain only invali
     .getByRole("button", { name: "Промени датата и часа", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Дата и час", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
   const preserved = page
@@ -52,9 +50,9 @@ test("path switches preserve valid choices and service edits explain only invali
     path: "coverage/playwright/recovery-path-switch.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(page.getByRole("radio", { name: /Мила/ })).toBeChecked();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("button", { name: "Виж избора" }).click();
   await page
     .getByRole("button", { name: "Промени услугите", exact: true })
@@ -71,20 +69,22 @@ test("path switches preserve valid choices and service edits explain only invali
   for (const contact of ["Демо Клиент", "0888123456", "demo@example.com"])
     await expect(invalidated).not.toContainText(contact);
   // The time is still valid with Ivan: only Mila must be cleared.
-  const summary = page.getByRole("complementary", { name: "Вашата резервация" });
+  const summary = page.getByRole("complementary", {
+    name: "Вашата резервация",
+  });
   await expect(summary).toContainText("15:00–15:50");
   await expect(summary).not.toContainText("Мила");
   await page.screenshot({
     path: "coverage/playwright/recovery-invalidation.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(
     page.getByRole("radio", { name: "15:00", exact: true }),
   ).toBeChecked();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: /Иван/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   for (const [name, value] of [
     ["Име", "Демо Клиент"],
     ["Телефон", "0888123456"],
@@ -102,7 +102,7 @@ for (const width of [360, 390, 1280]) {
     await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
     await page.setViewportSize({ width, height: 880 });
     await page.goto("/");
-    const next = page.getByRole("button", { name: "Продължи", exact: true });
+    const next = page.getByRole("button", { name: /^(Продължи|Напред:)/ });
     await next.click();
     await expect(
       page.getByRole("group", { name: "Услуги", exact: true }),
@@ -117,9 +117,7 @@ for (const width of [360, 390, 1280]) {
     await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
     await page.getByRole("checkbox", { name: /Измиване и оформяне/ }).check();
     await next.click();
-    await page
-      .getByRole("radio", { name: "Специалист", exact: true })
-      .check();
+    await page.getByRole("radio", { name: "Специалист", exact: true }).check();
     const noqual = page
       .getByRole("alert")
       .filter({ hasText: "Никой специалист" });
@@ -239,7 +237,7 @@ for (const width of [360, 390, 1280]) {
         ).toBeVisible();
       }
       await expect(
-        page.getByRole("button", { name: "Продължи", exact: true }),
+        page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
       ).toBeDisabled();
       await page.screenshot({
         path: `coverage/playwright/state-${scenario}-${width}.png`,

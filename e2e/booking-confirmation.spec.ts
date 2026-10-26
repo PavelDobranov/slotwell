@@ -27,24 +27,23 @@ for (const path of ["staff-first", "time-first"] as const) {
       await page.setViewportSize({ width: 360, height: 800 });
       await page.goto("/");
       await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-      await page.getByRole("button", { name: "Продължи" }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page
         .getByRole("radio", {
-          name:
-            path === "staff-first" ? "Специалист" : "Дата и час",
+          name: path === "staff-first" ? "Специалист" : "Дата и час",
           exact: true,
         })
         .check();
       if (path === "staff-first") {
         await page.getByRole("radio", { name: /Мила/ }).check();
-        await page.getByRole("button", { name: "Продължи" }).click();
+        await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
         await page.getByRole("radio", { name: "15:00", exact: true }).check();
       } else {
         await page.getByRole("radio", { name: "15:00", exact: true }).check();
-        await page.getByRole("button", { name: "Продължи" }).click();
+        await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
         await page.getByRole("radio", { name: /Мила/ }).check();
       }
-      await page.getByRole("button", { name: "Продължи" }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page
         .getByRole("textbox", { name: "Име", exact: true })
         .fill("Демо Възстановяване");
@@ -71,7 +70,9 @@ for (const path of ["staff-first", "time-first"] as const) {
           exact: true,
         })
         .click();
-      const summary = page.getByRole("complementary", { name: "Вашата резервация" });
+      const summary = page.getByRole("complementary", {
+        name: "Вашата резервация",
+      });
       await expect(summary).toContainText("Подстригване");
       if (scenario === "retryable") {
         await expect(
@@ -110,7 +111,7 @@ for (const path of ["staff-first", "time-first"] as const) {
         await page.keyboard.press("Enter");
       } else {
         await expect(
-          page.getByRole("heading", { name: "Дата и час", exact: true }),
+          page.getByRole("heading", { name: "Кога и с кого", exact: true }),
         ).toBeFocused();
         const recovery = page
           .getByRole("region", { name: "Дата и час", exact: true })
@@ -145,10 +146,12 @@ for (const path of ["staff-first", "time-first"] as const) {
           fullPage: true,
         });
         await page.getByRole("radio", { name: "16:00", exact: true }).check();
-        await page.getByRole("button", { name: "Продължи" }).click();
+        await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
         if (path === "time-first") {
           await page.getByRole("radio", { name: /Мила/ }).check();
-          await page.getByRole("button", { name: "Продължи" }).click();
+          await page
+            .getByRole("button", { name: /^(Продължи|Напред:)/ })
+            .click();
         }
         for (const [name, value] of [
           ["Име", "Демо Възстановяване"],
@@ -212,25 +215,27 @@ for (const path of ["staff-first", "time-first"] as const) {
     await page.goto("/");
     async function chooseServiceAndStaff() {
       await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-      await page.getByRole("button", { name: "Продължи" }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page
         .getByRole("radio", { name: "Специалист", exact: true })
         .check();
       await page.getByRole("radio", { name: /Мила/ }).check();
-      await page.getByRole("button", { name: "Продължи" }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     }
     if (path === "staff-first") {
       await chooseServiceAndStaff();
       await page.getByRole("radio", { name: "15:00", exact: true }).check();
     } else {
       await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-      await page.getByRole("button", { name: "Продължи" }).click();
-      await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
+      await page
+        .getByRole("radio", { name: "Дата и час", exact: true })
+        .check();
       await page.getByRole("radio", { name: "15:00", exact: true }).check();
-      await page.getByRole("button", { name: "Продължи" }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page.getByRole("radio", { name: /Мила/ }).check();
     }
-    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await page
       .getByRole("textbox", { name: "Име", exact: true })
       .fill("Демо Посетител");
@@ -307,7 +312,9 @@ for (const path of ["staff-first", "time-first"] as const) {
     for (const text of ["Подстригване", "Мила", "15:00–15:30", "30 мин"])
       await expect(visit).toContainText(text);
     await expect(visit).toContainText(/23,00\s*€/);
-    const summary = page.getByRole("complementary", { name: "Вашата резервация" });
+    const summary = page.getByRole("complementary", {
+      name: "Вашата резервация",
+    });
     for (const text of [
       "Подстригване",
       "Мила",
@@ -406,7 +413,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       page.getByRole("radio", { name: "15:00", exact: true }),
     ).toHaveCount(0);
     await page.getByRole("radio", { name: "16:00", exact: true }).check();
-    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await page
       .getByText("Добави бележка (по желание)", { exact: true })
       .click();
@@ -423,7 +430,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       page.getByRole("radio", { name: "15:00", exact: true }),
     ).toBeVisible();
     await page.getByRole("radio", { name: "15:00", exact: true }).check();
-    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await expect(
       page.getByRole("textbox", { name: "Име", exact: true }),
     ).toHaveValue("");

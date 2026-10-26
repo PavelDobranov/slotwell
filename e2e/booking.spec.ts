@@ -4,55 +4,39 @@ import { auditRenderedControls } from "./rendered-audit";
 
 test.use({ timezoneId: "America/New_York" });
 
+const BG_MONTHS = [
+  "януари",
+  "февруари",
+  "март",
+  "април",
+  "май",
+  "юни",
+  "юли",
+  "август",
+  "септември",
+  "октомври",
+  "ноември",
+  "декември",
+];
+
+// Clear Day replaced the calendar popover with a paged day strip: rewind to the
+// earliest window, then page forward until the target chip is reachable.
 async function chooseDate(page: Page, value: string) {
-  await page.getByRole("button", { name: "Календар", exact: true }).click();
-  const calendar = page.locator('[data-slot="calendar"]');
   const target = new Date(`${value}T12:00:00`);
-  const caption = new Intl.DateTimeFormat("bg-BG", {
-    month: "long",
-    year: "numeric",
-  })
-    .format(target)
-    .replace(/ г\.$/, "");
-  const months = [
-    "януари",
-    "февруари",
-    "март",
-    "април",
-    "май",
-    "юни",
-    "юли",
-    "август",
-    "септември",
-    "октомври",
-    "ноември",
-    "декември",
-  ];
-  for (
-    let attempt = 0;
-    attempt < 3 &&
-    !(await calendar.getByText(caption, { exact: true }).count());
-    attempt++
-  ) {
-    const current = await calendar.locator(".rdp-caption_label").innerText();
-    const index = months.findIndex((month) => current.includes(month));
-    await calendar
-      .getByRole("button", {
-        name:
-          index < target.getMonth()
-            ? "Към следващия месец"
-            : "Към предишния месец",
-      })
-      .click();
+  const label = new RegExp(
+    `(?:^|, )0?${target.getDate()} ${BG_MONTHS[target.getMonth()]} ${target.getFullYear()}`,
+  );
+  const chip = page.getByRole("radio", { name: label });
+  const previous = page.getByRole("button", {
+    name: "Предишни дни",
+    exact: true,
+  });
+  const next = page.getByRole("button", { name: "Следващи дни", exact: true });
+  while (await previous.isEnabled()) await previous.click();
+  for (let attempt = 0; attempt < 12 && (await chip.count()) === 0; attempt++) {
+    await next.click();
   }
-  await calendar
-    .getByRole("button", {
-      name: new RegExp(
-        `(?:^|, )0?${target.getDate()} ${months[target.getMonth()]} ${target.getFullYear()}`,
-      ),
-    })
-    .click();
-  await expect(calendar).toHaveCount(0);
+  await chip.first().check();
 }
 
 test("the home page exposes a visible main landmark", async ({ page }) => {
@@ -206,7 +190,7 @@ test("keyboard service selection updates totals, navigation and focus without a 
   });
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto("/");
-  const next = page.getByRole("button", { name: "Продължи" });
+  const next = page.getByRole("button", { name: /^(Продължи|Напред:)/ });
   await expect(next).toBeEnabled();
   const services = page.getByRole("group", { name: "Услуги", exact: true });
   const error = page.getByText("Избери поне една услуга, за да продължиш.");
@@ -229,7 +213,9 @@ test("keyboard service selection updates totals, navigation and focus without a 
   await expect(haircut).toBeChecked();
   await expect(error).toHaveCount(0);
   await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
-  const summary = page.getByRole("complementary", { name: "Вашата резервация" });
+  const summary = page.getByRole("complementary", {
+    name: "Вашата резервация",
+  });
   await expect(summary).toContainText("50 мин");
   await expect(summary).toContainText(/35,00\s*€/);
   await page.screenshot({
@@ -238,18 +224,18 @@ test("keyboard service selection updates totals, navigation and focus without a 
   });
   await next.click();
   await expect(
-    page.getByRole("heading", { name: "Дата и час", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await expect(
     page.getByRole("radio", { name: "Дата и час", exact: true }),
   ).toBeChecked();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
   await expect(
-    page.getByRole("heading", { name: "Специалист", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
   await expect(
-    page.getByRole("heading", { name: "Дата и час", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await expect(page.locator('[aria-current="step"]')).toContainText(
     "Час и специалист",
@@ -293,17 +279,17 @@ test("route choice exists only in when/who, defaults to time-first and cannot be
     exact: true,
   });
   await expect(route).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Дата и час" }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Дата и час" })).toHaveCount(0);
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-  const summary = page.getByRole("complementary", { name: "Вашата резервация" });
+  const summary = page.getByRole("complementary", {
+    name: "Вашата резервация",
+  });
   await expect(summary).toContainText("30 мин");
   await expect(summary).toContainText(/23,00\s*€/);
-  const next = page.getByRole("button", { name: "Продължи", exact: true });
+  const next = page.getByRole("button", { name: /^(Продължи|Напред:)/ });
   await next.click();
   await expect(
-    page.getByRole("heading", { name: "Дата и час", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await expect(route).toHaveCount(1);
   const timeFirst = page.getByRole("radio", {
@@ -323,7 +309,7 @@ test("route choice exists only in when/who, defaults to time-first and cannot be
   await expect(timeFirst).toBeChecked();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
   await expect(
-    page.getByRole("heading", { name: "Специалист", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await expect(route).toHaveCount(1);
   await page.getByRole("button", { name: "Назад", exact: true }).click();
@@ -361,7 +347,7 @@ test("specialist choices require explicit selection and match every service", as
   await page.goto("/");
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
   await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
   const specialists = page.getByRole("group", { name: "Избери специалист" });
   await expect(
@@ -369,20 +355,24 @@ test("specialist choices require explicit selection and match every service", as
   ).toHaveCount(1);
   const ivan = specialists.getByRole("radio", { name: /Иван/ });
   await expect(ivan).not.toBeChecked();
-  await expect(page.getByRole("button", { name: "Продължи" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
+  ).toBeDisabled();
   await ivan.focus();
   await page.keyboard.press("Space");
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(
-    page.getByRole("heading", { name: "Дата и час", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await page.getByRole("button", { name: "Промени услугите" }).click();
   await page.getByRole("checkbox", { name: /Боядисване/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(
     page.getByText("Никой специалист не прави всички избрани услуги заедно"),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Продължи" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
+  ).toBeDisabled();
 });
 
 test("specialist-first date recovery, horizon, edits and keyboard times reach details", async ({
@@ -398,10 +388,10 @@ test("specialist-first date recovery, horizon, edits and keyboard times reach de
   await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
   await page.goto("/");
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
   await page.getByRole("radio", { name: /Мила/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   const date = page.getByRole("group", {
     name: "Дата на посещението",
     exact: true,
@@ -409,7 +399,7 @@ test("specialist-first date recovery, horizon, edits and keyboard times reach de
   await expect(date.getByRole("radio")).toHaveCount(7);
   await chooseDate(page, "2026-07-31");
   await expect(
-    page.getByRole("button", { name: "Следващите 7 дни" }),
+    page.getByRole("button", { name: "Следващи дни" }),
   ).toBeDisabled();
   await expect(
     page.getByRole("radio", { name: "09:00", exact: true }),
@@ -418,11 +408,13 @@ test("specialist-first date recovery, horizon, edits and keyboard times reach de
   await expect(date.getByRole("radio", { checked: true })).toHaveValue(
     "2026-06-10",
   );
-  await expect(page.getByRole("button", { name: "Продължи" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
+  ).toBeDisabled();
   const start = page.getByRole("radio", { name: "09:00", exact: true });
   await start.focus();
   await page.keyboard.press("Space");
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(
     page.getByRole("heading", { name: "Данни и преглед", exact: true }),
   ).toBeFocused();
@@ -433,25 +425,27 @@ test("specialist-first date recovery, horizon, edits and keyboard times reach de
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await expect(start).toBeChecked();
   await chooseDate(page, "2026-06-11");
-  await expect(page.getByRole("button", { name: "Продължи" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
+  ).toBeDisabled();
   await expect(page.locator("section output").first()).toContainText(
     "Датата е променена",
   );
   await page.getByRole("radio", { name: "09:00", exact: true }).check();
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await page.getByRole("radio", { name: /Иван/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(
     page.getByRole("radio", { name: "09:00", exact: true }),
   ).toBeChecked();
   // Retain a date Mila can serve when choosing Ivan, who is off Wednesdays.
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await page.getByRole("radio", { name: /Мила/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await chooseDate(page, "2026-06-10");
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await page.getByRole("radio", { name: /Иван/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(
     page.getByText("Няма свободни часове за тази дата."),
   ).toBeVisible();
@@ -479,22 +473,22 @@ test("date survives back navigation and a specialist change that clears its star
   await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
   await page.goto("/");
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
   await page.getByRole("radio", { name: /Мила/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   const date = page.getByRole("group", {
     name: "Дата на посещението",
     exact: true,
   });
   await chooseDate(page, "2026-06-10");
   await page.getByRole("button", { name: "Назад", exact: true }).click();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(date.locator('input[value="2026-06-10"]')).toBeChecked();
   await page.getByRole("radio", { name: "09:00", exact: true }).check();
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await page.getByRole("radio", { name: /Иван/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(date.locator('input[value="2026-06-10"]')).toBeChecked();
   await expect(
     page.getByText("Няма свободни часове за тази дата."),
@@ -503,10 +497,10 @@ test("date survives back navigation and a specialist change that clears its star
     .getByRole("button", { name: "Смени специалиста", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Специалист", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await page.getByRole("radio", { name: /Мила/ }).check();
-  await page.getByRole("button", { name: "Продължи", exact: true }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(date.getByRole("radio", { checked: true })).toHaveValue(
     "2026-06-10",
   );
@@ -521,17 +515,19 @@ test("selection and navigation revalidate the clock instead of retaining page-op
   await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z")); // 08:00 Sofia.
   await page.goto("/");
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
   await page.getByRole("radio", { name: /Мила/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "09:00", exact: true }).check();
   await page.clock.setFixedTime(new Date("2026-06-01T05:30:00Z"));
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(
-    page.getByRole("heading", { name: "Дата и час", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Продължи" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
+  ).toBeDisabled();
   await expect(
     page.getByRole("radio", { name: "09:00", exact: true }),
   ).toHaveCount(0);
@@ -546,26 +542,21 @@ test("empty dates at the horizon offer service edits without inventing a later s
   await page.clock.setFixedTime(new Date("2026-06-03T05:00:00Z"));
   await page.goto("/");
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
   await page.getByRole("radio", { name: /Мила/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await chooseDate(page, "2026-08-01");
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await page.getByRole("radio", { name: /Иван/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(page.getByText(/Няма по-късна свободна дата/)).toBeVisible();
   await expect(page.locator('input[value="2026-08-01"]')).toBeChecked();
   await expect(page.getByRole("button", { name: /първи час/ })).toHaveCount(0);
-  await page.getByRole("button", { name: "Календар", exact: true }).click();
-  const calendar = page.locator('[data-slot="calendar"]');
+  // The day strip caps forward paging at the 60-day horizon.
   await expect(
-    calendar.getByRole("button", { name: /, 02 август 2026/ }),
+    page.getByRole("button", { name: "Следващи дни" }),
   ).toBeDisabled();
-  await expect(
-    calendar.getByRole("button", { name: /, 03 август 2026/ }),
-  ).toBeDisabled();
-  await page.keyboard.press("Escape");
   await page
     .getByRole("button", { name: "Промени избора на услуги", exact: true })
     .click();
@@ -587,7 +578,7 @@ test("time-first deduplicates shared starts, requires explicit staff, and switch
   await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
   await page.goto("/");
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-  const next = page.getByRole("button", { name: "Продължи" });
+  const next = page.getByRole("button", { name: /^(Продължи|Напред:)/ });
   await next.click();
   await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
   const start = page.getByRole("radio", { name: "15:00", exact: true });
@@ -598,7 +589,7 @@ test("time-first deduplicates shared starts, requires explicit staff, and switch
   await page.keyboard.press("Space");
   await next.click();
   await expect(
-    page.getByRole("heading", { name: "Специалист", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   const specialists = page.getByRole("group", { name: "Избери специалист" });
   await expect(
@@ -619,14 +610,14 @@ test("time-first deduplicates shared starts, requires explicit staff, and switch
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
   await expect(
-    page.getByRole("heading", { name: "Специалист", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await expect(specialists.getByRole("radio", { name: /Мила/ })).toBeChecked();
   await next.click();
   await expect(start).toBeChecked();
   await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
   await expect(
-    page.getByRole("heading", { name: "Дата и час", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await expect(start).toBeChecked();
   // The service ends at 10:00, but Mila's cleanup would overlap her occupancy.
@@ -675,7 +666,7 @@ test("time-first filters competencies and rejects a start that becomes stale on 
   await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
   await page.goto("/");
   await page.getByRole("checkbox", { name: /Боядисване/ }).check();
-  const next = page.getByRole("button", { name: "Продължи" });
+  const next = page.getByRole("button", { name: /^(Продължи|Напред:)/ });
   await next.click();
   await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
   await page.getByRole("radio", { name: "10:00", exact: true }).check();
@@ -691,7 +682,7 @@ test("time-first filters competencies and rejects a start that becomes stale on 
   await page.clock.setFixedTime(new Date("2026-06-01T06:30:00Z"));
   await next.click();
   await expect(
-    page.getByRole("heading", { name: "Дата и час", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await expect(
     page.getByRole("radio", { name: "10:00", exact: true }),
@@ -716,7 +707,7 @@ test("time-first clock refresh returns expired candidates to time selection with
   await page.clock.install({ time: new Date("2026-06-01T05:00:00Z") });
   await page.goto("/");
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-  const next = page.getByRole("button", { name: "Продължи" });
+  const next = page.getByRole("button", { name: /^(Продължи|Напред:)/ });
   await next.click();
   await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
   // :15 remains valid until the clock passes 08:15 Sofia.
@@ -725,7 +716,7 @@ test("time-first clock refresh returns expired candidates to time selection with
   await page.getByRole("radio", { name: /Мила/ }).focus();
   await page.clock.fastForward(16 * 60_000);
   await expect(
-    page.getByRole("heading", { name: "Дата и час", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await expect(page.locator("section output").first()).toContainText(
     "час е премахнат",
@@ -740,12 +731,16 @@ for (const path of ["staff-first", "time-first"] as const) {
     await page.clock.install({ time: new Date("2026-06-01T05:00:00Z") });
     await page.goto("/");
     await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-    const next = page.getByRole("button", { name: "Продължи" });
+    const next = page.getByRole("button", { name: /^(Продължи|Напред:)/ });
     await next.click();
     if (path === "time-first") {
-      await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
+      await page
+        .getByRole("radio", { name: "Дата и час", exact: true })
+        .check();
     } else {
-      await page.getByRole("radio", { name: "Специалист", exact: true }).check();
+      await page
+        .getByRole("radio", { name: "Специалист", exact: true })
+        .check();
       await page.getByRole("radio", { name: /Мила/ }).check();
       await next.click();
     }
@@ -755,7 +750,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await page.clock.fastForward(16 * 60_000);
     await expect(start).toHaveCount(0);
     await expect(
-      page.getByRole("heading", { name: "Дата и час", exact: true }),
+      page.getByRole("heading", { name: "Кога и с кого", exact: true }),
     ).toBeFocused();
     await expect(next).toBeDisabled();
     // A further refresh must not steal focus from a still-present control.
@@ -773,28 +768,26 @@ test("date strip pages without changing selection and calendar supports keyboard
   await page.goto("/");
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
   await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
-  await page.getByRole("button", { name: "Продължи", exact: true }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
   await page.getByRole("radio", { name: /Иван/ }).check();
-  await page.getByRole("button", { name: "Продължи", exact: true }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   const dates = page.getByRole("group", {
     name: "Дата на посещението",
     exact: true,
   });
   const next = page.getByRole("button", {
-    name: "Следващите 7 дни",
+    name: "Следващи дни",
     exact: true,
   });
   const previous = page.getByRole("button", {
-    name: "Предишните 7 дни",
+    name: "Предишни дни",
     exact: true,
   });
   await expect(previous).toBeDisabled();
   await expect(dates.locator('input[value="2026-06-03"]')).toBeDisabled();
   await page.getByRole("radio", { name: "15:00", exact: true }).check();
-  await expect(
-    page.locator("output").filter({ hasText: "15:00–15:50" }),
-  ).toBeVisible();
+  await expect(page.getByText(/Избрахте 15:00–15:50/)).toBeVisible();
   await next.click();
   await expect(dates.getByRole("radio").first()).toHaveValue("2026-06-08");
   await expect(
@@ -806,32 +799,12 @@ test("date strip pages without changing selection and calendar supports keyboard
     "2026-06-01",
   );
   await expect(previous).toBeDisabled();
-  const trigger = page.getByRole("button", { name: "Календар", exact: true });
-  await trigger.focus();
-  await page.keyboard.press("Enter");
-  const calendar = page.locator('[data-slot="calendar"]');
-  await expect(
-    calendar.getByRole("button", { name: /вторник, 09 юни/ }),
-  ).toBeDisabled();
-  await page.screenshot({
-    path: "coverage/playwright/time-calendar.png",
-    fullPage: true,
-  });
-  await page.keyboard.press("Escape");
-  await expect(trigger).toBeFocused();
-  await page.keyboard.press("Enter");
-  await expect(
-    calendar.getByRole("button", { name: /понеделник, 01 юни/ }),
-  ).toBeFocused();
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("Enter");
-  await expect(calendar).toHaveCount(0);
-  await expect(trigger).toBeFocused();
+  await dates.locator('input[value="2026-06-02"]').check();
   await expect(dates.getByRole("radio", { checked: true })).toHaveValue(
     "2026-06-02",
   );
   await expect(
-    page.getByRole("button", { name: "Продължи", exact: true }),
+    page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
   ).toBeDisabled();
   for (let index = 0; index < 8; index++) await next.click();
   await expect(next).toBeDisabled();
@@ -846,7 +819,7 @@ for (const width of [360, 1280]) {
     await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
     await page.goto("/");
     await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-    await page.getByRole("button", { name: "Продължи", exact: true }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     const dates = page.getByRole("group", {
       name: "Дата на посещението",
       exact: true,
@@ -855,7 +828,7 @@ for (const width of [360, 1280]) {
     const chip = firstDate.locator("..");
     await expect(chip).toHaveCSS("height", "72px");
     const unavailable = dates
-      .getByRole("radio", { name: /Няма часове/ })
+      .getByRole("radio", { name: /почивен ден|няма свободни часове/ })
       .first();
     await expect(unavailable).toBeDisabled();
     await expect(unavailable.locator("..")).toHaveCSS("border-style", "dashed");
@@ -878,7 +851,7 @@ for (const width of [360, 1280]) {
         (node) => getComputedStyle(node).gridTemplateColumns.split(" ").length,
       ),
     ).toBe(width === 360 ? 4 : 6);
-    await page.getByRole("button", { name: "Следващите 7 дни" }).click();
+    await page.getByRole("button", { name: "Следващи дни" }).click();
     await expect(slot).toBeChecked();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
@@ -906,10 +879,10 @@ for (const width of [320, 360, 768, 1024, 1440]) {
       fullPage: true,
     });
     await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await page.getByRole("radio", { name: "Специалист", exact: true }).check();
     await page.getByRole("radio", { name: /Мила/ }).check();
-    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await expect(
       page.getByRole("group", { name: "Дата на посещението", exact: true }),
     ).toBeVisible();

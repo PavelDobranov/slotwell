@@ -69,11 +69,16 @@ export function DetailsStep({
   appointment: {
     start: number;
     staffName: string;
-    services: { name: string; durationMinutes: number; priceCents: number }[];
+    services: {
+      name: string;
+      durationMinutes: number;
+      priceCents: number | null;
+    }[];
     salonName: string;
     address: string;
     durationMinutes: number;
     priceCents: number;
+    hasVariablePrice: boolean;
   };
   onBack: () => void;
   onEditSelection: (step: "services" | "staff" | "time") => void;

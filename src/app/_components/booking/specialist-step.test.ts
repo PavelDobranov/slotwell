@@ -28,26 +28,26 @@ function render(
 }
 
 test("specialist rows retain unavailable staff with reasons and avatar initials", () => {
-  const html = render(["haircut", "beard"]);
+  const html = render(["cut_m", "blowdry"]);
   assert.match(html, /Мила/);
-  assert.match(html, /Не прави: Оформяне на брада/);
+  assert.match(html, /Не прави: Изсушаване и оформяне/);
   assert.match(html, /data-slot="avatar-fallback"/);
   assert.equal((html.match(/role="radio"/g) ?? []).length, 3);
   assert.doesNotMatch(html, /aria-checked="true"/);
 });
 
 test("no specialist warning offers only single-service removals that restore eligibility", () => {
-  const html = render(["beard", "wash"]);
+  const html = render(["blowdry", "color"]);
   assert.match(html, /data-variant="warning"/);
   assert.match(html, /Никой специалист не прави всички избрани услуги заедно/);
-  assert.match(html, /Махни „Оформяне на брада“/);
-  assert.match(html, /Махни „Измиване и оформяне“/);
+  assert.match(html, /Махни „Изсушаване и оформяне“/);
+  assert.match(html, /Махни „Боядисване на корени“/);
   assert.match(html, /Към услугите/);
-  assert.doesNotMatch(render(["haircut", "beard", "wash", "color"]), /Махни/);
+  assert.doesNotMatch(render(["cut_m", "blowdry", "color", "mani"]), /Махни/);
 });
 
 test("specialist cards use the selected surface and keep the trailing radio explicit", () => {
-  const html = render(["beard"], undefined, "ivan");
+  const html = render(["blowdry"], undefined, "ivan");
   assert.match(html, /rounded-card/);
   assert.match(html, /data-checked:bg-selected/);
   assert.match(html, /data-disabled:bg-muted/);
@@ -55,17 +55,17 @@ test("specialist cards use the selected surface and keep the trailing radio expl
   assert.ok(ivan.indexOf('data-slot="avatar"') < ivan.indexOf('role="radio"'));
   assert.match(ivan, /^for="specialist-ivan" data-checked="true"/);
   assert.match(ivan, /aria-checked="true"/);
-  assert.doesNotMatch(render(["beard"]), /aria-checked="true"/);
+  assert.doesNotMatch(render(["blowdry"]), /aria-checked="true"/);
   assert.doesNotMatch(
-    render(["beard"], undefined, "mila"),
+    render(["blowdry"], undefined, "mila"),
     /aria-checked="true"/,
   );
-  assert.doesNotMatch(render(["haircut"], [], "mila"), /aria-checked="true"/);
+  assert.doesNotMatch(render(["cut_m"], [], "mila"), /aria-checked="true"/);
   assert.doesNotMatch(html, /Всеки свободен специалист/);
 });
 
 test("time-first unavailability is distinct from missing service coverage", () => {
-  const html = render(["haircut"], []);
+  const html = render(["cut_m"], []);
   assert.match(html, /Не е свободен за цялото посещение в избрания час/);
   assert.match(html, /Към дата и час/);
   assert.doesNotMatch(html, /Никой специалист/);

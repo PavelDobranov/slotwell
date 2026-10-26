@@ -10,7 +10,10 @@ import {
   CardTitle,
 } from "@/app/_components/card";
 import { Separator } from "@/app/_components/separator";
-import { euros } from "@/app/_lib/booking/format";
+import {
+  formatServicePrice,
+  formatTotalPrice,
+} from "@/app/_lib/booking/format";
 import type { ContactDraft } from "@/app/_lib/booking/state";
 import {
   businessDateAt,
@@ -27,6 +30,7 @@ export function Review({
   address,
   durationMinutes,
   priceCents,
+  hasVariablePrice,
   pending,
   retryable,
   onEdit,
@@ -38,11 +42,16 @@ export function Review({
   contact: ContactDraft;
   start: number;
   staffName: string;
-  services: { name: string; durationMinutes: number; priceCents: number }[];
+  services: {
+    name: string;
+    durationMinutes: number;
+    priceCents: number | null;
+  }[];
   salonName: string;
   address: string;
   durationMinutes: number;
   priceCents: number;
+  hasVariablePrice: boolean;
   pending: boolean;
   retryable: boolean;
   onEdit: () => void;
@@ -69,7 +78,7 @@ export function Review({
                 {service.name} · {service.durationMinutes} мин
               </span>
               <span className="tabular-nums">
-                {euros.format(service.priceCents / 100)}
+                {formatServicePrice(service.priceCents)}
               </span>
             </li>
           ))}
@@ -197,7 +206,7 @@ export function Review({
           <p className="flex flex-wrap items-baseline justify-between gap-2 font-semibold">
             <span>Общо {durationMinutes} мин ·</span>{" "}
             <span className="font-heading text-xl tabular-nums">
-              {euros.format(priceCents / 100)}
+              {formatTotalPrice({ priceCents, hasVariablePrice })}
             </span>
           </p>
         </CardContent>

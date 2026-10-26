@@ -14,32 +14,52 @@ import type {
 // Illustrative fictional content, not a real salon's identity or price list.
 const services: readonly Service[] = [
   {
-    id: "haircut",
-    name: "Подстригване",
-    priceCents: 2300,
+    id: "cut_w",
+    name: "Дамско подстригване",
+    category: "Коса",
+    priceCents: 2800,
+    durationMinutes: 45,
+    cleanupMinutes: 10,
+  },
+  {
+    id: "cut_m",
+    name: "Мъжко подстригване",
+    category: "Коса",
+    priceCents: 1800,
     durationMinutes: 30,
     cleanupMinutes: 10,
   },
   {
-    id: "beard",
-    name: "Оформяне на брада",
-    priceCents: 1200,
-    durationMinutes: 20,
-    cleanupMinutes: 5,
+    id: "color",
+    name: "Боядисване на корени",
+    category: "Коса",
+    priceCents: 4200,
+    durationMinutes: 75,
+    cleanupMinutes: 15,
   },
   {
-    id: "wash",
-    name: "Измиване и оформяне",
-    priceCents: 1800,
+    id: "blowdry",
+    name: "Изсушаване и оформяне",
+    category: "Коса",
+    priceCents: 1500,
     durationMinutes: 30,
     cleanupMinutes: 5,
   },
   {
-    id: "color",
-    name: "Боядисване",
-    priceCents: 5500,
+    id: "keratin",
+    name: "Кератинова терапия",
+    category: "Коса",
+    priceCents: null,
     durationMinutes: 90,
     cleanupMinutes: 15,
+  },
+  {
+    id: "mani",
+    name: "Маникюр с гел лак",
+    category: "Ръце",
+    priceCents: 2500,
+    durationMinutes: 60,
+    cleanupMinutes: 10,
   },
 ];
 const hours: WeeklyHours = {
@@ -74,22 +94,22 @@ export function createDemoSalon(clock: Clock): DemoSalon {
       {
         id: "mila",
         name: "Мила",
-        description: "Подстригване, измиване и оформяне",
-        serviceIds: ["haircut", "wash"],
+        description: "Дамско и мъжко подстригване",
+        serviceIds: ["cut_w", "cut_m"],
         hours,
       },
       {
         id: "ivan",
         name: "Иван",
-        description: "Подстригване и оформяне на брада",
-        serviceIds: ["haircut", "beard"],
+        description: "Мъжко подстригване и оформяне",
+        serviceIds: ["cut_m", "blowdry"],
         hours: { ...hours, 3: [], 6: [] },
       },
       {
         id: "elena",
         name: "Елена",
-        description: "Боядисване, измиване и оформяне",
-        serviceIds: ["color", "wash"],
+        description: "Подстригване, боядисване и маникюр",
+        serviceIds: ["cut_w", "color", "keratin", "mani"],
         hours: { ...hours, 1: [{ startMinute: 600, endMinute: 1020 }] },
       },
     ],
@@ -107,10 +127,17 @@ export function serviceTotals(selected: readonly Service[]) {
 
   return [...distinct.values()].reduce(
     (total, service) => ({
-      priceCents: total.priceCents + service.priceCents,
+      // Services priced on site contribute no amount but mark the total as a lower bound.
+      priceCents: total.priceCents + (service.priceCents ?? 0),
+      hasVariablePrice: total.hasVariablePrice || service.priceCents === null,
       durationMinutes: total.durationMinutes + service.durationMinutes,
       cleanupMinutes: total.cleanupMinutes + service.cleanupMinutes,
     }),
-    { priceCents: 0, durationMinutes: 0, cleanupMinutes: 0 },
+    {
+      priceCents: 0,
+      hasVariablePrice: false,
+      durationMinutes: 0,
+      cleanupMinutes: 0,
+    },
   );
 }

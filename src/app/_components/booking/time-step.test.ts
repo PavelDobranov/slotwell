@@ -13,7 +13,7 @@ const now = Date.parse("2026-06-01T05:00:00Z");
 const availability = {
   salon: createDemoSalon(() => now),
   now,
-  serviceIds: ["haircut", "beard"],
+  serviceIds: ["cut_m", "blowdry"],
   staffId: "ivan",
 };
 function render(overrides: Partial<Parameters<typeof TimeStep>[0]> = {}) {
@@ -32,23 +32,16 @@ function render(overrides: Partial<Parameters<typeof TimeStep>[0]> = {}) {
   );
 }
 
-test("date strip shows seven dated options with selector counts, today and disabled days", () => {
+test("date strip shows seven dated options with status tags, today and disabled days", () => {
   const html = render();
   assert.equal((html.match(/name="visit-date"/g) ?? []).length, 7);
   assert.match(html, /днес/);
   assert.match(
     html,
-    new RegExp(
-      `${availableSlots({ ...availability, date: "2026-06-01" }).length} свободни`,
-    ),
-  );
-  assert.match(
-    html,
     /disabled=""[^>]*value="2026-06-03"|value="2026-06-03"[^>]*disabled=""/,
   );
-  assert.match(html, /Предишните 7 дни/);
-  assert.match(html, /Следващите 7 дни/);
-  assert.match(html, /Календар/);
+  assert.match(html, /Предишни дни/);
+  assert.match(html, /Следващи дни/);
 });
 
 test("Clear Day dates are compact chips with a non-color unavailable treatment", () => {
@@ -56,25 +49,26 @@ test("Clear Day dates are compact chips with a non-color unavailable treatment",
   assert.match(html, /h-18/);
   assert.match(html, /has-\[:disabled\]:border-dashed/);
   assert.match(html, /has-\[:checked\]:bg-primary/);
-  assert.match(html, /aria-label="[^"]+Няма часове/);
+  // Sunday 7 June is a salon rest day inside the opening window.
+  assert.match(html, /почивен ден"/);
 });
 
 test("slot groups and selected range use salon time and exclude cleanup", () => {
   const html = render({ start: localStart("2026-06-01", 900) });
   assert.match(html, /Сутрин/);
-  assert.match(html, /След обяд/);
-  assert.match(html, /15:00–15:50/);
-  assert.match(html, /<output/);
+  assert.match(html, /Следобед/);
+  assert.match(html, /Избрахте/);
+  assert.match(html, /15:00–16:00/);
   assert.doesNotMatch(
     render({ start: localStart("2026-06-02", 900) }),
-    /15:00–15:50/,
+    /15:00–16:00/,
   );
 });
 
 test("slot groups separate Sofia evenings and omit groups with no available starts", () => {
   const slots = availableSlots({
     ...availability,
-    serviceIds: ["haircut"],
+    serviceIds: ["cut_m"],
     date: "2026-06-01",
   });
   const eveningStart = localStart("2026-06-01", 17 * 60);

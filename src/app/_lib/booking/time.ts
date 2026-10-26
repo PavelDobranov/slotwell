@@ -18,6 +18,17 @@ const dateFormatter = new Intl.DateTimeFormat("bg-BG", {
   month: "long",
   day: "numeric",
 });
+const weekdayDateFormatter = new Intl.DateTimeFormat("bg-BG", {
+  timeZone: BUSINESS_TIME_ZONE,
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+});
+const monthFormatter = new Intl.DateTimeFormat("bg-BG", {
+  timeZone: BUSINESS_TIME_ZONE,
+  month: "long",
+  year: "numeric",
+});
 const timeFormatter = new Intl.DateTimeFormat("bg-BG", {
   timeZone: BUSINESS_TIME_ZONE,
   hour: "2-digit",
@@ -119,6 +130,30 @@ export function localStart(date: string, minute: number): number | null {
 
 export function formatBusinessDate(date: string): string {
   return dateFormatter.format(calendarCarrier(date));
+}
+
+/** Weekday and day without the year, capitalized: "Понеделник, 26 октомври". */
+export function formatBusinessWeekdayDate(date: string): string {
+  const text = weekdayDateFormatter.format(calendarCarrier(date));
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** Month and year spanning a visible range: "Октомври 2026" or "Октомври – ноември 2026". */
+export function formatBusinessMonthRange(from: string, to: string): string {
+  const parse = (date: string) => {
+    const [month, year] = monthFormatter
+      .format(calendarCarrier(date))
+      .replace(/ г\.$/, "")
+      .split(" ");
+    return { month, year };
+  };
+  const start = parse(from);
+  const end = parse(to);
+  const label =
+    start.month === end.month
+      ? `${start.month} ${start.year}`
+      : `${start.month} – ${end.month} ${end.year}`;
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 export function formatBusinessTime(instant: number): string {

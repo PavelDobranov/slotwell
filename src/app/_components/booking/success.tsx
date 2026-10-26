@@ -10,7 +10,10 @@ import {
   CardTitle,
 } from "@/app/_components/card";
 import { Separator } from "@/app/_components/separator";
-import { euros } from "@/app/_lib/booking/format";
+import {
+  formatServicePrice,
+  formatTotalPrice,
+} from "@/app/_lib/booking/format";
 import { type BookingState, selectedTotals } from "@/app/_lib/booking/state";
 import {
   businessDateAt,
@@ -28,7 +31,10 @@ export function Success({
   state: BookingState & { start: number };
   onNewBooking: () => void;
 }) {
-  const { durationMinutes, priceCents } = selectedTotals(state, salon);
+  const { durationMinutes, priceCents, hasVariablePrice } = selectedTotals(
+    state,
+    salon,
+  );
   const staffName = salon.staff.find(({ id }) => id === state.staffId)?.name;
   const date = formatBusinessDate(businessDateAt(state.start));
   const time = `${formatBusinessTime(state.start)}–${formatBusinessTime(state.start + durationMinutes * 60_000)}`;
@@ -87,7 +93,7 @@ export function Success({
                     >
                       <dt className="wrap-anywhere">{service.name}</dt>
                       <dd className="shrink-0 font-medium">
-                        {euros.format(service.priceCents / 100)}
+                        {formatServicePrice(service.priceCents)}
                       </dd>
                     </div>
                   ))}
@@ -102,7 +108,7 @@ export function Success({
                   </span>
                 </dt>
                 <dd className="shrink-0 font-heading text-xl font-semibold">
-                  {euros.format(priceCents / 100)}
+                  {formatTotalPrice({ priceCents, hasVariablePrice })}
                 </dd>
               </dl>
               <Separator />

@@ -31,19 +31,19 @@ function salon(): DemoSalon {
 test("competency requires every distinct known service, including before choosing a time", () => {
   const demo = salon();
   assert.deepEqual(
-    qualifiedStaff(demo, ["haircut"]).map(({ id }) => id),
+    qualifiedStaff(demo, ["cut_m"]).map(({ id }) => id),
     ["mila", "ivan"],
   );
   assert.deepEqual(
-    qualifiedStaff(demo, ["wash", "haircut", "wash"]).map(({ id }) => id),
+    qualifiedStaff(demo, ["cut_w", "cut_m", "cut_w"]).map(({ id }) => id),
     ["mila"],
   );
 
   for (const serviceIds of [
     [],
     ["unknown"],
-    ["haircut", "unknown"],
-    ["beard", "color"],
+    ["cut_m", "unknown"],
+    ["blowdry", "color"],
   ]) {
     assert.deepEqual(qualifiedStaff(demo, serviceIds), []);
     assert.deepEqual(
@@ -58,7 +58,7 @@ test("slots intersect business and staff hours, fit cleanup, and deduplicate sha
   const slots = availableSlots({
     salon: demo,
     date,
-    serviceIds: ["haircut"],
+    serviceIds: ["cut_m"],
     now,
   });
   assert.deepEqual(
@@ -77,25 +77,25 @@ test("slots intersect business and staff hours, fit cleanup, and deduplicate sha
     serviceIds: ["color"],
     now,
   });
-  assert.deepEqual(colorSlots, []); // Elena starts at 10; 105 occupied minutes cannot fit.
+  assert.deepEqual(colorSlots, []); // Elena starts at 10; the 75-minute service cannot fit before 11.
 });
 
 test("multi-service duration and summed trailing cleanup are independent of service order", () => {
   const input = { salon: salon(), date, now };
-  const slots = availableSlots({ ...input, serviceIds: ["haircut", "beard"] });
-  assert.equal(slots.length, 4); // 65 occupied minutes: last grid start is 09:45.
+  const slots = availableSlots({ ...input, serviceIds: ["cut_m", "blowdry"] });
+  assert.equal(slots.length, 4); // 75 occupied minutes: last grid start is 09:45.
   assert.deepEqual(slots[0], {
     start: instant(540),
-    end: instant(590),
-    occupiedEnd: instant(605),
+    end: instant(600),
+    occupiedEnd: instant(615),
     staffIds: ["ivan"],
   });
   assert.deepEqual(
-    availableSlots({ ...input, serviceIds: ["beard", "haircut"] }),
+    availableSlots({ ...input, serviceIds: ["blowdry", "cut_m"] }),
     slots,
   );
   assert.deepEqual(
-    availableSlots({ ...input, serviceIds: ["beard", "haircut", "beard"] }),
+    availableSlots({ ...input, serviceIds: ["blowdry", "cut_m", "blowdry"] }),
     slots,
   );
 });
@@ -113,7 +113,7 @@ test("dated hours replace weekly hours, while business and staff restrictions bo
     salon: demo,
     date,
     now,
-    serviceIds: ["haircut"],
+    serviceIds: ["cut_m"],
   });
   assert.deepEqual(
     slots.map(({ start, staffIds }) => [start, staffIds]),
@@ -127,7 +127,7 @@ test("dated hours replace weekly hours, while business and staff restrictions bo
       salon: { ...demo, exceptions: [{ date, hours: [] }] },
       date,
       now,
-      serviceIds: ["haircut"],
+      serviceIds: ["cut_m"],
     }),
     [],
   );
@@ -136,7 +136,7 @@ test("dated hours replace weekly hours, while business and staff restrictions bo
       salon: demo,
       date: "2026-01-04",
       now,
-      serviceIds: ["haircut"],
+      serviceIds: ["cut_m"],
     }),
     [],
   );
@@ -156,7 +156,7 @@ test("split working windows reject breaks and cleanup overruns but allow exact c
     ],
   };
   assert.deepEqual(
-    availableSlots({ salon: demo, date, now, serviceIds: ["haircut"] }).map(
+    availableSlots({ salon: demo, date, now, serviceIds: ["cut_m"] }).map(
       ({ start }) => start,
     ),
     [instant(540), instant(600)],
@@ -172,7 +172,7 @@ test("occupied intervals include cleanup, allow touching, and affect only their 
     salon: demo,
     date,
     now,
-    serviceIds: ["haircut"],
+    serviceIds: ["cut_m"],
   });
   assert.deepEqual(
     slots.map(({ staffIds }) => staffIds),
@@ -192,7 +192,7 @@ test("occupied intervals include cleanup, allow touching, and affect only their 
     salon: demo,
     date,
     now,
-    serviceIds: ["haircut"],
+    serviceIds: ["cut_m"],
     sessionOccupied,
   });
   assert.deepEqual(refreshed[0].staffIds, ["mila"]);
@@ -207,7 +207,7 @@ test("occupied intervals include cleanup, allow touching, and affect only their 
 });
 
 test("lead time allows exactly one hour but rejects even one millisecond less", () => {
-  const input = { salon: salon(), date, serviceIds: ["haircut"], now };
+  const input = { salon: salon(), date, serviceIds: ["cut_m"], now };
   assert.equal(availableSlots(input)[0].start, instant(540));
   assert.equal(
     availableSlots({ ...input, now: now + 1 })[0].start,
@@ -227,7 +227,7 @@ test("horizon uses live Sofia today plus 60 calendar days, including closing on 
     occupied: [],
     exceptions: [],
   };
-  const input = { salon: demo, serviceIds: ["haircut"], now: reference };
+  const input = { salon: demo, serviceIds: ["cut_m"], now: reference };
   const lastDay = availableSlots({ ...input, date: "2026-04-30" });
   assert.equal(lastDay.at(-1)?.start, instant(1035, "2026-04-30"));
   assert.equal(lastDay.at(-1)?.occupiedEnd, instant(1075, "2026-04-30"));
@@ -246,7 +246,7 @@ test("grid is anchored to local midnight, not irregular opening or lead times", 
     exceptions: [{ date, hours: [{ startMinute: 547, endMinute: 610 }] }],
   };
   assert.deepEqual(
-    availableSlots({ salon: demo, date, now, serviceIds: ["haircut"] }).map(
+    availableSlots({ salon: demo, date, now, serviceIds: ["cut_m"] }).map(
       ({ start }) => start,
     ),
     [instant(555), instant(570)],
@@ -269,7 +269,7 @@ test("nonexistent and ambiguous local starts are absent even with transition-day
       },
       date: day,
       now: reference,
-      serviceIds: ["haircut"],
+      serviceIds: ["cut_m"],
       staffId: "mila",
     };
     const slots = availableSlots(input);
@@ -312,7 +312,7 @@ test("unresolvable working boundaries fail closed; midnight closing resolves on 
         },
         date: day,
         now: reference,
-        serviceIds: ["haircut"],
+        serviceIds: ["cut_m"],
       }),
       [],
     );
@@ -329,7 +329,7 @@ test("unresolvable working boundaries fail closed; midnight closing resolves on 
     },
     date,
     now,
-    serviceIds: ["haircut"],
+    serviceIds: ["cut_m"],
     staffId: "mila",
   });
   assert.deepEqual(
@@ -352,9 +352,9 @@ test("selectors do not mutate even deeply frozen fixtures, selections, or sessio
     salon: salon(),
     date,
     now,
-    serviceIds: ["wash", "haircut"],
+    serviceIds: ["cut_w", "cut_m"],
     sessionOccupied: [
-      { staffId: "mila", start: instant(540), end: instant(570) },
+      { staffId: "mila", start: instant(540), end: instant(555) },
     ],
   };
   const before = structuredClone(input);
@@ -369,9 +369,9 @@ test("specialist-first is exactly the matching subset of time-first slots", () =
 
   for (const day of [date, "2026-01-12", "2026-01-13", "2026-01-14"]) {
     for (const serviceIds of [
-      ["haircut"],
-      ["wash", "haircut"],
-      ["beard", "color"],
+      ["cut_m"],
+      ["cut_w", "cut_m"],
+      ["blowdry", "color"],
     ]) {
       const input = { salon: demo, date: day, now, serviceIds };
       const combined = availableSlots(input);

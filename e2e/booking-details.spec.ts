@@ -10,11 +10,11 @@ test("multi-service review reflects an edited time and an omitted note", async (
   await page.goto("/");
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
   await page.getByRole("checkbox", { name: /Измиване и оформяне/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "15:00", exact: true }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: /Мила/ }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("textbox", { name: "Име", exact: true }).fill("Демо");
   await page
     .getByRole("textbox", { name: "Телефон", exact: true })
@@ -50,8 +50,8 @@ test("multi-service review reflects an edited time and an omitted note", async (
     .getByRole("button", { name: "Промени датата и часа в прегледа" })
     .click();
   await page.getByRole("radio", { name: "16:00", exact: true }).check();
-  await page.getByRole("button", { name: "Продължи" }).click();
-  await page.getByRole("button", { name: "Продължи" }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(
     page.getByRole("textbox", { name: "Име", exact: true }),
   ).toHaveValue("Демо");
@@ -87,7 +87,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await page.setViewportSize({ width: 360, height: 800 });
     await page.goto("/");
     await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await page
       .getByRole("radio", {
         name: path === "staff-first" ? "Специалист" : "Дата и час",
@@ -96,14 +96,14 @@ for (const path of ["staff-first", "time-first"] as const) {
       .check();
     if (path === "time-first") {
       await page.getByRole("radio", { name: "15:00", exact: true }).check();
-      await page.getByRole("button", { name: "Продължи" }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page.getByRole("radio", { name: /Мила/ }).check();
     } else {
       await page.getByRole("radio", { name: /Мила/ }).check();
-      await page.getByRole("button", { name: "Продължи" }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page.getByRole("radio", { name: "15:00", exact: true }).check();
     }
-    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     const name = page.getByRole("textbox", { name: "Име", exact: true });
     const phone = page.getByRole("textbox", { name: "Телефон", exact: true });
     const email = page.getByRole("textbox", { name: "Имейл", exact: true });
@@ -183,7 +183,9 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(
       page.getByRole("status").filter({ hasText: "Данните са валидни" }),
     ).toBeVisible();
-    const summary = page.getByRole("complementary", { name: "Вашата резервация" });
+    const summary = page.getByRole("complementary", {
+      name: "Вашата резервация",
+    });
     await expect(summary).toContainText("Подстригване");
     await expect(summary).toContainText("Мила");
     await expect(summary).toContainText("1 юни 2026");
@@ -232,15 +234,15 @@ for (const path of ["staff-first", "time-first"] as const) {
     await page.setViewportSize({ width: 360, height: 800 });
     for (const [action, heading] of [
       ["Промени услугите в прегледа", "Изберете услуги"],
-      ["Промени специалиста в прегледа", "Специалист"],
-      ["Промени датата и часа в прегледа", "Дата и час"],
+      ["Промени специалиста в прегледа", "Кога и с кого"],
+      ["Промени датата и часа в прегледа", "Кога и с кого"],
     ]) {
       await review.getByRole("button", { name: action, exact: true }).click();
       await expect(
         page.getByRole("heading", { name: heading, exact: true }),
       ).toBeFocused();
       for (let step = 0; step < 3 && !(await name.isVisible()); step++) {
-        await page.getByRole("button", { name: "Продължи" }).click();
+        await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       }
       await expect(name).toHaveValue("  Демо Посетител  ");
       await expect(note).toHaveValue("Само демонстрационна бележка.");
@@ -266,12 +268,12 @@ for (const path of ["staff-first", "time-first"] as const) {
     await review.getByRole("button", { name: "Назад към данните" }).click();
     await expect(name).toBeFocused();
     await page.getByRole("button", { name: "Назад", exact: true }).click();
-    await page.getByRole("button", { name: "Продължи" }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await expect(name).toHaveValue("  Демо Посетител  ");
     for (const [action, heading] of [
       ["Промени услугите", "Изберете услуги"],
-      ["Промени специалиста", "Специалист"],
-      ["Промени датата и часа", "Дата и час"],
+      ["Промени специалиста", "Кога и с кого"],
+      ["Промени датата и часа", "Кога и с кого"],
     ]) {
       const trigger = page.getByRole("button", { name: "Виж избора" });
       if (await trigger.isVisible()) await trigger.click();
@@ -280,7 +282,7 @@ for (const path of ["staff-first", "time-first"] as const) {
         page.getByRole("heading", { name: heading, exact: true }),
       ).toBeFocused();
       for (let step = 0; step < 3 && !(await name.isVisible()); step++) {
-        await page.getByRole("button", { name: "Продължи" }).click();
+        await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       }
       await expect(name).toHaveValue("  Демо Посетител  ");
       await expect(phone).toHaveValue("+44 20 7946 0958");

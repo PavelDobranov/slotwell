@@ -18,7 +18,7 @@ async function reachReview(
     page.getByRole("heading", { name: "Изберете услуги", exact: true }),
   ).toBeVisible();
   await capture("services");
-  await page.getByRole("button", { name: "Продължи", exact: true }).click();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page
     .getByRole("radio", {
       name: path === "staff-first" ? "Специалист" : "Дата и час",
@@ -32,7 +32,7 @@ async function reachReview(
   ).entries()) {
     await expect(
       page.getByRole("heading", {
-        name: step === "staff" ? "Специалист" : "Дата и час",
+        name: "Кога и с кого",
         exact: true,
       }),
     ).toBeVisible();
@@ -43,7 +43,7 @@ async function reachReview(
     await choice.check();
     await expect(choice).toBeChecked();
     await capture(`${index + 1}-${step}`);
-    await page.getByRole("button", { name: "Продължи", exact: true }).click();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   }
 
   for (const [name, value] of [
@@ -157,7 +157,7 @@ for (const width of [360, 390, 1280]) {
           .click();
         if (scenario === "conflict") {
           await expect(
-            page.getByRole("heading", { name: "Дата и час", exact: true }),
+            page.getByRole("heading", { name: "Кога и с кого", exact: true }),
           ).toBeFocused();
           await expect(
             page.getByRole("alert").filter({ hasText: "Избери нов час" }),

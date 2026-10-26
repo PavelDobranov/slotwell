@@ -1,7 +1,11 @@
-import { CalendarXIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import {
+  CalendarXIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClockIcon,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
-import { DatePopover } from "@/app/_components/booking/date-popover";
 import { DayStrip } from "@/app/_components/booking/day-strip";
 import { TimeSlots } from "@/app/_components/booking/time-slots";
 import { Button } from "@/app/_components/button";
@@ -10,12 +14,17 @@ import {
   availableSlots,
 } from "@/app/_lib/booking/availability";
 import { serviceTotals } from "@/app/_lib/booking/fixtures";
+import { formatDuration } from "@/app/_lib/booking/format";
 import {
   addCalendarDays,
   businessDateAt,
+  businessWeekday,
   formatBusinessDate,
+  formatBusinessMonthRange,
   formatBusinessTime,
+  formatBusinessWeekdayDate,
 } from "@/app/_lib/booking/time";
+import type { Weekday } from "@/app/_lib/booking/types";
 
 export function TimeStep({
   availability,
@@ -67,9 +76,13 @@ export function TimeStep({
       return slots;
     };
   }, [salon, now, serviceIds, staffId, sessionOccupied]);
-  const days = Array.from({ length: 61 }, (_, index) => ({
-    date: addCalendarDays(today, index),
-  }));
+  const days = Array.from({ length: 61 }, (_, index) => {
+    const value = addCalendarDays(today, index);
+    return {
+      date: value,
+      open: salon.hours[businessWeekday(value) as Weekday].length > 0,
+    };
+  });
   const selectedIndex = days.findIndex((day) => day.date === date);
   // Paging never changes the booking. A new chosen date (including calendar and
   // recovery selections) resets the visible page without an effect/focus jump.
@@ -94,77 +107,87 @@ export function TimeStep({
     salon.services.filter((service) => serviceIds.includes(service.id)),
   ).durationMinutes;
   const staff = salon.staff.find((staff) => staff.id === staffId);
+  const selected = slots.find((slot) => slot.start === start);
+  const monthLabel = formatBusinessMonthRange(
+    days[offset].date,
+    days[Math.min(offset + 6, 60)].date,
+  );
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <p className="text-sm text-muted-foreground">
-        Свободни часове {staff ? `при ${staff.name}` : "при всички специалисти"}{" "}
-        за посещение от {duration} мин.
-      </p>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h3 className="font-heading text-xl leading-[26px] font-semibold">
+          {staff
+            ? `Свободни часове при ${staff.name.split(" ")[0]}`
+            : "Изберете дата и час"}
+        </h3>
+        <p className="text-sm text-muted-foreground">Часове по София (EET)</p>
+      </div>
       <div className="flex min-w-0 flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium" aria-live="polite">
-              Дата · {formatBusinessDate(days[offset].date)} –{" "}
-              {formatBusinessDate(days[Math.min(offset + 6, 60)].date)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Запазване от 1 час до 60 дни напред.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Предишните 7 дни"
-              disabled={loading || offset === 0}
-              onClick={() =>
-                setPage({ date, today, offset: Math.max(0, offset - 7) })
-              }
-            >
-              <ChevronLeftIcon />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Следващите 7 дни"
-              disabled={loading || offset + 7 > 60}
-              onClick={() => setPage({ date, today, offset: offset + 7 })}
-            >
-              <ChevronRightIcon />
-            </Button>
-            <DatePopover
-              today={today}
-              lastDate={lastDate}
-              date={date}
-              isDateAvailable={(value) =>
-                value >= today &&
-                value <= lastDate &&
-                slotsForDate(value).length > 0
-              }
-              onDate={onDate}
-              disabled={loading}
-            />
-          </div>
+        <p className="text-sm font-medium" aria-live="polite">
+          {monthLabel}
+        </p>
+        <div className="flex min-w-0 items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Предишни дни"
+            className="shrink-0"
+            disabled={loading || offset === 0}
+            onClick={() =>
+              setPage({ date, today, offset: Math.max(0, offset - 7) })
+            }
+          >
+            <ChevronLeftIcon />
+          </Button>
+          <DayStrip
+            days={days.slice(offset, offset + 7).map((day) => ({
+              date: day.date,
+              count: slotsForDate(day.date).length,
+              open: day.open,
+            }))}
+            today={today}
+            date={date}
+            onDate={onDate}
+            disabled={loading}
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Следващи дни"
+            className="shrink-0"
+            disabled={loading || offset + 7 > 60}
+            onClick={() => setPage({ date, today, offset: offset + 7 })}
+          >
+            <ChevronRightIcon />
+          </Button>
         </div>
-        <DayStrip
-          days={days.slice(offset, offset + 7).map((day) => ({
-            date: day.date,
-            count: slotsForDate(day.date).length,
-          }))}
-          today={today}
-          date={date}
-          onDate={onDate}
-          disabled={loading}
-        />
       </div>
       {loading || slots.length > 0 ? (
-        <TimeSlots
-          slots={slots}
-          date={date}
-          start={start}
-          onSelect={onSelect}
-          loading={loading}
-        />
+        <div className="flex min-w-0 flex-col gap-4">
+          <h4 className="font-heading text-lg leading-6 font-semibold">
+            {formatBusinessWeekdayDate(date)}
+          </h4>
+          <TimeSlots
+            slots={slots}
+            date={date}
+            start={start}
+            onSelect={onSelect}
+            loading={loading}
+          />
+          {selected && (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <ClockIcon aria-hidden="true" className="size-4 shrink-0" />
+              <span>
+                Избрахте{" "}
+                <strong className="font-semibold tabular-nums text-foreground">
+                  {formatBusinessTime(selected.start)}–
+                  {formatBusinessTime(selected.end)}
+                </strong>{" "}
+                · {formatDuration(duration)}
+              </span>
+            </p>
+          )}
+        </div>
       ) : (
         <Alert role="status" className="gap-y-3 rounded-card p-5">
           <CalendarXIcon aria-hidden="true" />
@@ -204,6 +227,10 @@ export function TimeStep({
           </Button>
         </Alert>
       )}
+      <p className="text-sm text-muted-foreground">
+        След това: {staffId ? "вашите данни" : "специалист"}. Можете да смените
+        реда по всяко време.
+      </p>
       {showPrimaryAction && (
         <Button
           className="self-end"

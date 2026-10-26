@@ -14,7 +14,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/app/_components/sheet";
-import { euros } from "@/app/_lib/booking/format";
+import {
+  formatServicePrice,
+  formatTotalPrice,
+} from "@/app/_lib/booking/format";
 import {
   type BookingState,
   type BookingStep,
@@ -94,7 +97,7 @@ export function BookingSummary({
                   <span>{service.name}</span>
                   <span className="text-muted-foreground tabular-nums">
                     {service.durationMinutes} мин ·{" "}
-                    {euros.format(service.priceCents / 100)}
+                    {formatServicePrice(service.priceCents)}
                   </span>
                 </li>
               ))}
@@ -131,7 +134,10 @@ export function BookingSummary({
           <p className="flex flex-wrap items-center justify-between gap-2 font-semibold">
             <span>Общо · {totals?.durationMinutes ?? 0} мин</span>
             <span className="font-heading text-xl tabular-nums">
-              {euros.format((totals?.priceCents ?? 0) / 100)}
+              {formatTotalPrice({
+                priceCents: totals?.priceCents ?? 0,
+                hasVariablePrice: totals?.hasVariablePrice ?? false,
+              })}
             </span>
           </p>
           <p className="text-sm text-muted-foreground">Плащане на място.</p>
@@ -183,7 +189,10 @@ export function BookingSummary({
                     : `${selected.length} ${selected.length === 1 ? "услуга" : "услуги"} · ${totals?.durationMinutes ?? 0} мин`}
                 </span>
                 <span className="text-sm font-normal text-muted-foreground">
-                  {euros.format((totals?.priceCents ?? 0) / 100)}
+                  {formatTotalPrice({
+                    priceCents: totals?.priceCents ?? 0,
+                    hasVariablePrice: totals?.hasVariablePrice ?? false,
+                  })}
                   {state.start !== null && (
                     <>
                       {" "}

@@ -1,11 +1,11 @@
 import { CircleAlertIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 import { ServiceOption } from "@/app/_components/booking/service-option";
 import { Button } from "@/app/_components/button";
 import {
   FieldDescription,
-  FieldError,
   FieldGroup,
   FieldLegend,
   FieldSet,
@@ -35,6 +35,9 @@ export function ServicesStep({
     if (invalid && attempts > 0) group.current?.focus();
   }, [invalid, attempts]);
 
+  // Keep the picker in category order as the catalog lists it (first appearance wins).
+  const categories = [...new Set(services.map((service) => service.category))];
+
   return (
     <form
       id="booking-services"
@@ -60,32 +63,49 @@ export function ServicesStep({
             : "services-description"
         }
         data-invalid={invalid || undefined}
-        className="min-w-0 gap-2 rounded-lg focus:outline-2 focus:outline-offset-4 focus:outline-ring"
+        className="min-w-0 gap-6 rounded-lg focus:outline-2 focus:outline-offset-4 focus:outline-ring"
       >
-        <FieldLegend>Услуги</FieldLegend>
-        <FieldGroup className="gap-2">
-          {services.map((service) => (
-            <ServiceOption
-              key={service.id}
-              service={service}
-              selected={serviceIds.includes(service.id)}
-              onSelect={(selected) => {
-                setAttempts(0);
-                onServices(
-                  selected
-                    ? [...serviceIds, service.id]
-                    : serviceIds.filter((id) => id !== service.id),
-                );
-              }}
-            />
-          ))}
-        </FieldGroup>
+        <FieldLegend className="sr-only">Услуги</FieldLegend>
         {invalid && (
-          <FieldError id="services-error" className="flex items-center gap-1.5">
-            <CircleAlertIcon aria-hidden="true" className="size-4 shrink-0" />
-            Избери поне една услуга, за да продължиш.
-          </FieldError>
+          <Alert
+            id="services-error"
+            variant="error"
+            aria-atomic="true"
+            className="rounded-card px-4 py-3"
+          >
+            <CircleAlertIcon aria-hidden="true" />
+            <AlertTitle>Изберете поне една услуга</AlertTitle>
+            <AlertDescription>
+              Така ще ви покажем подходящите специалисти и свободни часове.
+            </AlertDescription>
+          </Alert>
         )}
+        {categories.map((category) => (
+          <fieldset key={category} className="flex min-w-0 flex-col gap-2.5">
+            <legend className="text-[13px] leading-[18px] font-semibold tracking-[0.05em] text-muted-foreground uppercase">
+              {category}
+            </legend>
+            <FieldGroup className="gap-2">
+              {services
+                .filter((service) => service.category === category)
+                .map((service) => (
+                  <ServiceOption
+                    key={service.id}
+                    service={service}
+                    selected={serviceIds.includes(service.id)}
+                    onSelect={(selected) => {
+                      setAttempts(0);
+                      onServices(
+                        selected
+                          ? [...serviceIds, service.id]
+                          : serviceIds.filter((id) => id !== service.id),
+                      );
+                    }}
+                  />
+                ))}
+            </FieldGroup>
+          </fieldset>
+        ))}
       </FieldSet>
       {noSpecialist && (
         <output>

@@ -19,11 +19,14 @@ test("the fictional catalog has distinct competencies, integer prices and traili
   );
 
   for (const service of salon.services) {
+    // Prices are positive integers, except services settled on site (null).
     assert.ok(
-      Number.isSafeInteger(service.priceCents) && service.priceCents > 0,
+      service.priceCents === null ||
+        (Number.isSafeInteger(service.priceCents) && service.priceCents > 0),
     );
     assert.ok(service.durationMinutes > 0);
     assert.ok(service.cleanupMinutes > 0);
+    assert.ok(service.category.length > 0);
     assert.ok(
       salon.staff.some((staff) => staff.serviceIds.includes(service.id)),
     );
@@ -40,13 +43,13 @@ test("the fictional catalog has distinct competencies, integer prices and traili
   assert.ok(
     salon.staff.some(
       (staff) =>
-        staff.serviceIds.includes("haircut") &&
-        staff.serviceIds.includes("beard"),
+        staff.serviceIds.includes("cut_m") &&
+        staff.serviceIds.includes("blowdry"),
     ),
   );
   assert.equal(
     salon.staff.filter((staff) =>
-      ["beard", "color"].every((id) => staff.serviceIds.includes(id)),
+      ["cut_m", "color"].every((id) => staff.serviceIds.includes(id)),
     ).length,
     0,
   );
@@ -55,20 +58,33 @@ test("the fictional catalog has distinct competencies, integer prices and traili
 test("service totals sum client duration, then cleanup, and ignore selection order and duplicates", () => {
   const { services } = createDemoSalon(() => 0);
   const selected = services.filter((service) =>
-    ["haircut", "beard"].includes(service.id),
+    ["cut_w", "cut_m"].includes(service.id),
   );
   const expected = {
-    priceCents: 3500,
-    durationMinutes: 50,
-    cleanupMinutes: 15,
+    priceCents: 4600,
+    hasVariablePrice: false,
+    durationMinutes: 75,
+    cleanupMinutes: 20,
   };
   assert.deepEqual(serviceTotals(selected), expected);
   assert.deepEqual(serviceTotals([...selected].reverse()), expected);
   assert.deepEqual(serviceTotals([...selected, ...selected]), expected);
   assert.deepEqual(serviceTotals([]), {
     priceCents: 0,
+    hasVariablePrice: false,
     durationMinutes: 0,
     cleanupMinutes: 0,
+  });
+
+  // A service settled on site adds its duration but no amount, and flags the total.
+  const withVariable = services.filter((service) =>
+    ["cut_w", "keratin"].includes(service.id),
+  );
+  assert.deepEqual(serviceTotals(withVariable), {
+    priceCents: 2800,
+    hasVariablePrice: true,
+    durationMinutes: 135,
+    cleanupMinutes: 25,
   });
 });
 

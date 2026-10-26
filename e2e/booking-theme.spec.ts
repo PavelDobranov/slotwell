@@ -70,7 +70,7 @@ for (const width of [390, 1280]) {
       "14px",
     );
     await expect(
-      page.getByRole("button", { name: "Продължи", exact: true }),
+      page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
     ).toHaveCSS("border-radius", "12px");
     const checkbox = page.getByRole("checkbox", { name: /Подстригване/ });
     await checkbox.focus();

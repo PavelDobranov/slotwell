@@ -12,16 +12,14 @@ test("desktop summary remains a sticky 340px rail with one native service submit
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
   await expect(rail).toContainText("Общо · 30 мин");
   await expect(rail).toContainText("23,00");
-  const next = page.getByRole("button", { name: "Продължи", exact: true });
+  const next = page.getByRole("button", { name: /^(Продължи|Напред:)/ });
   await expect(next).toHaveCount(1);
   await expect(next).toHaveAttribute("form", "booking-services");
   await next.focus();
   await page.keyboard.press("Enter");
-  await page
-    .getByRole("radio", { name: "Специалист", exact: true })
-    .check();
+  await page.getByRole("radio", { name: "Специалист", exact: true }).check();
   await expect(
-    page.getByRole("heading", { name: "Специалист", exact: true }),
+    page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await expect(next).toBeDisabled();
   await page.getByRole("radio", { name: /Мила/ }).check();
@@ -105,48 +103,24 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       fullPage: true,
     });
   });
-  test(`${width}px calendar and route targets meet the shared 44px floor`, async ({
+  test(`${width}px route targets meet the shared 44px floor`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
     await page.goto("/");
     await expect(
-      page.getByRole("button", { name: "Продължи", exact: true }),
+      page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
     ).toBeEnabled();
     await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-    await page.getByRole("button", { name: "Продължи", exact: true }).click();
-    await page
-      .getByRole("radio", { name: "Дата и час", exact: true })
-      .check();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
+    await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
     const route = await auditRenderedControls(
       page,
       '[role="radiogroup"][aria-labelledby="path-label"]',
     );
     expect(route.targets.length).toBeGreaterThan(0);
     expect(route.targets.filter(({ minimum44 }) => !minimum44)).toEqual([]);
-    await page.getByRole("button", { name: "Календар", exact: true }).click();
-    const popup = page.locator('[data-slot="popover-content"]');
-    await expect
-      .poll(async () =>
-        (
-          await auditRenderedControls(page, '[data-slot="popover-content"]')
-        ).targets.filter(({ minimum44 }) => !minimum44),
-      )
-      .toEqual([]);
-    const bounds = await popup.boundingBox();
-    expect(bounds).not.toBeNull();
-    expect(bounds!.x).toBeGreaterThanOrEqual(0);
-    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
-    expect(
-      await popup.evaluate(
-        (element) => element.scrollWidth <= element.clientWidth,
-      ),
-    ).toBe(true);
-    await page.keyboard.press("Escape");
-    await expect(
-      page.getByRole("button", { name: "Календар", exact: true }),
-    ).toBeFocused();
   });
   for (const path of ["staff-first", "time-first"] as const) {
     test(`${width}px ${path}: chrome navigation preserves selections and focuses headings`, async ({
@@ -164,11 +138,10 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       );
       await expect(nav.getByRole("link")).toHaveCount(0);
       await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-      await page.getByRole("button", { name: "Продължи", exact: true }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page
         .getByRole("radio", {
-          name:
-            path === "staff-first" ? "Специалист" : "Дата и час",
+          name: "Кога и с кого",
           exact: true,
         })
         .check();
@@ -185,20 +158,16 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       await expect(
         page.getByRole("checkbox", { name: /Подстригване/ }),
       ).toBeChecked();
-      await page.getByRole("button", { name: "Продължи", exact: true }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       if (path === "staff-first") {
         await page.getByRole("radio", { name: /Иван/ }).check();
-        await page
-          .getByRole("button", { name: "Продължи", exact: true })
-          .click();
+        await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       }
       await page.getByRole("radio", { name: "15:00", exact: true }).check();
-      await page.getByRole("button", { name: "Продължи", exact: true }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       if (path === "time-first") {
         await page.getByRole("radio", { name: /Иван/ }).check();
-        await page
-          .getByRole("button", { name: "Продължи", exact: true })
-          .click();
+        await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       }
       await expect(
         page.getByRole("button", { name: "Назад", exact: true }),
@@ -206,11 +175,11 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       await page.getByRole("button", { name: "Назад", exact: true }).click();
       await expect(
         page.getByRole("heading", {
-          name: path === "staff-first" ? "Дата и час" : "Специалист",
+          name: "Кога и с кого",
           exact: true,
         }),
       ).toBeFocused();
-      await page.getByRole("button", { name: "Продължи", exact: true }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page
         .getByRole("textbox", { name: "Име", exact: true })
         .fill("Demo Chrome");
@@ -258,8 +227,8 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       ).toHaveValue("Demo Chrome");
       await page.getByRole("button", { name: "Провери данните" }).click();
       for (const [label, heading] of [
-        ["Промени специалиста", "Специалист"],
-        ["Промени датата и часа", "Дата и час"],
+        ["Промени специалиста", "Кога и с кого"],
+        ["Промени датата и часа", "Кога и с кого"],
         ["Промени услугите", "Изберете услуги"],
       ]) {
         const trigger = page.getByRole("button", { name: "Виж избора" });
@@ -277,7 +246,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
           step++
         )
           await page
-            .getByRole("button", { name: "Продължи", exact: true })
+            .getByRole("button", { name: /^(Продължи|Напред:)/ })
             .click();
         await expect(
           page.getByRole("textbox", { name: "Име", exact: true }),
@@ -293,14 +262,13 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       await nav.getByRole("link", { name: /Час и специалист/ }).click();
       await expect(
         page.getByRole("heading", {
-          name: path === "staff-first" ? "Специалист" : "Дата и час",
+          name: "Кога и с кого",
           exact: true,
         }),
       ).toBeFocused();
       await page
         .getByRole("radio", {
-          name:
-            path === "staff-first" ? "Дата и час" : "Специалист",
+          name: "Кога и с кого",
           exact: true,
         })
         .check();
@@ -313,8 +281,8 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
           exact: true,
         }),
       ).toHaveCount(0);
-      await page.getByRole("button", { name: "Продължи", exact: true }).click();
-      await page.getByRole("button", { name: "Продължи", exact: true }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await expect(
         page.getByRole("textbox", { name: "Име", exact: true }),
       ).toHaveValue("Demo Chrome");
@@ -354,27 +322,22 @@ for (const path of ["staff-first", "time-first"] as const) {
         });
       await page.goto("/");
       await page.getByRole("checkbox", { name: /Подстригване/ }).check();
-      await page.getByRole("button", { name: "Продължи", exact: true }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page
         .getByRole("radio", {
-          name:
-            path === "staff-first" ? "Специалист" : "Дата и час",
+          name: "Кога и с кого",
           exact: true,
         })
         .check();
       if (path === "staff-first") {
         await page.getByRole("radio", { name: /Иван/ }).check();
-        await page
-          .getByRole("button", { name: "Продължи", exact: true })
-          .click();
+        await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       }
       await page.getByRole("radio", { name: "15:00", exact: true }).check();
-      await page.getByRole("button", { name: "Продължи", exact: true }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       if (path === "time-first") {
         await page.getByRole("radio", { name: /Иван/ }).check();
-        await page
-          .getByRole("button", { name: "Продължи", exact: true })
-          .click();
+        await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       }
       const nav = page.getByRole("navigation", {
         name: "Стъпки на резервацията",
@@ -415,7 +378,7 @@ for (const path of ["staff-first", "time-first"] as const) {
         "Час и специалист",
       );
       await expect(
-        page.getByRole("heading", { name: "Дата и час", exact: true }),
+        page.getByRole("heading", { name: "Кога и с кого", exact: true }),
       ).toBeFocused();
       await expect(nav.getByRole("link")).toHaveCount(1);
       await expect(
@@ -425,12 +388,10 @@ for (const path of ["staff-first", "time-first"] as const) {
         }),
       ).toHaveCount(0);
       await page.getByRole("radio", { name: "16:00", exact: true }).check();
-      await page.getByRole("button", { name: "Продължи", exact: true }).click();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       if (path === "time-first") {
         await expect(page.getByRole("radio", { name: /Иван/ })).toBeChecked();
-        await page
-          .getByRole("button", { name: "Продължи", exact: true })
-          .click();
+        await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       }
       await expect(name).toHaveValue("Demo Recovery");
       await expect(nav.locator('[aria-current="step"]')).toContainText(

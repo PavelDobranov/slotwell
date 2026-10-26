@@ -3,7 +3,6 @@
 import { Radio } from "@base-ui/react/radio";
 import { RadioGroup } from "@base-ui/react/radio-group";
 import {
-  ArrowRight,
   Calendar,
   Check,
   CircleAlert,
@@ -178,9 +177,13 @@ export function BookingWizard() {
 
   const progress = bookingProgress(state, reviewRequested);
   const reviewing = progress.current === 3;
-  const today =
-    availabilityTime === null ? null : businessDateAt(availabilityTime);
   const order = stepOrder(state.path);
+  const nextStep = order[order.indexOf(state.step) + 1];
+  const shortStepLabels: Record<string, string> = {
+    staff: "специалист",
+    time: "дата и час",
+    details: "вашите данни",
+  };
   const firstSelectionStep = state.step === order[2] ? order[1] : null;
   const selectedStaff = salon?.staff.find(({ id }) => id === state.staffId);
   const firstSelection =
@@ -192,12 +195,6 @@ export function BookingWizard() {
             value: `${formatBusinessDate(businessDateAt(state.start))} · ${formatBusinessTime(state.start)}–${formatBusinessTime(state.start + selectedTotals(state, salon).durationMinutes * 60_000)}`,
           }
         : null;
-  const nextStep = order[order.indexOf(state.step) + 1];
-  const nextLabel = reviewing
-    ? "Плащане на място"
-    : state.step === "details"
-      ? "Следва: преглед"
-      : `Следва: ${stepLabels[nextStep]}`;
   const actionForm =
     state.step === "services"
       ? "booking-services"
@@ -290,7 +287,11 @@ export function BookingWizard() {
                   : "rounded-sm text-[28px] leading-[34px] font-semibold lg:text-4xl lg:leading-[42px]"
               }
             >
-              {confirmed ? "Резервацията е потвърдена" : stepLabels[state.step]}
+              {confirmed
+                ? "Резервацията е потвърдена"
+                : state.step === "staff" || state.step === "time"
+                  ? "Кога и с кого"
+                  : stepLabels[state.step]}
             </h2>
             {!confirmed && !confirmationError && (
               <RecoveryNotice
@@ -517,23 +518,6 @@ export function BookingWizard() {
                 </Button>
               </>
             )}
-            {!confirmed && state.step !== "services" && (
-              <>
-                <p className="text-sm text-muted-foreground" aria-live="polite">
-                  {today === null ? (
-                    "Подготвяме датата на салона…"
-                  ) : (
-                    <>
-                      Днес:{" "}
-                      <time dateTime={today}>{formatBusinessDate(today)}</time>
-                    </>
-                  )}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Всички часове са местни за салона в София (Europe/Sofia).
-                </p>
-              </>
-            )}
             <noscript>
               За избор на услуги е необходимо да включиш JavaScript.
             </noscript>
@@ -544,56 +528,46 @@ export function BookingWizard() {
               state={state}
               confirmed={false}
               action={
-                <>
-                  <p
-                    id="booking-next"
-                    className="text-sm text-muted-foreground"
-                  >
-                    {nextLabel}
-                  </p>
-                  <Button
-                    // Replace the node on navigation: a button click must not
-                    // acquire a new form-submit default action mid-event.
-                    key={`${state.step}-${reviewing}`}
-                    aria-describedby="booking-next"
-                    type={actionForm ? "submit" : "button"}
-                    form={actionForm}
-                    disabled={
-                      salon === null ||
-                      pending ||
-                      (state.step === "staff" && state.staffId === null) ||
-                      (state.step === "time" && state.start === null)
-                    }
-                    className="h-auto min-h-13 w-full whitespace-normal lg:w-auto lg:min-w-65"
-                    onClick={
-                      reviewing
-                        ? confirm
-                        : state.step === "staff" || state.step === "time"
-                          ? () => dispatch({ type: "next" })
-                          : undefined
-                    }
-                  >
-                    {pending && (
-                      <LoaderCircle
-                        aria-hidden="true"
-                        data-icon="inline-start"
-                        className="motion-safe:animate-spin"
-                      />
-                    )}
-                    {reviewing
-                      ? pending
-                        ? "Потвърждаваме…"
-                        : confirmationError
-                          ? "Опитай отново"
-                          : "Потвърди резервацията"
-                      : state.step === "details"
-                        ? "Провери данните"
-                        : "Продължи"}
-                    {!reviewing && (
-                      <ArrowRight aria-hidden="true" data-icon="inline-end" />
-                    )}
-                  </Button>
-                </>
+                <Button
+                  // Replace the node on navigation: a button click must not
+                  // acquire a new form-submit default action mid-event.
+                  key={`${state.step}-${reviewing}`}
+                  type={actionForm ? "submit" : "button"}
+                  form={actionForm}
+                  disabled={
+                    salon === null ||
+                    pending ||
+                    (state.step === "staff" && state.staffId === null) ||
+                    (state.step === "time" && state.start === null)
+                  }
+                  className="h-auto min-h-13 w-full whitespace-normal lg:w-auto lg:min-w-65"
+                  onClick={
+                    reviewing
+                      ? confirm
+                      : state.step === "staff" || state.step === "time"
+                        ? () => dispatch({ type: "next" })
+                        : undefined
+                  }
+                >
+                  {pending && (
+                    <LoaderCircle
+                      aria-hidden="true"
+                      data-icon="inline-start"
+                      className="motion-safe:animate-spin"
+                    />
+                  )}
+                  {reviewing
+                    ? pending
+                      ? "Потвърждаваме…"
+                      : confirmationError
+                        ? "Опитай отново"
+                        : "Потвърди резервацията"
+                    : state.step === "details"
+                      ? "Провери данните"
+                      : state.step === "services"
+                        ? "Продължи"
+                        : `Напред: ${shortStepLabels[nextStep]}`}
+                </Button>
               }
               onEdit={(step) => dispatch({ type: "edit", step })}
             />

@@ -16,7 +16,7 @@ const salon = createDemoSalon(() => now);
 const selection: BookingState = {
   ...initialBookingState,
   step: "details",
-  serviceIds: ["haircut"],
+  serviceIds: ["cut_m"],
   staffId: "mila",
   start: localStart("2026-06-01", 900),
   date: "2026-06-01",
@@ -147,7 +147,7 @@ test("new booking resets contact and choices but retains session occupancy; a fr
     availableSlots({
       salon,
       now,
-      serviceIds: ["haircut"],
+      serviceIds: ["cut_m"],
       staffId: "mila",
       date: "2026-06-01",
       sessionOccupied: occupied,

@@ -4,7 +4,10 @@ export type Clock = () => number;
 export type Service = {
   readonly id: string;
   readonly name: string;
-  readonly priceCents: number;
+  /** Category heading the service groups under in the picker, e.g. "Коса". */
+  readonly category: string;
+  /** Fixed price in cents, or null when it is settled on site (e.g. by hair length). */
+  readonly priceCents: number | null;
   readonly durationMinutes: number;
   readonly cleanupMinutes: number;
 };

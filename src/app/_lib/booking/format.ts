@@ -3,3 +3,27 @@ export const euros = new Intl.NumberFormat("bg-BG", {
   style: "currency",
   currency: "EUR",
 });
+
+/** Visit length as "45 мин" or "1 ч 30 мин"; minutes-only below an hour. */
+export function formatDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (!hours) return `${rest} мин`;
+  return rest ? `${hours} ч ${rest} мин` : `${hours} ч`;
+}
+
+/** A single service's price, or "на място" when it is settled on site. */
+export function formatServicePrice(priceCents: number | null): string {
+  return priceCents === null ? "на място" : euros.format(priceCents / 100);
+}
+
+/** Selected total: exact sum, "от X" when a picked service is priced on site, else "на място". */
+export function formatTotalPrice(totals: {
+  priceCents: number;
+  hasVariablePrice: boolean;
+}): string {
+  if (!totals.hasVariablePrice) return euros.format(totals.priceCents / 100);
+  return totals.priceCents > 0
+    ? `от ${euros.format(totals.priceCents / 100)}`
+    : "на място";
+}
