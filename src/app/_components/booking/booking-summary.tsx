@@ -1,4 +1,4 @@
-import { ChevronUp } from "lucide-react";
+import { ChevronUp, MapPin } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
 
 import { Button } from "@/app/_components/button";
@@ -30,6 +30,14 @@ import {
   formatBusinessTime,
 } from "@/app/_lib/booking/time";
 import type { DemoSalon } from "@/app/_lib/booking/types";
+import { cn } from "@/app/_lib/utils";
+
+const compactEuros = new Intl.NumberFormat("bg-BG", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
 
 export function BookingSummary({
   salon,
@@ -37,7 +45,9 @@ export function BookingSummary({
   confirmed,
   onEdit,
   action,
+  backAction,
 }: {
+  backAction?: ReactNode;
   action: ReactNode;
   salon: DemoSalon | null;
   state: BookingState;
@@ -50,18 +60,35 @@ export function BookingSummary({
     salon?.services.filter(({ id }) => state.serviceIds.includes(id)) ?? [];
   const totals = salon === null ? null : selectedTotals(state, salon);
   const order = stepOrder(state.path);
+  const timeDesign = state.step === "time" && !confirmed;
   const canEdit = (step: BookingStep) =>
-    !confirmed && order.indexOf(step) < order.indexOf(state.step);
+    !confirmed &&
+    (timeDesign || order.indexOf(step) < order.indexOf(state.step));
   function sectionHeading(step: BookingStep, label: string, editLabel: string) {
     return (
-      <div className="flex min-h-8 items-center justify-between gap-2">
-        <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+      <div
+        className={cn(
+          "relative flex items-center justify-between gap-2",
+          timeDesign ? "min-h-4.5 pr-20" : "min-h-8",
+        )}
+      >
+        <span
+          className={cn(
+            "text-xs tracking-wide text-muted-foreground uppercase",
+            timeDesign ? "font-semibold" : "font-medium",
+          )}
+        >
           {label}
         </span>
         {canEdit(step) && (
           <Button
             variant="link"
             size="sm"
+            className={
+              timeDesign
+                ? "absolute top-1/2 right-0 -translate-y-1/2 px-0 text-sm font-semibold underline underline-offset-4"
+                : undefined
+            }
             onClick={() => {
               editing.current = true;
               setOpen(false);
@@ -76,12 +103,19 @@ export function BookingSummary({
     );
   }
   const card = (
-    <Card className="shadow-none [--card-spacing:--spacing(6)]">
+    <Card
+      className={cn(
+        "shadow-none [--card-spacing:--spacing(6)]",
+        timeDesign && "rounded-[18px] text-base leading-5",
+      )}
+    >
       <CardHeader className="hidden lg:grid">
         <h2 className="text-lg font-semibold">Вашата резервация</h2>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
+      <CardContent
+        className={cn("flex flex-col", timeDesign ? "gap-3.5" : "gap-4")}
+      >
+        <div className={cn("flex flex-col", timeDesign ? "gap-5" : "gap-2")}>
           {sectionHeading("services", "Услуги", "Промени услугите")}
           {selected.length === 0 ? (
             <p className="text-muted-foreground">
@@ -94,11 +128,29 @@ export function BookingSummary({
                   key={service.id}
                   className="flex flex-wrap justify-between gap-x-3 gap-y-1"
                 >
-                  <span>{service.name}</span>
-                  <span className="text-muted-foreground tabular-nums">
-                    {service.durationMinutes} мин ·{" "}
-                    {formatServicePrice(service.priceCents)}
-                  </span>
+                  {timeDesign ? (
+                    <>
+                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span>{service.name}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {service.durationMinutes} мин
+                        </span>
+                      </span>
+                      <span className="tabular-nums">
+                        {service.priceCents === null
+                          ? "на място"
+                          : compactEuros.format(service.priceCents / 100)}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{service.name}</span>
+                      <span className="text-muted-foreground tabular-nums">
+                        {service.durationMinutes} мин ·{" "}
+                        {formatServicePrice(service.priceCents)}
+                      </span>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
@@ -108,7 +160,14 @@ export function BookingSummary({
         <div className="flex flex-col gap-1">
           {sectionHeading("staff", "Специалист", "Промени специалиста")}
           {state.staffId === null ? (
-            <p className="text-muted-foreground">Предстои — стъпка 2</p>
+            <p
+              className={cn(
+                "text-muted-foreground",
+                timeDesign && "font-semibold",
+              )}
+            >
+              {timeDesign ? "Не е избран" : "Предстои — стъпка 2"}
+            </p>
           ) : (
             <p>{salon?.staff.find(({ id }) => id === state.staffId)?.name}</p>
           )}
@@ -116,7 +175,14 @@ export function BookingSummary({
         <div className="flex flex-col gap-1">
           {sectionHeading("time", "Дата и час", "Промени датата и часа")}
           {state.start === null ? (
-            <p className="text-muted-foreground">Предстои — стъпка 2</p>
+            <p
+              className={cn(
+                "text-muted-foreground",
+                timeDesign && "font-semibold",
+              )}
+            >
+              {timeDesign ? "Не е избран" : "Предстои — стъпка 2"}
+            </p>
           ) : (
             <p className="tabular-nums">
               {formatBusinessDate(businessDateAt(state.start))} ·{" "}
@@ -128,31 +194,44 @@ export function BookingSummary({
           )}
         </div>
         <div
-          className="flex flex-col gap-2 rounded-xl bg-muted px-4 py-3.5"
+          className={cn(
+            "flex flex-col rounded-xl px-4",
+            timeDesign ? "gap-1.5 bg-background py-3" : "gap-2 bg-muted py-3.5",
+          )}
           aria-live="polite"
         >
           <p className="flex flex-wrap items-center justify-between gap-2 font-semibold">
             <span>Общо · {totals?.durationMinutes ?? 0} мин</span>
             <span className="font-heading text-xl tabular-nums">
-              {formatTotalPrice({
-                priceCents: totals?.priceCents ?? 0,
-                hasVariablePrice: totals?.hasVariablePrice ?? false,
-              })}
+              {timeDesign && !totals?.hasVariablePrice
+                ? compactEuros.format((totals?.priceCents ?? 0) / 100)
+                : formatTotalPrice({
+                    priceCents: totals?.priceCents ?? 0,
+                    hasVariablePrice: totals?.hasVariablePrice ?? false,
+                  })}
             </span>
           </p>
-          <p className="text-sm text-muted-foreground">Плащане на място.</p>
+          <p className="text-sm text-muted-foreground">
+            {timeDesign ? "Плащане на място в салона." : "Плащане на място."}
+          </p>
         </div>
-        {salon !== null && (
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Място
-            </span>
-            <p>
-              Място: {state.step === "details" && `${salon.name}, `}
+        {salon !== null &&
+          (timeDesign ? (
+            <p className="flex items-center gap-2 text-sm text-secondary-foreground">
+              <MapPin aria-hidden="true" className="size-5 shrink-0" />
               {salon.address}
             </p>
-          </div>
-        )}
+          ) : (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                Място
+              </span>
+              <p>
+                Място: {state.step === "details" && `${salon.name}, `}
+                {salon.address}
+              </p>
+            </div>
+          ))}
       </CardContent>
     </Card>
   );
@@ -234,8 +313,14 @@ export function BookingSummary({
       </aside>
       <fieldset
         aria-label="Действия по резервацията"
-        className="flex min-w-0 flex-col gap-2 bg-card px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] lg:col-start-1 lg:row-start-2 lg:items-end lg:bg-transparent lg:p-0"
+        className={cn(
+          "flex min-w-0 flex-col gap-2 bg-card px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] lg:col-start-1 lg:row-start-2 lg:bg-transparent lg:p-0",
+          timeDesign
+            ? "lg:flex-row lg:items-center lg:justify-between"
+            : "lg:items-end",
+        )}
       >
+        {backAction}
         {action}
       </fieldset>
     </>

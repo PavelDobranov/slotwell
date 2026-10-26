@@ -61,7 +61,7 @@ export function TimeSlots({
             .filter(([, group]) => group.length > 0)
             .map(([title, group]) => (
               <div key={title} className="flex flex-col gap-2">
-                <p className="text-[13px] leading-[18px] text-muted-foreground">
+                <p className="text-[13px] leading-5 text-muted-foreground">
                   {title}
                 </p>
                 <div className="grid grid-cols-2 gap-2 @min-[20rem]:grid-cols-4 @min-[30rem]:grid-cols-6">

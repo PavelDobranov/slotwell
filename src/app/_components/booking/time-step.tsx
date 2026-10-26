@@ -113,7 +113,7 @@ export function TimeStep({
     days[Math.min(offset + 6, 60)].date,
   );
   return (
-    <div className="flex min-w-0 flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h3 className="font-heading text-xl leading-[26px] font-semibold">
           {staff
@@ -122,7 +122,7 @@ export function TimeStep({
         </h3>
         <p className="text-sm text-muted-foreground">Часове по София (EET)</p>
       </div>
-      <div className="flex min-w-0 flex-col gap-3">
+      <div className="flex min-w-0 flex-col gap-1">
         <p className="text-sm font-medium" aria-live="polite">
           {monthLabel}
         </p>
@@ -131,7 +131,7 @@ export function TimeStep({
             variant="outline"
             size="icon"
             aria-label="Предишни дни"
-            className="h-18 shrink-0 bg-card"
+            className="h-18 shrink-0 bg-card disabled:text-unavailable disabled:opacity-100"
             disabled={loading || offset === 0}
             onClick={() =>
               setPage({ date, today, offset: Math.max(0, offset - 7) })
@@ -154,7 +154,7 @@ export function TimeStep({
             variant="outline"
             size="icon"
             aria-label="Следващи дни"
-            className="h-18 shrink-0 bg-card"
+            className="h-18 shrink-0 bg-card disabled:text-unavailable disabled:opacity-100"
             disabled={loading || offset + 7 > 60}
             onClick={() => setPage({ date, today, offset: offset + 7 })}
           >
@@ -163,8 +163,8 @@ export function TimeStep({
         </div>
       </div>
       {loading || slots.length > 0 ? (
-        <div className="flex min-w-0 flex-col gap-4">
-          <h4 className="font-heading text-lg leading-6 font-semibold">
+        <div className="flex min-w-0 flex-col gap-3">
+          <h4 className="font-heading text-base leading-6 font-semibold">
             {formatBusinessWeekdayDate(date)}
           </h4>
           <TimeSlots

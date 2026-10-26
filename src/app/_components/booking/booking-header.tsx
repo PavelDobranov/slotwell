@@ -9,7 +9,9 @@ export function BookingHeader({
   subtitle,
   onBack,
   disabled,
+  timeDesign = false,
 }: {
+  timeDesign?: boolean;
   children: ReactNode;
   subtitle: ReactNode;
   onBack?: () => void;
@@ -17,7 +19,13 @@ export function BookingHeader({
 }) {
   return (
     <header className="border-b bg-background lg:bg-card">
-      <div className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:gap-14 lg:px-12 lg:py-4">
+      <div
+        className={cn(
+          "flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:gap-14 lg:px-12 lg:py-4",
+          timeDesign &&
+            "lg:[&_nav_li>a]:min-h-12.5 lg:[&_nav_li>a]:gap-4 lg:[&_nav_li>span]:min-h-12.5 lg:[&_nav_li>span]:gap-4",
+        )}
+      >
         <div className="flex min-h-11 shrink-0 items-center gap-2.5">
           {onBack && (
             <Button

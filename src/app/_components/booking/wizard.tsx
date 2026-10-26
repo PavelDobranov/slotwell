@@ -5,6 +5,7 @@ import { RadioGroup } from "@base-ui/react/radio-group";
 import {
   Calendar,
   Check,
+  ChevronLeft,
   CircleAlert,
   CircleCheck,
   LoaderCircle,
@@ -206,9 +207,12 @@ export function BookingWizard() {
     state.serviceIds.length > 0 &&
     qualifiedStaff(salon, state.serviceIds).length === 0;
 
+  const timeDesign = state.step === "time" && !confirmed;
+
   return (
     <>
       <BookingHeader
+        timeDesign={timeDesign}
         subtitle={
           confirmed ? (
             <span className="lg:hidden">Резервацията е потвърдена</span>
@@ -247,7 +251,10 @@ export function BookingWizard() {
       <main
         id="booking"
         tabIndex={-1}
-        className="flex w-full flex-1 flex-col gap-5 px-4 pt-5 pb-7 lg:gap-6 lg:px-12 lg:pt-10 lg:pb-14"
+        className={cn(
+          "flex w-full flex-1 flex-col gap-5 px-4 pt-5 pb-7 lg:gap-6 lg:pt-10 lg:pb-14",
+          timeDesign ? "lg:px-[4.8%]" : "lg:px-12",
+        )}
       >
         <h1 className="sr-only">Запази време за себе си</h1>
         <fieldset
@@ -257,7 +264,9 @@ export function BookingWizard() {
             "grid min-w-0 items-start gap-8",
             confirmed
               ? "mx-auto max-w-170"
-              : "gap-y-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-x-12 lg:gap-y-6",
+              : timeDesign
+                ? "gap-y-0 lg:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)] lg:gap-x-12 lg:gap-y-6"
+                : "gap-y-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-x-12 lg:gap-y-6",
           )}
         >
           <section
@@ -265,7 +274,10 @@ export function BookingWizard() {
               lastFocusedControl.current = event.target;
             }}
             aria-labelledby="step-heading"
-            className="mb-6 flex min-w-0 flex-col gap-4 py-2 lg:mb-0"
+            className={cn(
+              "mb-6 flex min-w-0 flex-col lg:mb-0",
+              timeDesign ? "gap-5" : "gap-4 py-2",
+            )}
           >
             <p className="sr-only">
               {confirmed
@@ -369,7 +381,12 @@ export function BookingWizard() {
                           nativeButton
                           render={<button type="button" />}
                           value={path}
-                          className="flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-2.5 rounded-slot bg-secondary px-3 text-sm font-semibold text-muted-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-checked:bg-card data-checked:text-foreground data-checked:shadow-sm"
+                          className={cn(
+                            "flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-2.5 rounded-slot bg-secondary px-3 font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-checked:bg-card data-checked:shadow-sm",
+                            timeDesign
+                              ? "text-base text-secondary-foreground data-checked:text-accent-foreground data-checked:ring-1 data-checked:ring-success-border"
+                              : "text-sm text-muted-foreground data-checked:text-foreground",
+                          )}
                         >
                           <Icon
                             aria-hidden="true"
@@ -509,7 +526,7 @@ export function BookingWizard() {
                   </p>
                 )}
                 <Button
-                  hidden={state.step === "details"}
+                  hidden={state.step === "details" || timeDesign}
                   variant="outline"
                   className="hidden self-start lg:inline-flex"
                   onClick={() => dispatch({ type: "back" })}
@@ -527,6 +544,18 @@ export function BookingWizard() {
               salon={salon}
               state={state}
               confirmed={false}
+              backAction={
+                timeDesign ? (
+                  <Button
+                    variant="outline"
+                    className="hidden bg-card px-4 font-semibold lg:inline-flex"
+                    onClick={() => dispatch({ type: "back" })}
+                  >
+                    <ChevronLeft aria-hidden="true" data-icon="inline-start" />
+                    Назад
+                  </Button>
+                ) : undefined
+              }
               action={
                 <Button
                   // Replace the node on navigation: a button click must not
@@ -540,7 +569,10 @@ export function BookingWizard() {
                     (state.step === "staff" && state.staffId === null) ||
                     (state.step === "time" && state.start === null)
                   }
-                  className="h-auto min-h-13 w-full whitespace-normal lg:w-auto lg:min-w-65"
+                  className={cn(
+                    "h-auto min-h-13 w-full whitespace-normal lg:w-auto lg:min-w-65",
+                    timeDesign && "font-semibold disabled:opacity-100",
+                  )}
                   onClick={
                     reviewing
                       ? confirm
@@ -569,7 +601,19 @@ export function BookingWizard() {
                         : `Напред: ${shortStepLabels[nextStep]}`}
                 </Button>
               }
-              onEdit={(step) => dispatch({ type: "edit", step })}
+              onEdit={(step) => {
+                if (
+                  timeDesign &&
+                  step === "staff" &&
+                  state.path === "time-first" &&
+                  state.start === null
+                ) {
+                  dispatch({ type: "path", path: "staff-first" });
+                } else {
+                  dispatch({ type: "edit", step });
+                  requestAnimationFrame(() => heading.current?.focus());
+                }
+              }}
             />
           )}
         </fieldset>

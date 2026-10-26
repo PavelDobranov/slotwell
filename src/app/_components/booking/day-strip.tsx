@@ -16,7 +16,7 @@ export function DayStrip({
   return (
     <fieldset disabled={disabled} className="min-w-0 flex-1">
       <legend className="sr-only">Дата на посещението</legend>
-      <div className="overflow-x-auto py-1 lg:overflow-visible">
+      <div className="overflow-x-auto lg:overflow-visible">
         <div className="flex gap-2 lg:grid lg:grid-cols-7">
           {days.map(({ date: value, count, open }) => {
             const closed = !open;
