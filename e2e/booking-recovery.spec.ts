@@ -14,7 +14,7 @@ test("path switches preserve valid choices and service edits explain only invali
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
-  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "15:00", exact: true }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
@@ -39,7 +39,7 @@ test("path switches preserve valid choices and service edits explain only invali
     .getByRole("status")
     .filter({ hasText: "Запазихме избора ти" });
   await expect(preserved).toContainText("15:00");
-  await expect(preserved).toContainText("Мила");
+  await expect(preserved).toContainText("Мими Ибрамова");
   await expect(preserved).toHaveAttribute("data-variant", "info");
   await expect(preserved).toHaveAttribute("aria-atomic", "true");
   await expect(preserved).not.toContainText("demo@example.com");
@@ -51,7 +51,9 @@ test("path switches preserve valid choices and service edits explain only invali
     fullPage: true,
   });
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
-  await expect(page.getByRole("radio", { name: /Мила/ })).toBeChecked();
+  await expect(
+    page.getByRole("radio", { name: /Мими Ибрамова/ }),
+  ).toBeChecked();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("button", { name: "Виж избора" }).click();
   await page
@@ -73,7 +75,7 @@ test("path switches preserve valid choices and service edits explain only invali
     name: "Вашата резервация",
   });
   await expect(summary).toContainText("15:00–15:50");
-  await expect(summary).not.toContainText("Мила");
+  await expect(summary).not.toContainText("Мими Ибрамова");
   await page.screenshot({
     path: "coverage/playwright/recovery-invalidation.png",
     fullPage: true,
@@ -83,7 +85,7 @@ test("path switches preserve valid choices and service edits explain only invali
     page.getByRole("radio", { name: "15:00", exact: true }),
   ).toBeChecked();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
-  await page.getByRole("radio", { name: /Иван/ }).check();
+  await page.getByRole("radio", { name: /Павел Добранов/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   for (const [name, value] of [
     ["Име", "Демо Клиент"],
@@ -130,7 +132,7 @@ for (const width of [360, 390, 1280]) {
     await noqual
       .getByRole("button", { name: "Махни „Измиване и оформяне“" })
       .click();
-    await page.getByRole("radio", { name: /Иван/ }).check();
+    await page.getByRole("radio", { name: /Павел Добранов/ }).check();
     await next.click();
     // Wednesday is reachable via Mila, then remains selected when switching to Ivan.
     await page.getByRole("button", { name: "Назад", exact: true }).click();
@@ -138,16 +140,16 @@ for (const width of [360, 390, 1280]) {
     await page.getByRole("checkbox", { name: /Оформяне на брада/ }).uncheck();
     await page.getByRole("checkbox", { name: /Подстригване/ }).check();
     await next.click();
-    await page.getByRole("radio", { name: /Мила/ }).check();
+    await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
     await next.click();
     await page.locator('input[name="visit-date"][value="2026-06-03"]').check();
     await page.getByRole("button", { name: "Назад", exact: true }).click();
-    await page.getByRole("radio", { name: /Иван/ }).check();
+    await page.getByRole("radio", { name: /Павел Добранов/ }).check();
     await next.click();
     const emptyDay = page
       .locator('[data-slot="alert"][role="status"]')
       .filter({ hasText: "Няма свободни часове за тази дата" });
-    await expect(emptyDay).toContainText("Иван");
+    await expect(emptyDay).toContainText("Павел Добранов");
     await expect(next).toBeDisabled();
     await expect(
       emptyDay.getByRole("button", { name: /първи час/ }),
@@ -201,7 +203,7 @@ for (const width of [360, 390, 1280]) {
                 : salon,
             now,
             serviceIds: ["haircut"],
-            staffId: "ivan",
+            staffId: "pavel",
           },
           start: null,
           selectedDate: "2026-06-01",

@@ -6,7 +6,7 @@ import { localStart } from "@/app/_lib/booking/time";
 
 test("the fictional catalog has distinct competencies, integer prices and trailing buffers", () => {
   const salon = createDemoSalon(() => Date.parse("2026-06-01T08:00:00Z"));
-  assert.equal(salon.name, "Ателие Мента");
+  assert.equal(salon.name, "Wellness Studio");
   assert.ok(salon.services.length >= 3);
   assert.ok(salon.staff.length >= 2);
   assert.equal(
@@ -49,7 +49,7 @@ test("the fictional catalog has distinct competencies, integer prices and traili
   );
   assert.equal(
     salon.staff.filter((staff) =>
-      ["cut_m", "color"].every((id) => staff.serviceIds.includes(id)),
+      ["cut_m", "massage_relax"].every((id) => staff.serviceIds.includes(id)),
     ).length,
     0,
   );
@@ -107,12 +107,12 @@ test("walkthrough occupancy and dated closure follow the injected Sofia date, no
     assert.deepEqual(salon.exceptions[0].hours, []);
     assert.deepEqual(salon.occupied, [
       {
-        staffId: "mila",
+        staffId: "mimi",
         start: localStart(nextMonday, 600),
         end: localStart(nextMonday, 660),
       },
       {
-        staffId: "ivan",
+        staffId: "pavel",
         start: localStart(nextMonday, 690),
         end: localStart(nextMonday, 750),
       },

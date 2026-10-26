@@ -18,14 +18,16 @@ for (const width of [390, 1280]) {
           .check();
       const recap = page.getByRole("region", { name: "Първият ти избор" });
       const time = page.getByRole("radio", { name: "15:00", exact: true });
-      const staff = page.getByRole("radio", { name: /Мила/ });
+      const staff = page.getByRole("radio", { name: /Мими Ибрамова/ });
       await expect(recap).toHaveCount(0);
       await (timeFirst ? time : staff).check();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await expect(recap).toContainText(
         timeFirst ? "Избран час" : "Избран специалист",
       );
-      await expect(recap).toContainText(timeFirst ? "15:00–15:30" : "Мила");
+      await expect(recap).toContainText(
+        timeFirst ? "15:00–15:30" : "Мими Ибрамова",
+      );
       if (timeFirst) await expect(recap).toContainText("1 юни 2026");
       await (timeFirst ? staff : time).check();
       await page.screenshot({
@@ -57,7 +59,9 @@ for (const width of [390, 1280]) {
       await expect(recap).toContainText(
         timeFirst ? "Избран специалист" : "Избран час",
       );
-      await expect(recap).toContainText(timeFirst ? "Мила" : "15:00–15:30");
+      await expect(recap).toContainText(
+        timeFirst ? "Мими Ибрамова" : "15:00–15:30",
+      );
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(width);
@@ -85,9 +89,9 @@ test("time-first cards distinguish availability from qualification without auto-
   await page.getByRole("radio", { name: "09:30", exact: true }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   const group = page.getByRole("group", { name: "Избери специалист" });
-  const mila = group.getByRole("radio", { name: /Мила/ });
-  const ivan = group.getByRole("radio", { name: /Иван/ });
-  const elena = group.getByRole("radio", { name: /Елена/ });
+  const mila = group.getByRole("radio", { name: /Мими Ибрамова/ });
+  const ivan = group.getByRole("radio", { name: /Павел Добранов/ });
+  const elena = group.getByRole("radio", { name: /Емил Стойков/ });
   await expect(mila).toBeDisabled();
   await expect(mila).toHaveAccessibleDescription(
     /Не е свободен за цялото посещение/,
@@ -147,8 +151,8 @@ for (const width of [390, 1440]) {
       .getByRole("button", { name: "Махни „Измиване и оформяне“" })
       .click();
     await expect(alert).toHaveCount(0);
-    const ivan = group.getByRole("radio", { name: /Иван/ });
-    const mila = group.getByRole("radio", { name: /Мила/ });
+    const ivan = group.getByRole("radio", { name: /Павел Добранов/ });
+    const mila = group.getByRole("radio", { name: /Мими Ибрамова/ });
     await expect(ivan).toBeEnabled();
     await expect(ivan).not.toBeChecked();
     await expect(mila).toBeDisabled();
@@ -159,7 +163,7 @@ for (const width of [390, 1440]) {
       page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
     ).toBeDisabled();
     // The entire row, including the name, activates its radio.
-    await group.getByText("Иван", { exact: true }).click();
+    await group.getByText("Павел Добранов", { exact: true }).click();
     await expect(ivan).toBeChecked();
     await expect(ivan.locator("..")).toHaveAttribute("data-checked", "true");
     await expect(

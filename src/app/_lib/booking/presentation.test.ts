@@ -10,7 +10,7 @@ import {
 const complete: BookingState = {
   ...initialBookingState,
   serviceIds: ["cut_m"],
-  staffId: "ivan",
+  staffId: "pavel",
   start: 1,
   step: "details",
   contact: {

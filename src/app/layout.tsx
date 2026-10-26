@@ -19,9 +19,9 @@ const geologica = Geologica({
 });
 
 export const metadata: Metadata = {
-  title: "Запази час · Ателие Мента",
+  title: "Запази час · Wellness Studio",
   description:
-    "Запазете час в Ателие Мента — изберете услуги, специалист и свободно време.",
+    "Запазете час в Wellness Studio — изберете услуги, специалист и свободно време.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

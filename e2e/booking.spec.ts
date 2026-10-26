@@ -64,15 +64,15 @@ test("the Bulgarian shell has honest demo copy and keyboard access", async ({
   await page.goto("/");
 
   await expect(page.locator("html")).toHaveAttribute("lang", "bg");
-  await expect(page).toHaveTitle("Запази час · Ателие Мента");
+  await expect(page).toHaveTitle("Запази час · Wellness Studio");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
-    /Запазете час.*Ателие Мента/,
+    /Запазете час.*Wellness Studio/,
   );
   await expect(
     page.getByRole("heading", { name: "Запази време за себе си" }),
   ).toBeVisible();
-  await expect(page.getByText("Ателие Мента")).toBeVisible();
+  await expect(page.getByText("Wellness Studio")).toBeVisible();
   const progress = page.getByRole("navigation", {
     name: "Стъпки на резервацията",
   });
@@ -318,7 +318,7 @@ test("route choice exists only in when/who, defaults to time-first and cannot be
   await expect(
     page.getByRole("radio", { name: "Специалист", exact: true }),
   ).toBeChecked();
-  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
   await next.click();
   await page.getByRole("radio", { name: "15:00", exact: true }).check();
   await next.click();
@@ -353,7 +353,7 @@ test("specialist choices require explicit selection and match every service", as
   await expect(
     specialists.getByRole("radio").and(page.locator(":enabled")),
   ).toHaveCount(1);
-  const ivan = specialists.getByRole("radio", { name: /Иван/ });
+  const ivan = specialists.getByRole("radio", { name: /Павел Добранов/ });
   await expect(ivan).not.toBeChecked();
   await expect(
     page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
@@ -365,7 +365,7 @@ test("specialist choices require explicit selection and match every service", as
     page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await page.getByRole("button", { name: "Промени услугите" }).click();
-  await page.getByRole("checkbox", { name: /Боядисване/ }).check();
+  await page.getByRole("checkbox", { name: /Релаксиращ масаж/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(
     page.getByText("Никой специалист не прави всички избрани услуги заедно"),
@@ -390,7 +390,7 @@ test("specialist-first date recovery, horizon, edits and keyboard times reach de
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
-  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   const date = page.getByRole("group", {
     name: "Дата на посещението",
@@ -420,7 +420,7 @@ test("specialist-first date recovery, horizon, edits and keyboard times reach de
   ).toBeFocused();
   await expect(page.getByRole("complementary")).toContainText("09:00–09:30");
   await expect(page.getByRole("complementary")).toContainText(
-    "Ателие Мента, ул. „Шипка“ 18, София",
+    "Wellness Studio, ул. „Шипка“ 18, София",
   );
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await expect(start).toBeChecked();
@@ -433,18 +433,18 @@ test("specialist-first date recovery, horizon, edits and keyboard times reach de
   );
   await page.getByRole("radio", { name: "09:00", exact: true }).check();
   await page.getByRole("button", { name: "Назад", exact: true }).click();
-  await page.getByRole("radio", { name: /Иван/ }).check();
+  await page.getByRole("radio", { name: /Павел Добранов/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(
     page.getByRole("radio", { name: "09:00", exact: true }),
   ).toBeChecked();
   // Retain a date Mila can serve when choosing Ivan, who is off Wednesdays.
   await page.getByRole("button", { name: "Назад", exact: true }).click();
-  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await chooseDate(page, "2026-06-10");
   await page.getByRole("button", { name: "Назад", exact: true }).click();
-  await page.getByRole("radio", { name: /Иван/ }).check();
+  await page.getByRole("radio", { name: /Павел Добранов/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(
     page.getByText("Няма свободни часове за тази дата."),
@@ -475,7 +475,7 @@ test("date survives back navigation and a specialist change that clears its star
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
-  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   const date = page.getByRole("group", {
     name: "Дата на посещението",
@@ -487,7 +487,7 @@ test("date survives back navigation and a specialist change that clears its star
   await expect(date.locator('input[value="2026-06-10"]')).toBeChecked();
   await page.getByRole("radio", { name: "09:00", exact: true }).check();
   await page.getByRole("button", { name: "Назад", exact: true }).click();
-  await page.getByRole("radio", { name: /Иван/ }).check();
+  await page.getByRole("radio", { name: /Павел Добранов/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(date.locator('input[value="2026-06-10"]')).toBeChecked();
   await expect(
@@ -499,7 +499,7 @@ test("date survives back navigation and a specialist change that clears its star
   await expect(
     page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
-  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(date.getByRole("radio", { checked: true })).toHaveValue(
     "2026-06-10",
@@ -517,7 +517,7 @@ test("selection and navigation revalidate the clock instead of retaining page-op
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
-  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "09:00", exact: true }).check();
   await page.clock.setFixedTime(new Date("2026-06-01T05:30:00Z"));
@@ -544,11 +544,11 @@ test("empty dates at the horizon offer service edits without inventing a later s
   await page.getByRole("checkbox", { name: /Подстригване/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
-  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await chooseDate(page, "2026-08-01");
   await page.getByRole("button", { name: "Назад", exact: true }).click();
-  await page.getByRole("radio", { name: /Иван/ }).check();
+  await page.getByRole("radio", { name: /Павел Добранов/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await expect(page.getByText(/Няма по-късна свободна дата/)).toBeVisible();
   await expect(page.locator('input[value="2026-08-01"]')).toBeChecked();
@@ -596,13 +596,13 @@ test("time-first deduplicates shared starts, requires explicit staff, and switch
     specialists.getByRole("radio").and(page.locator(":enabled")),
   ).toHaveCount(2);
   await expect(next).toBeDisabled();
-  await specialists.getByRole("radio", { name: /Мила/ }).check();
+  await specialists.getByRole("radio", { name: /Мими Ибрамова/ }).check();
   await next.click();
   await expect(
     page.getByRole("heading", { name: "Данни и преглед", exact: true }),
   ).toBeFocused();
   const summary = page.getByRole("complementary");
-  await expect(summary).toContainText("Мила");
+  await expect(summary).toContainText("Мими Ибрамова");
   await expect(summary).toContainText("15:00–15:30");
   await expect(
     page.getByRole("radio", { name: "Специалист", exact: true }),
@@ -612,7 +612,9 @@ test("time-first deduplicates shared starts, requires explicit staff, and switch
   await expect(
     page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
-  await expect(specialists.getByRole("radio", { name: /Мила/ })).toBeChecked();
+  await expect(
+    specialists.getByRole("radio", { name: /Мими Ибрамова/ }),
+  ).toBeChecked();
   await next.click();
   await expect(start).toBeChecked();
   await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
@@ -627,9 +629,11 @@ test("time-first deduplicates shared starts, requires explicit staff, and switch
   await expect(
     specialists.getByRole("radio").and(page.locator(":enabled")),
   ).toHaveCount(1);
-  await expect(specialists.getByRole("radio", { name: /Мила/ })).toBeDisabled();
+  await expect(
+    specialists.getByRole("radio", { name: /Мими Ибрамова/ }),
+  ).toBeDisabled();
   await expect(next).toBeDisabled();
-  await specialists.getByRole("radio", { name: /Иван/ }).check();
+  await specialists.getByRole("radio", { name: /Павел Добранов/ }).check();
   // Wednesday has only Mila; changing time must clear retained Ivan, not the time.
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await chooseDate(page, "2026-06-10");
@@ -639,11 +643,11 @@ test("time-first deduplicates shared starts, requires explicit staff, and switch
     specialists.getByRole("radio").and(page.locator(":enabled")),
   ).toHaveCount(1);
   await expect(
-    specialists.getByRole("radio", { name: /Мила/ }),
+    specialists.getByRole("radio", { name: /Мими Ибрамова/ }),
   ).not.toBeChecked();
   await expect(next).toBeDisabled();
   await expect(summary).toContainText("09:00–09:30");
-  await expect(summary).not.toContainText("Иван");
+  await expect(summary).not.toContainText("Павел Добранов");
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(360);
@@ -651,7 +655,7 @@ test("time-first deduplicates shared starts, requires explicit staff, and switch
     path: "coverage/playwright/time-first-single-staff.png",
     fullPage: true,
   });
-  await specialists.getByRole("radio", { name: /Мила/ }).focus();
+  await specialists.getByRole("radio", { name: /Мими Ибрамова/ }).focus();
   await page.keyboard.press("Space");
   await next.click();
   await expect(
@@ -665,7 +669,7 @@ test("time-first filters competencies and rejects a start that becomes stale on 
 }) => {
   await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
   await page.goto("/");
-  await page.getByRole("checkbox", { name: /Боядисване/ }).check();
+  await page.getByRole("checkbox", { name: /Релаксиращ масаж/ }).check();
   const next = page.getByRole("button", { name: /^(Продължи|Напред:)/ });
   await next.click();
   await page.getByRole("radio", { name: "Дата и час", exact: true }).check();
@@ -675,7 +679,7 @@ test("time-first filters competencies and rejects a start that becomes stale on 
   await expect(
     specialists.getByRole("radio").and(page.locator(":enabled")),
   ).toHaveCount(1);
-  const elena = specialists.getByRole("radio", { name: /Елена/ });
+  const elena = specialists.getByRole("radio", { name: /Емил Стойков/ });
   await expect(elena).not.toBeChecked();
   await expect(next).toBeDisabled();
   await elena.check();
@@ -713,7 +717,7 @@ test("time-first clock refresh returns expired candidates to time selection with
   // :15 remains valid until the clock passes 08:15 Sofia.
   await page.getByRole("radio", { name: "09:15", exact: true }).check();
   await next.click();
-  await page.getByRole("radio", { name: /Мила/ }).focus();
+  await page.getByRole("radio", { name: /Мими Ибрамова/ }).focus();
   await page.clock.fastForward(16 * 60_000);
   await expect(
     page.getByRole("heading", { name: "Кога и с кого", exact: true }),
@@ -741,7 +745,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       await page
         .getByRole("radio", { name: "Специалист", exact: true })
         .check();
-      await page.getByRole("radio", { name: /Мила/ }).check();
+      await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
       await next.click();
     }
     const start = page.getByRole("radio", { name: "09:15", exact: true });
@@ -770,7 +774,7 @@ test("date strip pages without changing selection and calendar supports keyboard
   await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
-  await page.getByRole("radio", { name: /Иван/ }).check();
+  await page.getByRole("radio", { name: /Павел Добранов/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   const dates = page.getByRole("group", {
     name: "Дата на посещението",
@@ -881,7 +885,7 @@ for (const width of [320, 360, 768, 1024, 1440]) {
     await page.getByRole("checkbox", { name: /Подстригване/ }).check();
     await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await page.getByRole("radio", { name: "Специалист", exact: true }).check();
-    await page.getByRole("radio", { name: /Мила/ }).check();
+    await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
     await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await expect(
       page.getByRole("group", { name: "Дата на посещението", exact: true }),

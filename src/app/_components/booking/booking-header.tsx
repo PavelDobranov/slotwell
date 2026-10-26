@@ -46,11 +46,11 @@ export function BookingHeader({
               onBack ? "hidden lg:flex" : "flex",
             )}
           >
-            М
+            W
           </span>
           <div className="flex flex-col gap-0.5">
             <span className="font-heading text-base font-semibold">
-              Ателие Мента
+              Wellness Studio
             </span>
             <p className="text-sm text-muted-foreground">
               <span className="hidden lg:inline">ул. „Шипка“ 18, София</span>

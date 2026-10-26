@@ -22,11 +22,11 @@ test("desktop summary remains a sticky 340px rail with one native service submit
     page.getByRole("heading", { name: "Кога и с кого", exact: true }),
   ).toBeFocused();
   await expect(next).toBeDisabled();
-  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
   await next.click();
   await page.getByRole("radio", { name: "15:00", exact: true }).check();
   await expect(rail).toContainText("15:00–15:30");
-  await expect(rail).toContainText("Мила");
+  await expect(rail).toContainText("Мими Ибрамова");
   await page.screenshot({
     path: "coverage/playwright/summary-rail-1280.png",
     fullPage: true,
@@ -44,8 +44,8 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
     await expect(page.getByRole("banner")).toHaveCount(1);
     await expect(page.getByRole("main")).toHaveCount(1);
     await expect(page.locator("h1")).toHaveCount(1);
-    await expect(page).toHaveTitle(/Ателие Мента/);
-    await expect(page.getByRole("banner")).toContainText("Ателие Мента");
+    await expect(page).toHaveTitle(/Wellness Studio/);
+    await expect(page.getByRole("banner")).toContainText("Wellness Studio");
     const main = page.getByRole("main");
     const gutter = width >= 1024 ? "48px" : "16px";
     await expect(main).toHaveCSS("padding-left", gutter);
@@ -129,7 +129,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
       await page.goto("/");
-      await expect(page.getByRole("banner")).toContainText("Ателие Мента");
+      await expect(page.getByRole("banner")).toContainText("Wellness Studio");
       const nav = page.getByRole("navigation", {
         name: "Стъпки на резервацията",
       });
@@ -160,13 +160,13 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       ).toBeChecked();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       if (path === "staff-first") {
-        await page.getByRole("radio", { name: /Иван/ }).check();
+        await page.getByRole("radio", { name: /Павел Добранов/ }).check();
         await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       }
       await page.getByRole("radio", { name: "15:00", exact: true }).check();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       if (path === "time-first") {
-        await page.getByRole("radio", { name: /Иван/ }).check();
+        await page.getByRole("radio", { name: /Павел Добранов/ }).check();
         await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       }
       await expect(
@@ -330,13 +330,13 @@ for (const path of ["staff-first", "time-first"] as const) {
         })
         .check();
       if (path === "staff-first") {
-        await page.getByRole("radio", { name: /Иван/ }).check();
+        await page.getByRole("radio", { name: /Павел Добранов/ }).check();
         await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       }
       await page.getByRole("radio", { name: "15:00", exact: true }).check();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       if (path === "time-first") {
-        await page.getByRole("radio", { name: /Иван/ }).check();
+        await page.getByRole("radio", { name: /Павел Добранов/ }).check();
         await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       }
       const nav = page.getByRole("navigation", {
@@ -390,7 +390,9 @@ for (const path of ["staff-first", "time-first"] as const) {
       await page.getByRole("radio", { name: "16:00", exact: true }).check();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       if (path === "time-first") {
-        await expect(page.getByRole("radio", { name: /Иван/ })).toBeChecked();
+        await expect(
+          page.getByRole("radio", { name: /Павел Добранов/ }),
+        ).toBeChecked();
         await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       }
       await expect(name).toHaveValue("Demo Recovery");

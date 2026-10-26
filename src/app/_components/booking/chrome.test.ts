@@ -22,7 +22,7 @@ for (const path of ["staff-first", "time-first"] satisfies BookingPath[]) {
             path,
             step,
             serviceIds: ["cut_m"],
-            staffId: "ivan",
+            staffId: "pavel",
             start: 1,
           },
           review: false,
@@ -46,7 +46,7 @@ for (const path of ["staff-first", "time-first"] satisfies BookingPath[]) {
             path,
             step: "details",
             serviceIds: ["cut_m"],
-            staffId: "ivan",
+            staffId: "pavel",
             start: 1,
             contact: {
               name: "Demo",

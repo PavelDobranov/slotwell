@@ -192,7 +192,7 @@ for (const { width, zoom } of reviewViewports) {
       } else {
         await activate(
           page,
-          page.getByRole("radio", { name: /Иван/ }),
+          page.getByRole("radio", { name: /Павел Добранов/ }),
           "Space",
         );
         await activate(page, button(/^(Продължи|Напред:)/));
@@ -204,7 +204,7 @@ for (const { width, zoom } of reviewViewports) {
         await verifyStep("Специалист");
         await activate(
           page,
-          page.getByRole("radio", { name: /Иван/ }),
+          page.getByRole("radio", { name: /Павел Добранов/ }),
           "Space",
         );
         await activate(page, button(/^(Продължи|Напред:)/));

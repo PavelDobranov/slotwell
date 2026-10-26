@@ -17,7 +17,7 @@ const selection: BookingState = {
   ...initialBookingState,
   step: "details",
   serviceIds: ["cut_m"],
-  staffId: "mila",
+  staffId: "mimi",
   start: localStart("2026-06-01", 900),
   date: "2026-06-01",
   contact: {
@@ -95,7 +95,7 @@ test("confirmation appends one interval including cleanup and rejects duplicate 
   assert.equal(await first, "success");
   assert.deepEqual(session.occupied, [
     {
-      staffId: "mila",
+      staffId: "mimi",
       start: selection.start,
       end: Number(selection.start) + 40 * 60_000,
     },
@@ -148,7 +148,7 @@ test("new booking resets contact and choices but retains session occupancy; a fr
       salon,
       now,
       serviceIds: ["cut_m"],
-      staffId: "mila",
+      staffId: "mimi",
       date: "2026-06-01",
       sessionOccupied: occupied,
     });

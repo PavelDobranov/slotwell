@@ -31,7 +31,7 @@ test("RadioGroup composes named choices with selected and disabled states", () =
       createElement(RadioGroupItem, { value: "first", "aria-label": "Алекс" }),
       createElement(RadioGroupItem, {
         value: "second",
-        "aria-label": "Мила",
+        "aria-label": "Мими Ибрамова",
         disabled: true,
       }),
     ),

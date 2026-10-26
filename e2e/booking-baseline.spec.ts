@@ -37,7 +37,7 @@ async function reachReview(
       }),
     ).toBeVisible();
     const choice = page.getByRole("radio", {
-      name: step === "staff" ? /Мила/ : "15:00",
+      name: step === "staff" ? /Мими Ибрамова/ : "15:00",
       exact: step === "time",
     });
     await choice.check();
@@ -116,7 +116,7 @@ for (const width of [360, 390, 1280]) {
           },
         );
         await expect(summary).toBeVisible();
-        for (const text of ["Подстригване", "Мила", "15:00–15:30"])
+        for (const text of ["Подстригване", "Мими Ибрамова", "15:00–15:30"])
           await expect(summary).toContainText(text);
         await capture("summary");
         if (width < 1280) {

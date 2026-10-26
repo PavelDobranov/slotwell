@@ -18,7 +18,7 @@ test("360px booking bar owns one action and remains in flow with a short keyboar
   await next.click();
   await page.getByRole("radio", { name: "Специалист", exact: true }).check();
   await expect(next).toBeDisabled();
-  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
   await next.click();
   await page.getByRole("radio", { name: "15:00", exact: true }).check();
   await expect(summary).toContainText("15:00");
@@ -119,7 +119,7 @@ for (const width of [360, 390, 1280, 1440]) {
     const timeAudit = await auditRenderedControls(page);
     expect(timeAudit.targets.filter(({ minimum44 }) => !minimum44)).toEqual([]);
     await next.click();
-    await page.getByRole("radio", { name: /Мила/ }).check();
+    await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
     await next.click();
     const name = page.getByRole("textbox", { name: "Име", exact: true });
     for (const label of ["Име", "Телефон", "Имейл"]) {
@@ -198,7 +198,7 @@ for (const width of [360, 390, 1280, 1440]) {
     });
     expect((await removal.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await removal.click();
-    await page.getByRole("radio", { name: /Иван/ }).check();
+    await page.getByRole("radio", { name: /Павел Добранов/ }).check();
     await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await expect(
       page.getByText("Няма свободни часове за тази дата."),
@@ -256,7 +256,7 @@ for (const width of [360, 390]) {
     await page.getByRole("radio", { name: "15:00", exact: true }).check();
     await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await verify("M4-staff");
-    await page.getByRole("radio", { name: /Мила/ }).check();
+    await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
     await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await page.getByRole("button", { name: "Провери данните" }).click();
     await verify("M5-details-errors");

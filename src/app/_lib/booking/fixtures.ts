@@ -11,7 +11,7 @@ import type {
   WeeklyHours,
 } from "@/app/_lib/booking/types";
 
-// Illustrative fictional content, not a real salon's identity or price list.
+// User-provided staff identities; studio details, services and prices are illustrative.
 const services: readonly Service[] = [
   {
     id: "cut_w",
@@ -30,9 +30,9 @@ const services: readonly Service[] = [
     cleanupMinutes: 10,
   },
   {
-    id: "color",
-    name: "Боядисване на корени",
-    category: "Коса",
+    id: "massage_relax",
+    name: "Релаксиращ масаж",
+    category: "Масажи",
     priceCents: 4200,
     durationMinutes: 75,
     cleanupMinutes: 15,
@@ -54,12 +54,60 @@ const services: readonly Service[] = [
     cleanupMinutes: 15,
   },
   {
-    id: "mani",
-    name: "Маникюр с гел лак",
-    category: "Ръце",
-    priceCents: 2500,
+    id: "massage_deep",
+    name: "Дълбокотъканен масаж",
+    category: "Масажи",
+    priceCents: 4500,
     durationMinutes: 60,
     cleanupMinutes: 10,
+  },
+  {
+    id: "cut_child",
+    name: "Детско подстригване до 12 г.",
+    category: "Коса",
+    priceCents: 1400,
+    durationMinutes: 30,
+    cleanupMinutes: 10,
+  },
+  {
+    id: "beard",
+    name: "Оформяне на брада",
+    category: "Коса",
+    priceCents: 1200,
+    durationMinutes: 20,
+    cleanupMinutes: 10,
+  },
+  {
+    id: "scalp",
+    name: "Терапия за скалп и коса",
+    category: "Коса",
+    priceCents: 3200,
+    durationMinutes: 45,
+    cleanupMinutes: 10,
+  },
+  {
+    id: "massage_back",
+    name: "Масаж на гръб, врат и рамене",
+    category: "Масажи",
+    priceCents: 2800,
+    durationMinutes: 30,
+    cleanupMinutes: 10,
+  },
+  {
+    id: "massage_sport",
+    name: "Спортен масаж",
+    category: "Масажи",
+    priceCents: 4800,
+    durationMinutes: 60,
+    cleanupMinutes: 15,
+  },
+  {
+    id: "massage_aroma",
+    name: "Ароматерапевтичен масаж",
+    category: "Масажи",
+    priceCents: 5200,
+    durationMinutes: 90,
+    cleanupMinutes: 15,
   },
 ];
 const hours: WeeklyHours = {
@@ -85,37 +133,45 @@ export function createDemoSalon(clock: Clock): DemoSalon {
   }
 
   return {
-    name: "Ателие Мента",
+    name: "Wellness Studio",
     address: "ул. „Шипка“ 18, София",
     today,
     services,
     hours,
     staff: [
       {
-        id: "mila",
-        name: "Мила",
-        description: "Дамско и мъжко подстригване",
-        serviceIds: ["cut_w", "cut_m"],
+        id: "mimi",
+        name: "Мими Ибрамова",
+        description:
+          "Дамско и мъжко подстригване, грижа и възстановяване на косата",
+        serviceIds: ["cut_w", "cut_m", "keratin", "cut_child", "scalp"],
         hours,
       },
       {
-        id: "ivan",
-        name: "Иван",
+        id: "pavel",
+        name: "Павел Добранов",
         description: "Мъжко подстригване и оформяне",
-        serviceIds: ["cut_m", "blowdry"],
+        serviceIds: ["cut_m", "blowdry", "cut_child", "beard"],
         hours: { ...hours, 3: [], 6: [] },
       },
       {
-        id: "elena",
-        name: "Елена",
-        description: "Подстригване, боядисване и маникюр",
-        serviceIds: ["cut_w", "color", "keratin", "mani"],
+        id: "emil",
+        name: "Емил Стойков",
+        description:
+          "Релаксиращи и дълбокотъканни масажи за възстановяване и отмора",
+        serviceIds: [
+          "massage_relax",
+          "massage_deep",
+          "massage_back",
+          "massage_sport",
+          "massage_aroma",
+        ],
         hours: { ...hours, 1: [{ startMinute: 600, endMinute: 1020 }] },
       },
     ],
     occupied: [
-      { staffId: "mila", start, end },
-      { staffId: "ivan", start: start + 90 * 60_000, end: end + 90 * 60_000 },
+      { staffId: "mimi", start, end },
+      { staffId: "pavel", start: start + 90 * 60_000, end: end + 90 * 60_000 },
     ],
     exceptions: [{ date: addCalendarDays(monday, 1), hours: [] }],
   };

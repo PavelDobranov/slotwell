@@ -14,7 +14,7 @@ const availability = {
   salon: createDemoSalon(() => now),
   now,
   serviceIds: ["cut_m", "blowdry"],
-  staffId: "ivan",
+  staffId: "pavel",
 };
 function render(overrides: Partial<Parameters<typeof TimeStep>[0]> = {}) {
   return renderToStaticMarkup(

@@ -35,13 +35,13 @@ for (const path of ["staff-first", "time-first"] as const) {
         })
         .check();
       if (path === "staff-first") {
-        await page.getByRole("radio", { name: /Мила/ }).check();
+        await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
         await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
         await page.getByRole("radio", { name: "15:00", exact: true }).check();
       } else {
         await page.getByRole("radio", { name: "15:00", exact: true }).check();
         await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
-        await page.getByRole("radio", { name: /Мила/ }).check();
+        await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
       }
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page
@@ -81,7 +81,7 @@ for (const path of ["staff-first", "time-first"] as const) {
             .getByRole("alert"),
         ).toContainText("Опитай отново");
         await expect(summary).toContainText("15:00–15:30");
-        await expect(summary).toContainText("Мила");
+        await expect(summary).toContainText("Мими Ибрамова");
         const failure = page
           .getByRole("alert")
           .filter({ hasText: "Не успяхме да потвърдим" });
@@ -148,7 +148,7 @@ for (const path of ["staff-first", "time-first"] as const) {
         await page.getByRole("radio", { name: "16:00", exact: true }).check();
         await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
         if (path === "time-first") {
-          await page.getByRole("radio", { name: /Мила/ }).check();
+          await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
           await page
             .getByRole("button", { name: /^(Продължи|Напред:)/ })
             .click();
@@ -219,7 +219,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       await page
         .getByRole("radio", { name: "Специалист", exact: true })
         .check();
-      await page.getByRole("radio", { name: /Мила/ }).check();
+      await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     }
     if (path === "staff-first") {
@@ -233,7 +233,7 @@ for (const path of ["staff-first", "time-first"] as const) {
         .check();
       await page.getByRole("radio", { name: "15:00", exact: true }).check();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
-      await page.getByRole("radio", { name: /Мила/ }).check();
+      await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
     }
     await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await page
@@ -309,7 +309,12 @@ for (const path of ["staff-first", "time-first"] as const) {
     });
     await expect(heading).toBeFocused();
     const visit = page.getByRole("region", { name: "Твоето посещение" });
-    for (const text of ["Подстригване", "Мила", "15:00–15:30", "30 мин"])
+    for (const text of [
+      "Подстригване",
+      "Мими Ибрамова",
+      "15:00–15:30",
+      "30 мин",
+    ])
       await expect(visit).toContainText(text);
     await expect(visit).toContainText(/23,00\s*€/);
     const summary = page.getByRole("complementary", {
@@ -317,7 +322,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     });
     for (const text of [
       "Подстригване",
-      "Мила",
+      "Мими Ибрамова",
       "15:00–15:30",
       "30 мин",
       "ул. „Шипка“ 18",

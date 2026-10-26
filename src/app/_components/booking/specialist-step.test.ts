@@ -29,7 +29,7 @@ function render(
 
 test("specialist rows retain unavailable staff with reasons and avatar initials", () => {
   const html = render(["cut_m", "blowdry"]);
-  assert.match(html, /Мила/);
+  assert.match(html, /Мими Ибрамова/);
   assert.match(html, /Не прави: Изсушаване и оформяне/);
   assert.match(html, /data-slot="avatar-fallback"/);
   assert.equal((html.match(/role="radio"/g) ?? []).length, 3);
@@ -37,30 +37,33 @@ test("specialist rows retain unavailable staff with reasons and avatar initials"
 });
 
 test("no specialist warning offers only single-service removals that restore eligibility", () => {
-  const html = render(["blowdry", "color"]);
+  const html = render(["blowdry", "massage_relax"]);
   assert.match(html, /data-variant="warning"/);
   assert.match(html, /Никой специалист не прави всички избрани услуги заедно/);
   assert.match(html, /Махни „Изсушаване и оформяне“/);
-  assert.match(html, /Махни „Боядисване на корени“/);
+  assert.match(html, /Махни „Релаксиращ масаж“/);
   assert.match(html, /Към услугите/);
-  assert.doesNotMatch(render(["cut_m", "blowdry", "color", "mani"]), /Махни/);
+  assert.doesNotMatch(
+    render(["cut_m", "blowdry", "massage_relax", "massage_deep"]),
+    /Махни/,
+  );
 });
 
 test("specialist cards use the selected surface and keep the trailing radio explicit", () => {
-  const html = render(["blowdry"], undefined, "ivan");
+  const html = render(["blowdry"], undefined, "pavel");
   assert.match(html, /rounded-card/);
   assert.match(html, /data-checked:bg-selected/);
   assert.match(html, /data-disabled:bg-muted/);
-  const ivan = html.slice(html.indexOf('for="specialist-ivan"'));
+  const ivan = html.slice(html.indexOf('for="specialist-pavel"'));
   assert.ok(ivan.indexOf('data-slot="avatar"') < ivan.indexOf('role="radio"'));
-  assert.match(ivan, /^for="specialist-ivan" data-checked="true"/);
+  assert.match(ivan, /^for="specialist-pavel" data-checked="true"/);
   assert.match(ivan, /aria-checked="true"/);
   assert.doesNotMatch(render(["blowdry"]), /aria-checked="true"/);
   assert.doesNotMatch(
-    render(["blowdry"], undefined, "mila"),
+    render(["blowdry"], undefined, "mimi"),
     /aria-checked="true"/,
   );
-  assert.doesNotMatch(render(["cut_m"], [], "mila"), /aria-checked="true"/);
+  assert.doesNotMatch(render(["cut_m"], [], "mimi"), /aria-checked="true"/);
   assert.doesNotMatch(html, /Всеки свободен специалист/);
 });
 

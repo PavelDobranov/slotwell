@@ -13,7 +13,7 @@ test("multi-service review reflects an edited time and an omitted note", async (
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("radio", { name: "15:00", exact: true }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
-  await page.getByRole("radio", { name: /Мила/ }).check();
+  await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("textbox", { name: "Име", exact: true }).fill("Демо");
   await page
@@ -97,9 +97,9 @@ for (const path of ["staff-first", "time-first"] as const) {
     if (path === "time-first") {
       await page.getByRole("radio", { name: "15:00", exact: true }).check();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
-      await page.getByRole("radio", { name: /Мила/ }).check();
+      await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
     } else {
-      await page.getByRole("radio", { name: /Мила/ }).check();
+      await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page.getByRole("radio", { name: "15:00", exact: true }).check();
     }
@@ -187,7 +187,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       name: "Вашата резервация",
     });
     await expect(summary).toContainText("Подстригване");
-    await expect(summary).toContainText("Мила");
+    await expect(summary).toContainText("Мими Ибрамова");
     await expect(summary).toContainText("1 юни 2026");
     await expect(summary).toContainText("15:00–15:30");
     await expect(summary).toContainText("30 мин");
@@ -203,10 +203,10 @@ for (const path of ["staff-first", "time-first"] as const) {
     ).toBeFocused();
     for (const text of [
       "Подстригване",
-      "Мила",
+      "Мими Ибрамова",
       "1 юни 2026",
       "15:00–15:30",
-      "Ателие Мента",
+      "Wellness Studio",
       "ул. „Шипка“ 18",
       "Само демонстрационна бележка.",
     ]) {

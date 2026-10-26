@@ -18,7 +18,7 @@ const booked: BookingState = {
   serviceIds: ["cut_m"],
   path: "staff-first",
   step: "details",
-  staffId: "mila",
+  staffId: "mimi",
   start: localStart("2026-06-01", 900),
   date: "2026-06-01",
   contact: { name: "Тест", phone: "0888123456", email: "", note: "" },
@@ -57,12 +57,12 @@ test("both route orders reach the same explicit service-staff-time combination",
     const choices =
       path === "staff-first"
         ? ([
-            { type: "staff", id: "mila" },
+            { type: "staff", id: "mimi" },
             { type: "time", start: Number(booked.start) },
           ] as const)
         : ([
             { type: "time", start: Number(booked.start) },
-            { type: "staff", id: "mila" },
+            { type: "staff", id: "mimi" },
           ] as const);
     for (const choice of choices) {
       state = bookingReducer(state, choice, context);
@@ -81,7 +81,7 @@ test("time-first changes preserve a valid time and clear staff unavailable for t
     ...context,
     sessionOccupied: [
       {
-        staffId: "mila",
+        staffId: "mimi",
         start: Number(booked.start) + 35 * 60_000,
         end: Number(booked.start) + 40 * 60_000,
       },
@@ -100,7 +100,7 @@ test("time-first changes preserve a valid time and clear staff unavailable for t
   assert.deepEqual(result.contact, booked.contact);
   const rejected = bookingReducer(
     result,
-    { type: "staff", id: "mila" },
+    { type: "staff", id: "mimi" },
     occupied,
   );
   assert.equal(rejected.staffId, null);
@@ -111,7 +111,7 @@ test("time-first changes preserve a valid time and clear staff unavailable for t
   );
   const chosen = bookingReducer(
     rejected,
-    { type: "staff", id: "ivan" },
+    { type: "staff", id: "pavel" },
     occupied,
   );
   assert.equal(
@@ -212,7 +212,7 @@ test("back, edit, path switches and contact updates preserve valid choices", () 
     { type: "services", ids: ["cut_m", "cut_w"] },
     context,
   );
-  assert.equal(unchanged.staffId, "mila");
+  assert.equal(unchanged.staffId, "mimi");
   assert.equal(unchanged.start, booked.start);
   const switched = bookingReducer(
     unchanged,
@@ -221,7 +221,7 @@ test("back, edit, path switches and contact updates preserve valid choices", () 
   );
   assert.equal(switched.step, "time");
   assert.equal(switched.start, booked.start);
-  assert.equal(switched.staffId, "mila");
+  assert.equal(switched.staffId, "mimi");
   assert.deepEqual(switched.contact, booked.contact);
   assert.equal(bookingReducer(booked, { type: "back" }, context).step, "time");
   assert.equal(
@@ -242,7 +242,7 @@ test("back, edit, path switches and contact updates preserve valid choices", () 
 test("ineligible staff is cleared, never replaced, while a still-valid time survives", () => {
   const result = bookingReducer(
     booked,
-    { type: "services", ids: ["color"] },
+    { type: "services", ids: ["massage_relax"] },
     context,
   );
   assert.equal(result.staffId, null);
@@ -259,7 +259,7 @@ test("longer services clear a time that no longer fits and return to time choice
     { type: "services", ids: ["cut_m", "cut_w"] },
     context,
   );
-  assert.equal(result.staffId, "mila");
+  assert.equal(result.staffId, "mimi");
   assert.equal(result.start, null);
   assert.equal(result.step, "time");
   assert.match(result.notice, /час/);
@@ -268,7 +268,7 @@ test("longer services clear a time that no longer fits and return to time choice
 test("time-first returns to earliest unresolved choice; empty services clear both", () => {
   const result = bookingReducer(
     { ...booked, path: "time-first" },
-    { type: "services", ids: ["color", "blowdry"] },
+    { type: "services", ids: ["massage_relax", "blowdry"] },
     context,
   );
   assert.equal(result.step, "time");
@@ -293,7 +293,7 @@ test("changing dates clears only starts from a different date and explains why",
     context,
   );
   assert.equal(changed.start, null);
-  assert.equal(changed.staffId, "mila");
+  assert.equal(changed.staffId, "mimi");
   assert.equal(changed.date, "2026-06-02");
   assert.deepEqual(changed.contact, booked.contact);
   assert.equal(changed.step, "time");
@@ -301,14 +301,18 @@ test("changing dates clears only starts from a different date and explains why",
 });
 
 test("changing specialists preserves a shared start but clears an unavailable one", () => {
-  const shared = bookingReducer(booked, { type: "staff", id: "ivan" }, context);
-  assert.equal(shared.staffId, "ivan");
+  const shared = bookingReducer(
+    booked,
+    { type: "staff", id: "pavel" },
+    context,
+  );
+  assert.equal(shared.staffId, "pavel");
   assert.equal(shared.start, booked.start);
   const occupied = {
     ...context,
     sessionOccupied: [
       {
-        staffId: "ivan",
+        staffId: "pavel",
         start: Number(booked.start),
         end: Number(booked.start) + 60_000,
       },
@@ -316,10 +320,10 @@ test("changing specialists preserves a shared start but clears an unavailable on
   };
   const changed = bookingReducer(
     booked,
-    { type: "staff", id: "ivan" },
+    { type: "staff", id: "pavel" },
     occupied,
   );
-  assert.equal(changed.staffId, "ivan");
+  assert.equal(changed.staffId, "pavel");
   assert.equal(changed.start, null);
   assert.equal(changed.date, booked.date);
   assert.equal(changed.step, "time");
@@ -345,7 +349,7 @@ test("current occupancy and lead time invalidate choices on navigation", () => {
     ...context,
     sessionOccupied: [
       {
-        staffId: "mila",
+        staffId: "mimi",
         start: start,
         end: start + 60 * 60_000,
       },
