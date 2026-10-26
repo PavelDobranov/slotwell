@@ -1,0 +1,243 @@
+import { expect, type Page, test } from "@playwright/test";
+
+function groupUnavailable(page: Page) {
+  return page
+    .getByRole("group", { name: "Избери специалист" })
+    .locator('[role="radio"][disabled]')
+    .first();
+}
+
+for (const width of [320, 390, 768, 1024, 1280, 1440]) {
+  for (const timeFirst of [true, false]) {
+    test(`chosen-first recap edits and preserves both selections (${timeFirst ? "time" : "staff"}-first, ${width}px)`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 940 });
+      await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+      const errors: string[] = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      await page.goto("/");
+      await page.getByRole("checkbox", { name: /Мъжко подстригване/ }).check();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
+      if (!timeFirst) {
+        await page
+          .getByRole("radio", { name: "Специалист", exact: true })
+          .check();
+        if (width >= 1024)
+          await expect(
+            page
+              .getByRole("complementary")
+              .getByRole("button", { name: "Промени датата и часа" }),
+          ).toHaveCount(0);
+      }
+      const recap = page.getByRole("region", { name: "Първият ти избор" });
+      const time = page.getByRole("radio", { name: "15:00", exact: true });
+      const staff = page.getByRole("radio", { name: /Мими Ибрамова/ });
+      await expect(recap).toHaveCount(0);
+      await (timeFirst ? time : staff).check();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
+      await expect(recap).toContainText(
+        timeFirst ? "Избран час" : "Избран специалист",
+      );
+      await expect(recap).toContainText(
+        timeFirst ? "15:00–15:30" : "Мими Ибрамова",
+      );
+      if (timeFirst) {
+        await expect(recap).toContainText("пн, 1 юни");
+        await expect(
+          page.getByRole("heading", {
+            name: "Изберете специалист",
+            exact: true,
+          }),
+        ).toBeVisible();
+        await expect(page.locator("#specialists-description")).toHaveText(
+          "Показваме кой е свободен за цялото посещение в 15:00–15:30.",
+        );
+        const row = staff.locator("..");
+        await expect(row).toHaveCSS("min-height", "72px");
+        const photo = row.locator('[data-slot="avatar-image"]');
+        await expect(photo).toBeVisible();
+        await expect(photo).toHaveAttribute("src", "/staff/mimi-ibramova.jpg");
+        await expect
+          .poll(() =>
+            photo.evaluate((image: HTMLImageElement) => image.naturalWidth),
+          )
+          .toBeGreaterThan(0);
+        await expect(row.locator('[data-slot="avatar-fallback"]')).toHaveCount(
+          0,
+        );
+        await expect(groupUnavailable(page)).toHaveCSS("opacity", "0");
+        if (width >= 1024) {
+          const content = await page
+            .locator('section[aria-labelledby="step-heading"]')
+            .boundingBox();
+          const rail = await page.getByRole("complementary").boundingBox();
+          expect((content?.width ?? 0) / (rail?.width ?? 1)).toBeCloseTo(
+            1.85,
+            2,
+          );
+          await expect(
+            page
+              .getByRole("complementary")
+              .getByRole("button", { name: /^Промени/ }),
+          ).toHaveCount(3);
+          const back = await page
+            .getByRole("button", { name: "Назад", exact: true })
+            .boundingBox();
+          const next = await page
+            .getByRole("button", { name: /^(Продължи|Напред:)/ })
+            .boundingBox();
+          expect(back?.y).toBe(next?.y);
+        }
+      }
+      await (timeFirst ? staff : time).check();
+      await page.screenshot({
+        path: `coverage/playwright/specialist-recap-${timeFirst ? "time" : "staff"}-${width}.png`,
+        fullPage: true,
+      });
+      await recap.getByRole("button", { name: "Промени", exact: true }).click();
+      await expect(
+        page.getByRole("heading", {
+          name: "Кога и с кого",
+          exact: true,
+        }),
+      ).toBeFocused();
+      await expect(recap).toHaveCount(0);
+      await expect(timeFirst ? time : staff).toBeChecked();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
+      await expect(timeFirst ? staff : time).toBeChecked();
+      // Switching order keeps both still-valid selections and reverses the recap.
+      await page
+        .getByRole("radio", {
+          name: timeFirst ? "Специалист" : "Дата и час",
+          exact: true,
+        })
+        .check();
+      await expect(recap).toHaveCount(0);
+      await expect(timeFirst ? staff : time).toBeChecked();
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
+      await expect(timeFirst ? time : staff).toBeChecked();
+      await expect(recap).toContainText(
+        timeFirst ? "Избран специалист" : "Избран час",
+      );
+      await expect(recap).toContainText(
+        timeFirst ? "Мими Ибрамова" : "15:00–15:30",
+      );
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(width);
+      await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
+      await expect(
+        page.getByRole("textbox", { name: "Име и фамилия", exact: true }),
+      ).toBeVisible();
+      await expect(recap).toHaveCount(0);
+      expect(errors).toEqual([]);
+    });
+  }
+}
+
+test("time-first cards distinguish availability from qualification without auto-selecting the only eligible specialist", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 940 });
+  await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+  await page.goto("/");
+  await page.getByRole("checkbox", { name: /Мъжко подстригване/ }).check();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
+  await page.getByRole("button", { name: "Следващи дни" }).click();
+  await page.getByRole("radio", { name: /8 юни 2026/ }).check();
+  // Mila's cleanup would overlap her 10:00 occupied interval.
+  await page.getByRole("radio", { name: "09:30", exact: true }).check();
+  await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
+  const group = page.getByRole("group", { name: "Избери специалист" });
+  const mila = group.getByRole("radio", { name: /Мими Ибрамова/ });
+  const ivan = group.getByRole("radio", { name: /Павел Добранов/ });
+  const elena = group.getByRole("radio", { name: /Емил Стойков/ });
+  await expect(mila).toBeDisabled();
+  await expect(mila).toHaveAccessibleDescription(
+    /Не е свободен за цялото посещение/,
+  );
+  await expect(elena).toBeDisabled();
+  await expect(elena).toHaveAccessibleDescription(
+    /Не прави: Мъжко подстригване/,
+  );
+  await expect(ivan).toBeEnabled();
+  await expect(ivan).not.toBeChecked();
+  await expect(
+    page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
+  ).toBeDisabled();
+  await page.screenshot({
+    path: "coverage/playwright/specialist-time-first-unavailable.png",
+    fullPage: true,
+  });
+  // Keyboard activation remains explicit even when only one specialist is eligible.
+  await ivan.focus();
+  await ivan.press("Space");
+  await expect(ivan).toBeChecked();
+  await expect(
+    page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
+  ).toBeEnabled();
+});
+
+for (const width of [390, 1440]) {
+  test(`specialist rows and S3 quick fixes at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 940 });
+    await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.goto("/");
+    await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
+    await page.getByRole("checkbox", { name: /Релаксиращ масаж/ }).check();
+    await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
+    await page.getByRole("radio", { name: "Специалист", exact: true }).check();
+    const group = page.getByRole("group", { name: "Избери специалист" });
+    await expect(group.getByRole("radio")).toHaveCount(3);
+    for (const radio of await group.getByRole("radio").all()) {
+      await expect(radio).toBeDisabled();
+      await expect(radio).not.toBeChecked();
+    }
+    const alert = page
+      .getByRole("alert")
+      .filter({ hasText: "Никой специалист" });
+    await expect(alert).toHaveAttribute("data-variant", "warning");
+    await expect(
+      alert.getByRole("button", { name: "Махни „Оформяне на брада“" }),
+    ).toBeVisible();
+    await expect(
+      alert.getByRole("button", { name: "Към услугите" }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: `coverage/playwright/specialist-s3-${width}.png`,
+      fullPage: true,
+    });
+    await alert
+      .getByRole("button", { name: "Махни „Релаксиращ масаж“" })
+      .click();
+    await expect(alert).toHaveCount(0);
+    const ivan = group.getByRole("radio", { name: /Павел Добранов/ });
+    const mila = group.getByRole("radio", { name: /Мими Ибрамова/ });
+    await expect(ivan).toBeEnabled();
+    await expect(ivan).not.toBeChecked();
+    await expect(mila).toBeEnabled();
+    await expect(mila).not.toBeChecked();
+    await expect(mila).toHaveAccessibleDescription(/оформяне на коса и брада/);
+    await expect(
+      page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
+    ).toBeDisabled();
+    // The entire row, including the name, activates its radio.
+    await group.getByText("Павел Добранов", { exact: true }).click();
+    await expect(ivan).toBeChecked();
+    await expect(ivan.locator("..")).toHaveAttribute("data-checked", "true");
+    await expect(
+      page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
+    ).toBeEnabled();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+    await page.screenshot({
+      path: `coverage/playwright/specialist-d2-${width}.png`,
+      fullPage: true,
+    });
+    expect(errors).toEqual([]);
+  });
+}
