@@ -187,7 +187,7 @@ for (const width of [390, 1440]) {
     page.on("pageerror", (error) => errors.push(error.message));
     await page.goto("/");
     await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
-    await page.getByRole("checkbox", { name: /Дамско подстригване/ }).check();
+    await page.getByRole("checkbox", { name: /Релаксиращ масаж/ }).check();
     await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await page.getByRole("radio", { name: "Специалист", exact: true }).check();
     const group = page.getByRole("group", { name: "Избери специалист" });
@@ -211,17 +211,16 @@ for (const width of [390, 1440]) {
       fullPage: true,
     });
     await alert
-      .getByRole("button", { name: "Махни „Дамско подстригване“" })
+      .getByRole("button", { name: "Махни „Релаксиращ масаж“" })
       .click();
     await expect(alert).toHaveCount(0);
     const ivan = group.getByRole("radio", { name: /Павел Добранов/ });
     const mila = group.getByRole("radio", { name: /Мими Ибрамова/ });
     await expect(ivan).toBeEnabled();
     await expect(ivan).not.toBeChecked();
-    await expect(mila).toBeDisabled();
-    await expect(mila).toHaveAccessibleDescription(
-      /Не прави: Оформяне на брада/,
-    );
+    await expect(mila).toBeEnabled();
+    await expect(mila).not.toBeChecked();
+    await expect(mila).toHaveAccessibleDescription(/оформяне на коса и брада/);
     await expect(
       page.getByRole("button", { name: /^(Продължи|Напред:)/ }),
     ).toBeDisabled();

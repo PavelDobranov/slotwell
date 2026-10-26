@@ -13,7 +13,7 @@ for (const width of [390, 1280]) {
         errors.push(message.text());
     });
     await page.goto("/");
-    await expect(page).toHaveTitle("Запази час · Wellness Studio");
+    await expect(page).toHaveTitle("Запази час · Студио за красота Нюанс");
     await expect(page.getByRole("checkbox")).toHaveCount(12);
     await page.getByRole("checkbox", { name: /^Масаж на гръб/ }).check();
     const next = page.getByRole("button", { name: /^(Продължи|Напред:)/ });

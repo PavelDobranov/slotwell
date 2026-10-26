@@ -81,7 +81,7 @@ for (const path of ["staff-first", "time-first"] as const) {
             .getByRole("region", { name: "Данни и преглед" })
             .getByRole("alert"),
         ).toContainText("Опитай отново");
-        await expect(summary).toContainText("15:00 – 15:30");
+        await expect(summary).toContainText("15:00–15:30");
         await expect(summary).toContainText("Мими Ибрамова");
         const failure = page
           .getByRole("alert")

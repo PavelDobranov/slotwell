@@ -12,7 +12,7 @@ npm run dev
 
 ## Booking demo
 
-The Bulgarian demo represents **Wellness Studio**, with 12 illustrative hair and
+The Bulgarian demo represents **Студио за красота Нюанс**, with 12 illustrative hair and
 massage services. Мими Ибрамова and Павел Добранов provide haircuts and complementary
 hair services; Емил Стойков provides massages. Portraits supplied for the demo are
 stored in `public/staff/` so rendering does not depend on expiring CDN links.
@@ -39,6 +39,21 @@ Success and recovery follow D6/M6 and S4/S5:
 - Invalidation displays the reducer's explanation and retains contact data. Switching routes explains when the existing choice is preserved; it never invents a replacement.
 - Below the desktop breakpoint, “Виж избора” opens a modal summary sheet. Escape restores focus to its trigger; editing closes it and focuses the destination step. Scroll padding keeps keyboard focus above the fixed summary dock.
 - Mobile e2e checks cover 360/390px layouts, 44px hit areas (including calendar and validation links), text contrast, focus, and horizontal overflow.
+
+## Approved prototype checkpoint
+
+The current frontend has been accepted for integration. `ReservationSummaryCard`
+is shared by every booking step, the mobile summary sheet, and appointment review;
+contact details remain a separate review section. UI copy and business identity
+centralization for multilingual support are tracked in [#52](https://github.com/PavelDobranov/slotwell/issues/52).
+
+Verification at this checkpoint: production build and type checks pass, 119 unit
+tests pass, and the focused summary-design/wellness browser run passes (4 tests).
+Lint passes with three existing reduced-motion CSS `!important` warnings. A broader
+browser run encountered failures and timed out; full regression/accessibility
+sign-off, magnification checks, and independent salon/visitor validation are not
+claimed. Administrative closure of historical tickets does not complete those
+checks or the persisted MVP/backend milestones. Bookings remain frontend-only.
 
 ## Checks and production
 

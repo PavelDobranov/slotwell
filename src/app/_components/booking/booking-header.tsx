@@ -59,7 +59,7 @@ export function BookingHeader({
           </span>
           <div className="flex flex-col gap-0.5">
             <span className="font-heading text-base font-semibold">
-              Wellness Studio
+              Студио за красота Нюанс
             </span>
             <p className="text-sm text-muted-foreground">
               {!confirmed && (

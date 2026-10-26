@@ -36,7 +36,7 @@ test("competency requires every distinct known service, including before choosin
   );
   assert.deepEqual(
     qualifiedStaff(demo, ["cut_w", "cut_m", "cut_w"]).map(({ id }) => id),
-    ["mimi"],
+    ["mimi", "pavel"],
   );
 
   for (const serviceIds of [
@@ -88,7 +88,7 @@ test("multi-service duration and summed trailing cleanup are independent of serv
     start: instant(540),
     end: instant(600),
     occupiedEnd: instant(615),
-    staffIds: ["pavel"],
+    staffIds: ["mimi", "pavel"],
   });
   assert.deepEqual(
     availableSlots({ ...input, serviceIds: ["blowdry", "cut_m"] }),

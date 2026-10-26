@@ -583,7 +583,6 @@ export function BookingWizard() {
           </section>
           {!confirmed && !reviewDesign && (
             <BookingSummary
-              detailsDesign={detailsDesign}
               salon={salon}
               state={state}
               confirmed={false}

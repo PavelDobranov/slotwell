@@ -12,7 +12,7 @@ import {
 
 test("wellness studio has exactly the requested team and separates hair from massage", () => {
   const salon = createDemoSalon(() => Date.parse("2026-06-01T05:00:00Z"));
-  assert.equal(salon.name, "Wellness Studio");
+  assert.equal(salon.name, "Студио за красота Нюанс");
   assert.equal(salon.services.length, 12);
   assert.equal(
     salon.services.filter(({ category }) => category === "Масажи").length,
@@ -41,9 +41,24 @@ test("wellness studio has exactly the requested team and separates hair from mas
       );
       assert.deepEqual(qualifiedStaff(salon, ["cut_m", service.id]), []);
     } else {
-      assert.ok(providers.every(({ id }) => id !== "emil"));
+      assert.deepEqual(
+        providers.map(({ id }) => id),
+        ["mimi", "pavel"],
+      );
     }
   }
+});
+
+test("both hair specialists support a combined selection of every hair service", () => {
+  const salon = createDemoSalon(() => Date.parse("2026-06-01T05:00:00Z"));
+  const hairIds = salon.services
+    .filter(({ category }) => category === "Коса")
+    .map(({ id }) => id);
+  assert.equal(hairIds.length, 7);
+  assert.deepEqual(
+    qualifiedStaff(salon, hairIds).map(({ id }) => id),
+    ["mimi", "pavel"],
+  );
 });
 
 test("rolling visits fit real shifts without overlap across DST and year boundaries", () => {

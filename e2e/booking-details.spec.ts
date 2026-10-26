@@ -42,13 +42,13 @@ test("multi-service review reflects an edited time and an omitted note", async (
   const services = review.getByRole("region", { name: "Услуги", exact: true });
   await expect(services.getByRole("listitem")).toHaveCount(2);
   await expect(services.getByRole("listitem").nth(0)).toContainText(
-    /Мъжко подстригване · 30 мин.*18\s*€/,
+    /Мъжко подстригване\s*30 мин\s*18\s*€/,
   );
   await expect(services.getByRole("listitem").nth(1)).toContainText(
-    /Изсушаване и оформяне · 30 мин.*15\s*€/,
+    /Изсушаване и оформяне\s*30 мин\s*15\s*€/,
   );
-  await expect(review).toContainText(/Общо · 60 мин\s*33\s*€/);
-  await expect(review).toContainText("15:00 – 16:00");
+  await expect(review).toContainText(/Общо · 1 ч\s*33\s*€/);
+  await expect(review).toContainText("15:00–16:00");
   await expect(review).not.toContainText("16:30");
   await expect(review).toContainText("Без бележка");
   for (const width of [390, 1280]) {
@@ -74,9 +74,9 @@ test("multi-service review reflects an edited time and an omitted note", async (
     }),
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Към преглед" }).click();
-  await expect(review).toContainText("16:00 – 17:00");
-  await expect(review).not.toContainText("15:00 – 16:00");
-  await expect(review).toContainText(/Общо · 60 мин\s*33\s*€/);
+  await expect(review).toContainText("16:00–17:00");
+  await expect(review).not.toContainText("15:00–16:00");
+  await expect(review).toContainText(/Общо · 1 ч\s*33\s*€/);
 });
 
 for (const path of ["staff-first", "time-first"] as const) {
@@ -228,9 +228,8 @@ for (const path of ["staff-first", "time-first"] as const) {
     for (const text of [
       "Дамско подстригване",
       "Мими Ибрамова",
-      "1 юни 2026",
-      "15:00 – 15:45",
-      "Wellness Studio",
+      "пн, 1 юни",
+      "15:00–15:45",
       "ул. „Шипка“ 18",
       "Само демонстрационна бележка.",
     ]) {
@@ -251,8 +250,11 @@ for (const path of ["staff-first", "time-first"] as const) {
       "Плащането е на място — онлайн не плащате нищо.",
     );
     await page.setViewportSize({ width: 1280, height: 880 });
-    const card = review.locator('[data-slot="card"]');
-    await expect(card).toHaveCSS("width", "680px");
+    const cards = review.locator('[data-slot="card"]');
+    await expect(cards).toHaveCount(2);
+    for (const card of await cards.all()) {
+      await expect(card).toHaveCSS("width", "680px");
+    }
     const contacts = review.getByRole("region", {
       name: "Контакти",
       exact: true,
@@ -270,7 +272,9 @@ for (const path of ["staff-first", "time-first"] as const) {
     expect(
       await confirm.evaluate((element) => element.getBoundingClientRect().top),
     ).toBeGreaterThan(
-      await card.evaluate((element) => element.getBoundingClientRect().bottom),
+      await cards
+        .last()
+        .evaluate((element) => element.getBoundingClientRect().bottom),
     );
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({

@@ -44,8 +44,10 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
     await expect(page.getByRole("banner")).toHaveCount(1);
     await expect(page.getByRole("main")).toHaveCount(1);
     await expect(page.locator("h1")).toHaveCount(1);
-    await expect(page).toHaveTitle(/Wellness Studio/);
-    await expect(page.getByRole("banner")).toContainText("Wellness Studio");
+    await expect(page).toHaveTitle(/Студио за красота Нюанс/);
+    await expect(page.getByRole("banner")).toContainText(
+      "Студио за красота Нюанс",
+    );
     const main = page.getByRole("main");
     const gutter = width >= 1024 ? "48px" : "16px";
     await expect(main).toHaveCSS("padding-left", gutter);
@@ -129,7 +131,9 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
       await page.goto("/");
-      await expect(page.getByRole("banner")).toContainText("Wellness Studio");
+      await expect(page.getByRole("banner")).toContainText(
+        "Студио за красота Нюанс",
+      );
       const nav = page.getByRole("navigation", {
         name: "Стъпки на резервацията",
       });
@@ -342,7 +346,10 @@ for (const path of ["staff-first", "time-first"] as const) {
       const nav = page.getByRole("navigation", {
         name: "Стъпки на резервацията",
       });
-      const name = page.getByRole("textbox", { name: "Име и фамилия", exact: true });
+      const name = page.getByRole("textbox", {
+        name: "Име и фамилия",
+        exact: true,
+      });
       await name.fill("Demo Recovery");
       await page
         .getByRole("textbox", { name: "Телефон", exact: true })

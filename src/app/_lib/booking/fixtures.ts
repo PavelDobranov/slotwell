@@ -111,6 +111,10 @@ const services: readonly Service[] = [
     cleanupMinutes: 15,
   },
 ];
+const hairServiceIds = services
+  .filter(({ category }) => category === "Коса")
+  .map(({ id }) => id);
+
 const hours: WeeklyHours = {
   0: [],
   1: [{ startMinute: 540, endMinute: 1080 }],
@@ -165,7 +169,7 @@ export function createDemoSalon(clock: Clock): DemoSalon {
   }
 
   return {
-    name: "Wellness Studio",
+    name: "Студио за красота Нюанс",
     address: "ул. „Шипка“ 18, София",
     today,
     services,
@@ -176,16 +180,17 @@ export function createDemoSalon(clock: Clock): DemoSalon {
         name: "Мими Ибрамова",
         imageUrl: "/staff/mimi-ibramova.jpg",
         description:
-          "Дамско и мъжко подстригване, грижа и възстановяване на косата",
-        serviceIds: ["cut_w", "cut_m", "keratin", "cut_child", "scalp"],
+          "Подстригване, оформяне на коса и брада, грижа и терапии за коса",
+        serviceIds: hairServiceIds,
         hours,
       },
       {
         id: "pavel",
         name: "Павел Добранов",
         imageUrl: "/staff/pavel-dobranov.jpg",
-        description: "Мъжко подстригване и оформяне",
-        serviceIds: ["cut_m", "blowdry", "cut_child", "beard"],
+        description:
+          "Подстригване, оформяне на коса и брада, грижа и терапии за коса",
+        serviceIds: hairServiceIds,
         hours: { ...hours, 3: [], 6: [] },
       },
       {

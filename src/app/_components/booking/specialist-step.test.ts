@@ -32,7 +32,7 @@ function render(
 test("specialist rows retain unavailable staff with reasons and avatar initials", () => {
   const html = render(["cut_m", "blowdry"]);
   assert.match(html, /Мими Ибрамова/);
-  assert.match(html, /Не прави: Изсушаване и оформяне/);
+  assert.match(html, /Не прави: Мъжко подстригване, Изсушаване и оформяне/);
   assert.match(html, /data-slot="avatar-fallback"/);
   assert.equal((html.match(/role="radio"/g) ?? []).length, 3);
   assert.doesNotMatch(html, /aria-checked="true"/);
@@ -61,9 +61,9 @@ test("specialist cards use the selected surface and keep the trailing radio expl
   assert.match(ivan, /^for="specialist-pavel" data-checked="true"/);
   assert.match(ivan, /aria-checked="true"/);
   assert.doesNotMatch(render(["blowdry"]), /aria-checked="true"/);
-  assert.doesNotMatch(
+  assert.match(
     render(["blowdry"], undefined, "mimi"),
-    /aria-checked="true"/,
+    /for="specialist-mimi" data-checked="true"/,
   );
   assert.doesNotMatch(render(["cut_m"], [], "mimi"), /aria-checked="true"/);
   assert.doesNotMatch(html, /Всеки свободен специалист/);
