@@ -18,6 +18,26 @@ const dateFormatter = new Intl.DateTimeFormat("bg-BG", {
   month: "long",
   day: "numeric",
 });
+const shortDateFormatter = new Intl.DateTimeFormat("bg-BG", {
+  timeZone: BUSINESS_TIME_ZONE,
+  weekday: "short",
+  day: "numeric",
+});
+// Intl's Bulgarian short month format is numeric, unlike the recap design.
+const shortMonths = [
+  "ян.",
+  "февр.",
+  "март",
+  "апр.",
+  "май",
+  "юни",
+  "юли",
+  "авг.",
+  "септ.",
+  "окт.",
+  "ноем.",
+  "дек.",
+];
 const weekdayDateFormatter = new Intl.DateTimeFormat("bg-BG", {
   timeZone: BUSINESS_TIME_ZONE,
   weekday: "long",
@@ -130,6 +150,15 @@ export function localStart(date: string, minute: number): number | null {
 
 export function formatBusinessDate(date: string): string {
   return dateFormatter.format(calendarCarrier(date));
+}
+
+/** Compact booking recap, e.g. "сб, 24 окт.". */
+export function formatBusinessShortDate(date: string): string {
+  const carrier = calendarCarrier(date);
+  const parts = shortDateFormatter.formatToParts(carrier);
+  const weekday = parts.find(({ type }) => type === "weekday")?.value;
+  const day = parts.find(({ type }) => type === "day")?.value;
+  return `${weekday}, ${day} ${shortMonths[carrier.getUTCMonth()]}`;
 }
 
 /** Weekday and day without the year, capitalized: "Понеделник, 26 октомври". */

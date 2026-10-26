@@ -1,6 +1,13 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
-for (const width of [390, 1280]) {
+function groupUnavailable(page: Page) {
+  return page
+    .getByRole("group", { name: "Избери специалист" })
+    .locator('[role="radio"][disabled]')
+    .first();
+}
+
+for (const width of [320, 390, 768, 1024, 1280, 1440]) {
   for (const timeFirst of [true, false]) {
     test(`chosen-first recap edits and preserves both selections (${timeFirst ? "time" : "staff"}-first, ${width}px)`, async ({
       page,
@@ -10,12 +17,19 @@ for (const width of [390, 1280]) {
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
       await page.goto("/");
-      await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+      await page.getByRole("checkbox", { name: /Мъжко подстригване/ }).check();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
-      if (!timeFirst)
+      if (!timeFirst) {
         await page
           .getByRole("radio", { name: "Специалист", exact: true })
           .check();
+        if (width >= 1024)
+          await expect(
+            page
+              .getByRole("complementary")
+              .getByRole("button", { name: "Промени датата и часа" }),
+          ).toHaveCount(0);
+      }
       const recap = page.getByRole("region", { name: "Първият ти избор" });
       const time = page.getByRole("radio", { name: "15:00", exact: true });
       const staff = page.getByRole("radio", { name: /Мими Ибрамова/ });
@@ -28,7 +42,54 @@ for (const width of [390, 1280]) {
       await expect(recap).toContainText(
         timeFirst ? "15:00–15:30" : "Мими Ибрамова",
       );
-      if (timeFirst) await expect(recap).toContainText("1 юни 2026");
+      if (timeFirst) {
+        await expect(recap).toContainText("пн, 1 юни");
+        await expect(
+          page.getByRole("heading", {
+            name: "Изберете специалист",
+            exact: true,
+          }),
+        ).toBeVisible();
+        await expect(page.locator("#specialists-description")).toHaveText(
+          "Показваме кой е свободен за цялото посещение в 15:00–15:30.",
+        );
+        const row = staff.locator("..");
+        await expect(row).toHaveCSS("min-height", "72px");
+        const photo = row.locator('[data-slot="avatar-image"]');
+        await expect(photo).toBeVisible();
+        await expect(photo).toHaveAttribute("src", "/staff/mimi-ibramova.jpg");
+        await expect
+          .poll(() =>
+            photo.evaluate((image: HTMLImageElement) => image.naturalWidth),
+          )
+          .toBeGreaterThan(0);
+        await expect(row.locator('[data-slot="avatar-fallback"]')).toHaveCount(
+          0,
+        );
+        await expect(groupUnavailable(page)).toHaveCSS("opacity", "0");
+        if (width >= 1024) {
+          const content = await page
+            .locator('section[aria-labelledby="step-heading"]')
+            .boundingBox();
+          const rail = await page.getByRole("complementary").boundingBox();
+          expect((content?.width ?? 0) / (rail?.width ?? 1)).toBeCloseTo(
+            1.85,
+            2,
+          );
+          await expect(
+            page
+              .getByRole("complementary")
+              .getByRole("button", { name: /^Промени/ }),
+          ).toHaveCount(3);
+          const back = await page
+            .getByRole("button", { name: "Назад", exact: true })
+            .boundingBox();
+          const next = await page
+            .getByRole("button", { name: /^(Продължи|Напред:)/ })
+            .boundingBox();
+          expect(back?.y).toBe(next?.y);
+        }
+      }
       await (timeFirst ? staff : time).check();
       await page.screenshot({
         path: `coverage/playwright/specialist-recap-${timeFirst ? "time" : "staff"}-${width}.png`,
@@ -67,7 +128,7 @@ for (const width of [390, 1280]) {
       ).toBeLessThanOrEqual(width);
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await expect(
-        page.getByRole("textbox", { name: "Име", exact: true }),
+        page.getByRole("textbox", { name: "Име и фамилия", exact: true }),
       ).toBeVisible();
       await expect(recap).toHaveCount(0);
       expect(errors).toEqual([]);
@@ -81,7 +142,7 @@ test("time-first cards distinguish availability from qualification without auto-
   await page.setViewportSize({ width: 390, height: 940 });
   await page.clock.setFixedTime(new Date("2026-06-01T05:00:00Z"));
   await page.goto("/");
-  await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+  await page.getByRole("checkbox", { name: /Мъжко подстригване/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page.getByRole("button", { name: "Следващи дни" }).click();
   await page.getByRole("radio", { name: /8 юни 2026/ }).check();
@@ -97,7 +158,9 @@ test("time-first cards distinguish availability from qualification without auto-
     /Не е свободен за цялото посещение/,
   );
   await expect(elena).toBeDisabled();
-  await expect(elena).toHaveAccessibleDescription(/Не прави: Подстригване/);
+  await expect(elena).toHaveAccessibleDescription(
+    /Не прави: Мъжко подстригване/,
+  );
   await expect(ivan).toBeEnabled();
   await expect(ivan).not.toBeChecked();
   await expect(
@@ -124,7 +187,7 @@ for (const width of [390, 1440]) {
     page.on("pageerror", (error) => errors.push(error.message));
     await page.goto("/");
     await page.getByRole("checkbox", { name: /Оформяне на брада/ }).check();
-    await page.getByRole("checkbox", { name: /Измиване и оформяне/ }).check();
+    await page.getByRole("checkbox", { name: /Дамско подстригване/ }).check();
     await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await page.getByRole("radio", { name: "Специалист", exact: true }).check();
     const group = page.getByRole("group", { name: "Избери специалист" });
@@ -148,7 +211,7 @@ for (const width of [390, 1440]) {
       fullPage: true,
     });
     await alert
-      .getByRole("button", { name: "Махни „Измиване и оформяне“" })
+      .getByRole("button", { name: "Махни „Дамско подстригване“" })
       .click();
     await expect(alert).toHaveCount(0);
     const ivan = group.getByRole("radio", { name: /Павел Добранов/ });

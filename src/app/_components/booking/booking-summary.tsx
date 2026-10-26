@@ -28,6 +28,7 @@ import {
 import {
   businessDateAt,
   formatBusinessDate,
+  formatBusinessShortDate,
   formatBusinessTime,
 } from "@/app/_lib/booking/time";
 import type { DemoSalon } from "@/app/_lib/booking/types";
@@ -40,7 +41,9 @@ export function BookingSummary({
   onEdit,
   action,
   backAction,
+  detailsDesign = false,
 }: {
+  detailsDesign?: boolean;
   backAction?: ReactNode;
   action: ReactNode;
   salon: DemoSalon | null;
@@ -56,17 +59,24 @@ export function BookingSummary({
   const order = stepOrder(state.path);
   const timeDesign = state.step === "time" && !confirmed;
   const servicesDesign = state.step === "services" && !confirmed;
-  const referenceDesign = timeDesign || servicesDesign;
+  const specialistDesign = state.step === "staff" && !confirmed;
+  const selectionDesign = timeDesign || specialistDesign;
+  const referenceDesign = selectionDesign || servicesDesign || detailsDesign;
   const canEdit = (step: BookingStep) =>
     !confirmed &&
-    (timeDesign || order.indexOf(step) < order.indexOf(state.step));
+    (timeDesign ||
+      (specialistDesign &&
+        (step !== "time" ||
+          state.path === "time-first" ||
+          state.staffId !== null)) ||
+      order.indexOf(step) < order.indexOf(state.step));
   function sectionHeading(step: BookingStep, label: string, editLabel: string) {
     return (
       <div
         className={cn(
           "relative flex items-center justify-between gap-2",
           referenceDesign ? "min-h-4.5" : "min-h-8",
-          timeDesign && "pr-20",
+          (selectionDesign || detailsDesign) && "pr-20",
         )}
       >
         <span
@@ -82,7 +92,7 @@ export function BookingSummary({
             variant="link"
             size="sm"
             className={
-              timeDesign
+              selectionDesign || detailsDesign
                 ? "absolute top-1/2 right-0 -translate-y-1/2 px-0 text-sm font-semibold underline underline-offset-4"
                 : undefined
             }
@@ -113,7 +123,12 @@ export function BookingSummary({
       <CardContent
         className={cn("flex flex-col", referenceDesign ? "gap-3.5" : "gap-4")}
       >
-        <div className={cn("flex flex-col", timeDesign ? "gap-5" : "gap-2")}>
+        <div
+          className={cn(
+            "flex flex-col",
+            selectionDesign || detailsDesign ? "gap-5" : "gap-2",
+          )}
+        >
           {sectionHeading("services", "Услуги", "Промени услугите")}
           {selected.length === 0 ? (
             <p className="text-muted-foreground">
@@ -172,7 +187,13 @@ export function BookingSummary({
               {referenceDesign ? "Не е избран" : "Предстои — стъпка 2"}
             </p>
           ) : (
-            <p>{salon?.staff.find(({ id }) => id === state.staffId)?.name}</p>
+            <p
+              className={cn(
+                (specialistDesign || detailsDesign) && "font-semibold",
+              )}
+            >
+              {salon?.staff.find(({ id }) => id === state.staffId)?.name}
+            </p>
           )}
         </div>
         <div className="flex flex-col gap-1">
@@ -187,9 +208,16 @@ export function BookingSummary({
               {referenceDesign ? "Не е избран" : "Предстои — стъпка 2"}
             </p>
           ) : (
-            <p className="tabular-nums">
-              {formatBusinessDate(businessDateAt(state.start))} ·{" "}
-              {formatBusinessTime(state.start)}–
+            <p
+              className={cn(
+                "tabular-nums",
+                (specialistDesign || detailsDesign) && "font-semibold",
+              )}
+            >
+              {(specialistDesign || detailsDesign
+                ? formatBusinessShortDate
+                : formatBusinessDate)(businessDateAt(state.start))}{" "}
+              · {formatBusinessTime(state.start)}–
               {formatBusinessTime(
                 state.start + (totals?.durationMinutes ?? 0) * 60_000,
               )}
@@ -208,7 +236,7 @@ export function BookingSummary({
           <p className="flex flex-wrap items-center justify-between gap-2 font-semibold">
             <span>
               Общо ·{" "}
-              {servicesDesign
+              {servicesDesign || specialistDesign
                 ? formatDuration(totals?.durationMinutes ?? 0)
                 : `${totals?.durationMinutes ?? 0} мин`}
             </span>
@@ -218,7 +246,9 @@ export function BookingSummary({
                   priceCents: totals?.priceCents ?? 0,
                   hasVariablePrice: totals?.hasVariablePrice ?? false,
                 },
-                servicesDesign || (timeDesign && !totals?.hasVariablePrice),
+                servicesDesign ||
+                  ((selectionDesign || detailsDesign) &&
+                    !totals?.hasVariablePrice),
               )}
             </span>
           </p>
@@ -328,7 +358,7 @@ export function BookingSummary({
         aria-label="Действия по резервацията"
         className={cn(
           "flex min-w-0 flex-col gap-2 bg-card px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] lg:col-start-1 lg:row-start-2 lg:bg-transparent lg:p-0",
-          timeDesign
+          selectionDesign || detailsDesign
             ? "lg:flex-row lg:items-center lg:justify-between"
             : "lg:items-end",
         )}

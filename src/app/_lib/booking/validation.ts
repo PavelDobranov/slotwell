@@ -5,7 +5,7 @@ export const contactLimits = {
   name: 100,
   phone: 32,
   email: 254,
-  note: 1000,
+  note: 300,
 } as const;
 
 /** Plausibility only, not identity verification. Never mutate or truncate the draft. */
@@ -14,11 +14,11 @@ export function validateContact(draft: ContactDraft): ContactErrors {
   const name = draft.name.trim();
   const phone = draft.phone.trim();
   const email = draft.email.trim();
-  if (!name) errors.name = "Въведи име.";
+  if (!name) errors.name = "Въведете име и фамилия.";
   else if (name.length > contactLimits.name)
     errors.name = "Името трябва да е до 100 знака.";
 
-  if (!phone) errors.phone = "Въведи телефон.";
+  if (!phone) errors.phone = "Въведете телефонен номер.";
   else if (phone.length > contactLimits.phone)
     errors.phone = "Телефонът трябва да е до 32 знака.";
   else if (
@@ -29,13 +29,13 @@ export function validateContact(draft: ContactDraft): ContactErrors {
     errors.phone =
       "Въведи телефон с код на държавата или български номер с начална 0.";
 
-  if (!email) errors.email = "Въведи имейл.";
+  if (!email) errors.email = "Въведете имейл адрес.";
   else if (email.length > contactLimits.email)
     errors.email = "Имейлът трябва да е до 254 знака.";
   else if (!/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email))
     errors.email = "Въведи валиден имейл, например ivan@example.com.";
 
   if (draft.note.length > contactLimits.note)
-    errors.note = "Бележката трябва да е до 1000 знака.";
+    errors.note = "Бележката трябва да е до 300 знака.";
   return errors;
 }

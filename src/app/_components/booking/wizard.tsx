@@ -46,7 +46,7 @@ import {
 } from "@/app/_lib/booking/state";
 import {
   businessDateAt,
-  formatBusinessDate,
+  formatBusinessShortDate,
   formatBusinessTime,
 } from "@/app/_lib/booking/time";
 import { cn } from "@/app/_lib/utils";
@@ -193,7 +193,7 @@ export function BookingWizard() {
       : firstSelectionStep === "time" && state.start !== null && salon
         ? {
             label: "Избран час",
-            value: `${formatBusinessDate(businessDateAt(state.start))} · ${formatBusinessTime(state.start)}–${formatBusinessTime(state.start + selectedTotals(state, salon).durationMinutes * 60_000)}`,
+            value: `${formatBusinessShortDate(businessDateAt(state.start))} · ${formatBusinessTime(state.start)}–${formatBusinessTime(state.start + selectedTotals(state, salon).durationMinutes * 60_000)}`,
           }
         : null;
   const actionForm =
@@ -209,15 +209,22 @@ export function BookingWizard() {
 
   const timeDesign = state.step === "time" && !confirmed;
   const servicesDesign = state.step === "services" && !confirmed;
-  const referenceDesign = timeDesign || servicesDesign;
+  const specialistDesign = state.step === "staff" && !confirmed;
+  const selectionDesign = timeDesign || specialistDesign;
+  const detailsDesign = state.step === "details" && !reviewing && !confirmed;
+  const reviewDesign = reviewing && !confirmed;
+  const referenceDesign =
+    selectionDesign || servicesDesign || detailsDesign || reviewDesign;
 
   return (
     <>
       <BookingHeader
+        confirmed={confirmed}
+        sticky={reviewDesign}
         referenceDesign={referenceDesign}
         subtitle={
           confirmed ? (
-            <span className="lg:hidden">Резервацията е потвърдена</span>
+            <span>Резервацията е потвърдена</span>
           ) : (
             <MobileProgress
               current={progress.current + 1}
@@ -255,11 +262,15 @@ export function BookingWizard() {
         tabIndex={-1}
         className={cn(
           "flex w-full flex-1 flex-col gap-5 px-4 pt-5 pb-7 lg:gap-6 lg:pt-10 lg:pb-14",
-          timeDesign
-            ? "lg:px-[4.8%]"
-            : servicesDesign
-              ? "lg:pl-12 lg:pr-19"
-              : "lg:px-12",
+          confirmed
+            ? "pt-6 lg:pt-6"
+            : reviewDesign
+              ? "lg:pt-8"
+              : selectionDesign || detailsDesign
+                ? "lg:px-[4.8%]"
+                : servicesDesign
+                  ? "lg:pl-12 lg:pr-19"
+                  : "lg:px-12",
         )}
       >
         <h1 className="sr-only">Запази време за себе си</h1>
@@ -268,12 +279,14 @@ export function BookingWizard() {
           aria-busy={pending}
           className={cn(
             "grid min-w-0 items-start gap-8",
-            confirmed
-              ? "mx-auto max-w-170"
+            confirmed || reviewDesign
+              ? "mx-auto w-full max-w-170"
               : referenceDesign
                 ? cn(
                     "gap-y-0 lg:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)] lg:gap-x-12",
-                    servicesDesign ? "lg:gap-y-8" : "lg:gap-y-6",
+                    servicesDesign || detailsDesign
+                      ? "lg:gap-y-8"
+                      : "lg:gap-y-6",
                   )
                 : "gap-y-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-x-12 lg:gap-y-6",
           )}
@@ -285,7 +298,15 @@ export function BookingWizard() {
             aria-labelledby="step-heading"
             className={cn(
               "mb-6 flex min-w-0 flex-col lg:mb-0",
-              timeDesign ? "gap-5" : servicesDesign ? "gap-3" : "gap-4 py-2",
+              confirmed
+                ? "gap-4"
+                : detailsDesign || reviewDesign
+                  ? "gap-0"
+                  : selectionDesign
+                    ? "gap-5"
+                    : servicesDesign
+                      ? "gap-3"
+                      : "gap-4 py-2",
             )}
           >
             <p className="sr-only">
@@ -392,7 +413,7 @@ export function BookingWizard() {
                           value={path}
                           className={cn(
                             "flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-2.5 rounded-slot bg-secondary px-3 font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-checked:bg-card data-checked:shadow-sm",
-                            timeDesign
+                            selectionDesign
                               ? "text-base text-secondary-foreground data-checked:text-accent-foreground data-checked:ring-1 data-checked:ring-success-border"
                               : "text-sm text-muted-foreground data-checked:text-foreground",
                           )}
@@ -410,12 +431,19 @@ export function BookingWizard() {
                 {firstSelection !== null && firstSelectionStep !== null && (
                   <section
                     aria-label="Първият ти избор"
-                    className="flex min-w-0 items-center gap-3 rounded-card bg-accent py-2.5 pr-2 pl-4 text-accent-foreground"
+                    className={cn(
+                      "flex min-w-0 items-center gap-3 rounded-card bg-accent py-2.5 pr-2 pl-4 text-accent-foreground",
+                      specialistDesign && "min-h-16 gap-3.5 pr-4",
+                    )}
                   >
-                    <CircleCheck
-                      aria-hidden="true"
-                      className="size-5 shrink-0"
-                    />
+                    {specialistDesign ? (
+                      <Check aria-hidden="true" className="size-5 shrink-0" />
+                    ) : (
+                      <CircleCheck
+                        aria-hidden="true"
+                        className="size-5 shrink-0"
+                      />
+                    )}
                     <p className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span className="text-[13px] leading-[18px]">
                         {firstSelection.label}
@@ -426,7 +454,11 @@ export function BookingWizard() {
                     </p>
                     <Button
                       variant="link"
-                      className="underline"
+                      size={specialistDesign ? "sm" : "default"}
+                      className={cn(
+                        "underline",
+                        specialistDesign && "px-0 text-sm font-semibold",
+                      )}
                       onClick={() =>
                         dispatch({ type: "edit", step: firstSelectionStep })
                       }
@@ -443,6 +475,7 @@ export function BookingWizard() {
                     salon={salon}
                     serviceIds={state.serviceIds}
                     staffId={state.staffId}
+                    start={state.start ?? undefined}
                     availableStaffIds={
                       state.path === "time-first"
                         ? (availableSlots({
@@ -500,7 +533,7 @@ export function BookingWizard() {
                   salon !== null &&
                   state.start !== null ? (
                   <DetailsStep
-                    showPrimaryAction={false}
+                    showPrimaryAction={reviewDesign}
                     draft={state.contact}
                     checked={reviewing}
                     onChecked={(checked) => {
@@ -535,7 +568,7 @@ export function BookingWizard() {
                   </p>
                 )}
                 <Button
-                  hidden={state.step === "details" || timeDesign}
+                  hidden={state.step === "details" || selectionDesign}
                   variant="outline"
                   className="hidden self-start lg:inline-flex"
                   onClick={() => dispatch({ type: "back" })}
@@ -548,13 +581,14 @@ export function BookingWizard() {
               За избор на услуги е необходимо да включиш JavaScript.
             </noscript>
           </section>
-          {!confirmed && (
+          {!confirmed && !reviewDesign && (
             <BookingSummary
+              detailsDesign={detailsDesign}
               salon={salon}
               state={state}
               confirmed={false}
               backAction={
-                timeDesign ? (
+                selectionDesign || detailsDesign ? (
                   <Button
                     variant="outline"
                     className="hidden bg-card px-4 font-semibold lg:inline-flex"
@@ -581,6 +615,7 @@ export function BookingWizard() {
                   className={cn(
                     "h-auto min-h-13 w-full whitespace-normal lg:w-auto lg:min-w-65",
                     referenceDesign && "font-semibold disabled:opacity-100",
+                    detailsDesign && "lg:w-65",
                   )}
                   onClick={
                     reviewing
@@ -604,7 +639,7 @@ export function BookingWizard() {
                         ? "Опитай отново"
                         : "Потвърди резервацията"
                     : state.step === "details"
-                      ? "Провери данните"
+                      ? "Към преглед"
                       : state.step === "services"
                         ? "Продължи"
                         : `Напред: ${shortStepLabels[nextStep]}`}

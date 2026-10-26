@@ -10,7 +10,11 @@ export function BookingHeader({
   onBack,
   disabled,
   referenceDesign = false,
+  sticky = false,
+  confirmed = false,
 }: {
+  confirmed?: boolean;
+  sticky?: boolean;
   referenceDesign?: boolean;
   children: ReactNode;
   subtitle: ReactNode;
@@ -18,7 +22,12 @@ export function BookingHeader({
   disabled: boolean;
 }) {
   return (
-    <header className="border-b bg-background lg:bg-card">
+    <header
+      className={cn(
+        "border-b bg-background lg:bg-card",
+        sticky && "sticky top-0 z-10",
+      )}
+    >
       <div
         className={cn(
           "flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:gap-14 lg:px-12 lg:py-4",
@@ -53,7 +62,9 @@ export function BookingHeader({
               Wellness Studio
             </span>
             <p className="text-sm text-muted-foreground">
-              <span className="hidden lg:inline">ул. „Шипка“ 18, София</span>
+              {!confirmed && (
+                <span className="hidden lg:inline">ул. „Шипка“ 18, София</span>
+              )}
               {subtitle}
             </p>
           </div>

@@ -52,7 +52,7 @@ for (const width of [390, 1280]) {
     await page.getByRole("radio", { name: "15:00", exact: true }).check();
     await next.click();
     await page
-      .getByRole("textbox", { name: "Име", exact: true })
+      .getByRole("textbox", { name: "Име и фамилия", exact: true })
       .fill("Демо Посетител");
     await page
       .getByRole("textbox", { name: "Телефон", exact: true })
@@ -61,7 +61,7 @@ for (const width of [390, 1280]) {
       .getByRole("textbox", { name: "Имейл", exact: true })
       .fill("wellness@example.com");
     await page
-      .getByRole("button", { name: "Провери данните", exact: true })
+      .getByRole("button", { name: "Към преглед", exact: true })
       .click();
     const review = page.getByRole("region", {
       name: "Преглед и потвърждение",

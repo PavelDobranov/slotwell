@@ -24,12 +24,12 @@ test("360px booking bar owns one action and remains in flow with a short keyboar
   await expect(summary).toContainText("15:00");
   await next.click();
   const submit = page.getByRole("button", {
-    name: "Провери данните",
+    name: "Към преглед",
     exact: true,
   });
   await expect(submit).toHaveCount(1);
   await expect(
-    page.getByRole("textbox", { name: "Име", exact: true }),
+    page.getByRole("textbox", { name: "Име и фамилия", exact: true }),
   ).toHaveAttribute("aria-invalid", "false");
   await expect(submit).toHaveAttribute("form", "booking-contact");
   await page.setViewportSize({ width: 360, height: 320 });
@@ -42,7 +42,7 @@ test("360px booking bar owns one action and remains in flow with a short keyboar
   await expect(submit).toBeInViewport();
   await submit.click();
   await expect(
-    page.getByRole("textbox", { name: "Име", exact: true }),
+    page.getByRole("textbox", { name: "Име и фамилия", exact: true }),
   ).toBeFocused();
   await expect(page).toHaveURL("/");
   expect(
@@ -121,8 +121,8 @@ for (const width of [360, 390, 1280, 1440]) {
     await next.click();
     await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
     await next.click();
-    const name = page.getByRole("textbox", { name: "Име", exact: true });
-    for (const label of ["Име", "Телефон", "Имейл"]) {
+    const name = page.getByRole("textbox", { name: "Име и фамилия", exact: true });
+    for (const label of ["Име и фамилия", "Телефон", "Имейл"]) {
       await expect(
         page.getByRole("textbox", { name: label, exact: true }),
       ).toHaveCSS("height", "52px");
@@ -132,7 +132,7 @@ for (const width of [360, 390, 1280, 1440]) {
     const normalBorder = await name.evaluate(
       (element) => getComputedStyle(element).borderColor,
     );
-    await page.getByRole("button", { name: "Провери данните" }).click();
+    await page.getByRole("button", { name: "Към преглед" }).click();
     await expect(name).toHaveAttribute("aria-invalid", "true");
     await expect(name).toBeFocused();
     await expect(name).not.toHaveCSS("border-color", normalBorder);
@@ -141,12 +141,12 @@ for (const width of [360, 390, 1280, 1440]) {
       fullPage: true,
     });
     for (const [label, value] of [
-      ["Име", "Демо Клиент"],
+      ["Име и фамилия", "Демо Клиент"],
       ["Телефон", "0888123456"],
       ["Имейл", "demo@example.com"],
     ])
       await page.getByRole("textbox", { name: label, exact: true }).fill(value);
-    await page.getByRole("button", { name: "Провери данните" }).click();
+    await page.getByRole("button", { name: "Към преглед" }).click();
     const reviewAudit = await auditRenderedControls(page);
     expect(reviewAudit.targets.filter(({ minimum44 }) => !minimum44)).toEqual(
       [],
@@ -258,15 +258,15 @@ for (const width of [360, 390]) {
     await verify("M4-staff");
     await page.getByRole("radio", { name: /Мими Ибрамова/ }).check();
     await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
-    await page.getByRole("button", { name: "Провери данните" }).click();
+    await page.getByRole("button", { name: "Към преглед" }).click();
     await verify("M5-details-errors");
     for (const [name, value] of [
-      ["Име", "Демо Клиент"],
+      ["Име и фамилия", "Демо Клиент"],
       ["Телефон", "0888123456"],
       ["Имейл", "demo@example.com"],
     ])
       await page.getByRole("textbox", { name, exact: true }).fill(value);
-    await page.getByRole("button", { name: "Провери данните" }).click();
+    await page.getByRole("button", { name: "Към преглед" }).click();
     await verify("review");
     await page
       .getByRole("button", {

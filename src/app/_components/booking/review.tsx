@@ -1,5 +1,5 @@
-import { ArrowLeft, Check, Info, LoaderCircle } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { ChevronLeft, Info, LoaderCircle, MapPin } from "lucide-react";
+import { Fragment, useEffect, useRef } from "react";
 
 import { Alert, AlertDescription } from "@/app/_components/alert";
 import { Button } from "@/app/_components/button";
@@ -75,10 +75,14 @@ export function Review({
               className="flex flex-wrap justify-between gap-x-3 gap-y-1"
             >
               <span>
-                {service.name} · {service.durationMinutes} мин
+                {service.name}
+                <span className="text-muted-foreground">
+                  {" "}
+                  · {service.durationMinutes} мин
+                </span>
               </span>
               <span className="tabular-nums">
-                {formatServicePrice(service.priceCents)}
+                {formatServicePrice(service.priceCents, true)}
               </span>
             </li>
           ))}
@@ -96,12 +100,12 @@ export function Review({
       editLabel: "Промени датата и часа в прегледа",
       onEdit: () => onEditSelection("time"),
       content: (
-        <div className="flex flex-col gap-1">
-          <p className="font-semibold">
-            {formatBusinessDate(businessDateAt(start))}
+        <div className="flex flex-col">
+          <p className="font-semibold first-letter:uppercase">
+            {formatBusinessDate(businessDateAt(start)).replace(/ г\.$/, "")}
           </p>
           <p className="tabular-nums">
-            {formatBusinessTime(start)}–
+            {formatBusinessTime(start)} –{" "}
             {formatBusinessTime(start + durationMinutes * 60_000)} ·{" "}
             {durationMinutes} мин
           </p>
@@ -109,39 +113,28 @@ export function Review({
       ),
     },
     {
-      label: "Данни за контакт",
+      label: "Контакти",
       editLabel: "Редактирай данните за контакт",
       onEdit,
       content: (
-        <dl className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2">
-          {[
-            ["Име", contact.name],
-            ["Телефон", contact.phone],
-            ["Имейл", contact.email],
-          ].map(([label, value]) => (
-            <div key={label} className="contents">
-              <dt className="text-muted-foreground">{label}</dt>
-              <dd className="whitespace-pre-wrap wrap-anywhere">{value}</dd>
-            </div>
-          ))}
-        </dl>
+        <div className="flex min-w-0 flex-col whitespace-pre-wrap wrap-anywhere">
+          <p className="font-semibold">{contact.name}</p>
+          <p>{contact.phone}</p>
+          <p>{contact.email}</p>
+        </div>
       ),
     },
     {
       label: "Бележка",
       content: (
-        <p className="whitespace-pre-wrap wrap-anywhere">
+        <p
+          className={
+            contact.note
+              ? "whitespace-pre-wrap wrap-anywhere"
+              : "text-muted-foreground"
+          }
+        >
           {contact.note || "Без бележка"}
-        </p>
-      ),
-    },
-    {
-      label: "Място",
-      content: (
-        <p>
-          <strong>{salonName}</strong>
-          <br />
-          {address}
         </p>
       ),
     },
@@ -152,45 +145,50 @@ export function Review({
       aria-busy={pending}
       className="flex min-w-0 flex-col gap-5"
     >
-      <div className="flex flex-col gap-2">
-        <h3
-          ref={heading}
-          tabIndex={-1}
-          className="rounded-sm text-xl font-semibold"
-        >
-          Провери и потвърди
-        </h3>
-        <output className="sr-only">
-          Данните са валидни. Все още няма резервация.
-        </output>
-      </div>
-      <Alert role="note" variant="success" className="px-4 py-3.5">
+      <h3
+        ref={heading}
+        tabIndex={-1}
+        className="rounded-sm text-[28px] leading-[34px] font-semibold lg:text-4xl lg:leading-[42px]"
+      >
+        Проверете и потвърдете
+      </h3>
+      <output className="sr-only">
+        Данните са валидни. Все още няма резервация.
+      </output>
+      <Alert
+        role="note"
+        variant="success"
+        className="rounded-card border-0 px-4 py-3 text-base has-[>svg]:gap-x-3 [&>svg]:size-5"
+      >
         <Info aria-hidden="true" />
-        <AlertDescription>
-          Часът не е задържан, докато преглеждаш. Ако междувременно бъде зает,
-          ще те върнем към избора на час, без да губиш данните си.
+        <AlertDescription className="text-base leading-6 text-pretty">
+          Часът се запазва едва когато натиснете „Потвърди резервацията“.
+          Плащането е на място — онлайн не плащате нищо.
         </AlertDescription>
       </Alert>
-      <Card className="gap-0 shadow-none [--card-spacing:--spacing(5)]">
+      <Card className="gap-0 rounded-[18px] py-0 text-base leading-6 shadow-none">
         <CardHeader className="sr-only">
           <CardTitle>Твоят час</CardTitle>
         </CardHeader>
-        <CardContent className="flex min-w-0 flex-col gap-4">
+        <CardContent className="flex min-w-0 flex-col px-0">
           {rows.map((row) => (
-            <section
-              key={row.label}
-              className="flex min-w-0 flex-col gap-2"
-              aria-label={row.label}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-x-3">
-                <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  {row.label}
-                </h4>
+            <Fragment key={row.label}>
+              <section
+                className="flex min-w-0 items-center gap-5 px-5 py-4"
+                aria-label={row.label}
+              >
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <h4 className="text-xs leading-4 font-semibold tracking-wide text-muted-foreground uppercase">
+                    {row.label}
+                  </h4>
+                  {row.content}
+                </div>
                 {row.onEdit && (
                   <Button
                     type="button"
                     variant="link"
                     size="sm"
+                    className="shrink-0 self-start px-0 text-sm font-semibold underline underline-offset-4"
                     disabled={pending}
                     onClick={row.onEdit}
                     aria-label={row.editLabel}
@@ -198,58 +196,74 @@ export function Review({
                     Промени
                   </Button>
                 )}
-              </div>
-              {row.content}
-              <Separator className="mt-2" />
-            </section>
+              </section>
+              <Separator className="opacity-50" />
+              {row.label === "Дата и час" && (
+                <>
+                  <p className="flex flex-wrap items-center justify-between gap-2 bg-background px-5 py-4 font-semibold">
+                    <span>Общо · {durationMinutes} мин</span>
+                    <span className="font-heading text-xl tabular-nums">
+                      {formatTotalPrice({ priceCents, hasVariablePrice }, true)}
+                    </span>
+                  </p>
+                  <Separator className="opacity-50" />
+                </>
+              )}
+            </Fragment>
           ))}
-          <p className="flex flex-wrap items-baseline justify-between gap-2 font-semibold">
-            <span>Общо {durationMinutes} мин ·</span>{" "}
-            <span className="font-heading text-xl tabular-nums">
-              {formatTotalPrice({ priceCents, hasVariablePrice })}
-            </span>
-          </p>
+          <section
+            aria-label="Място"
+            className="flex items-start gap-3 px-5 py-4"
+          >
+            <MapPin
+              aria-hidden="true"
+              className="mt-0.5 size-5 shrink-0 text-muted-foreground"
+            />
+            <p className="min-w-0 wrap-anywhere">
+              <strong className="font-semibold">{salonName}</strong>
+              <br />
+              {address}
+            </p>
+          </section>
         </CardContent>
       </Card>
-      <p className="text-sm text-muted-foreground">
-        Плащането е на място — онлайн не плащате нищо.
-      </p>
-      {showPrimaryAction && (
+      <div className="mt-3 flex items-center justify-between gap-4">
         <Button
           type="button"
-          className="self-start"
+          variant="outline"
+          aria-label="Назад към данните"
+          className="bg-card px-4 font-semibold"
+          onClick={onEdit}
           disabled={pending}
-          onClick={onConfirm}
         >
-          {pending ? (
-            <LoaderCircle
-              aria-hidden="true"
-              data-icon="inline-start"
-              className="motion-safe:animate-spin"
-            />
-          ) : (
-            <Check aria-hidden="true" data-icon="inline-start" />
-          )}
-          {pending
-            ? "Потвърждаваме…"
-            : retryable
-              ? "Опитай отново"
-              : "Потвърди резервацията"}
+          <ChevronLeft aria-hidden="true" data-icon="inline-start" />
+          Назад
         </Button>
-      )}
+        {showPrimaryAction && (
+          <Button
+            type="button"
+            className="h-auto min-h-13 min-w-0 flex-1 whitespace-normal px-5 font-semibold transition-colors sm:flex-none lg:min-w-65"
+            disabled={pending}
+            onClick={onConfirm}
+          >
+            {pending && (
+              <LoaderCircle
+                aria-hidden="true"
+                data-icon="inline-start"
+                className="motion-safe:animate-spin"
+              />
+            )}
+            {pending
+              ? "Потвърждаваме…"
+              : retryable
+                ? "Опитай отново"
+                : "Потвърди резервацията"}
+          </Button>
+        )}
+      </div>
       <output className="text-sm text-muted-foreground empty:hidden">
         {pending ? "Проверяваме дали часът е още свободен." : ""}
       </output>
-      <Button
-        type="button"
-        variant="outline"
-        className="self-start"
-        onClick={onEdit}
-        disabled={pending}
-      >
-        <ArrowLeft aria-hidden="true" data-icon="inline-start" />
-        Назад към данните
-      </Button>
     </section>
   );
 }

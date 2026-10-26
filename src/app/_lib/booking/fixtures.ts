@@ -183,7 +183,7 @@ export function createDemoSalon(clock: Clock): DemoSalon {
       {
         id: "pavel",
         name: "Павел Добранов",
-        imageUrl: "/staff/pavel-dobranov.png",
+        imageUrl: "/staff/pavel-dobranov.jpg",
         description: "Мъжко подстригване и оформяне",
         serviceIds: ["cut_m", "blowdry", "cut_child", "beard"],
         hours: { ...hours, 3: [], 6: [] },

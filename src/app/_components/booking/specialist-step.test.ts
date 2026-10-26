@@ -11,6 +11,7 @@ function render(
   serviceIds: string[],
   availableStaffIds?: string[],
   staffId: string | null = null,
+  start?: number,
 ) {
   return renderToStaticMarkup(
     createElement(SpecialistStep, {
@@ -18,6 +19,7 @@ function render(
       serviceIds,
       availableStaffIds,
       staffId,
+      start,
       onSelect: () => {},
       onNext: () => {},
       onEditServices: () => {},
@@ -65,6 +67,23 @@ test("specialist cards use the selected surface and keep the trailing radio expl
   );
   assert.doesNotMatch(render(["cut_m"], [], "mimi"), /aria-checked="true"/);
   assert.doesNotMatch(html, /Всеки свободен специалист/);
+});
+
+test("reference specialist step shows a compact heading and time-aware descriptions", () => {
+  const html = render(["cut_m"], ["pavel"], "pavel", Date.UTC(2026, 5, 1, 12));
+  assert.match(html, /<h3[^>]*>Изберете специалист<\/h3>/);
+  assert.match(
+    html,
+    /Показваме кой е свободен за цялото посещение в 15:00–15:30\./,
+  );
+  assert.match(html, /свободен в 15:00/);
+  assert.doesNotMatch(html, /Изборът е задължителен/);
+  const disabled = html.slice(
+    html.indexOf('for="specialist-mimi"'),
+    html.indexOf('for="specialist-emil"'),
+  );
+  assert.match(disabled, /Не е свободен/);
+  assert.doesNotMatch(disabled, /specialist-mimi-services/);
 });
 
 test("time-first unavailability is distinct from missing service coverage", () => {

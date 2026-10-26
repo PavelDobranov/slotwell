@@ -210,13 +210,13 @@ for (const { width, zoom } of reviewViewports) {
         await activate(page, button(/^(Продължи|Напред:)/));
       }
       await verifyStep("Данни и преглед");
-      await activate(page, button("Провери данните"));
-      const name = page.getByRole("textbox", { name: "Име", exact: true });
+      await activate(page, button("Към преглед"));
+      const name = page.getByRole("textbox", { name: "Име и фамилия", exact: true });
       await expect(name).toBeFocused();
       await expect(name).toHaveAttribute("aria-invalid", "true");
       await expect(name).toHaveAccessibleDescription(/име/);
       await expect(
-        page.getByRole("alert").filter({ hasText: /^Въведи име\.$/ }),
+        page.getByRole("alert").filter({ hasText: /^Въведете име и фамилия\.$/ }),
       ).toBeVisible();
       await verifyRendered("Грешки в данните");
       await page.keyboard.type("Demo Keyboard");
@@ -262,7 +262,7 @@ for (const { width, zoom } of reviewViewports) {
       await expect(summary).toContainText("50 мин");
       await expect(summary).toContainText(/35,00\s*€/);
       await expect(summary).toContainText("15:15–16:05");
-      await activate(page, button("Провери данните"));
+      await activate(page, button("Към преглед"));
       await verifyRendered("Проверени данни");
       await expectNoPersistence(page);
       await activate(page, button(/^Потвърди резервация(?:та)?$/));
@@ -272,6 +272,10 @@ for (const { width, zoom } of reviewViewports) {
       await page.keyboard.press("Space");
       await verifyStep("Резервацията е потвърдена");
       await expectNoPersistence(page);
+      await activate(
+        page,
+        page.getByText("Данни за контакт и нова резервация", { exact: true }),
+      );
       await activate(page, button("Нова резервация"));
       await verifyStep("Изберете услуги");
       await expect(

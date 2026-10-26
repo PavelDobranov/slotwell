@@ -324,7 +324,7 @@ test("route choice exists only in when/who, defaults to time-first and cannot be
   await next.click();
   await expect(route).toHaveCount(0);
   await page
-    .getByRole("textbox", { name: "Име", exact: true })
+    .getByRole("textbox", { name: "Име и фамилия", exact: true })
     .fill("Демо Клиент");
   await page
     .getByRole("textbox", { name: "Телефон", exact: true })
@@ -332,11 +332,9 @@ test("route choice exists only in when/who, defaults to time-first and cannot be
   await page
     .getByRole("textbox", { name: "Имейл", exact: true })
     .fill("demo@example.com");
-  await page
-    .getByRole("button", { name: "Провери данните", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Към преглед", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Провери и потвърди", exact: true }),
+    page.getByRole("heading", { name: "Проверете и потвърдете", exact: true }),
   ).toBeFocused();
   await expect(route).toHaveCount(0);
 });

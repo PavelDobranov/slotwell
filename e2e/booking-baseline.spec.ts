@@ -47,7 +47,7 @@ async function reachReview(
   }
 
   for (const [name, value] of [
-    ["Име", "Демо Посетител"],
+    ["Име и фамилия", "Демо Посетител"],
     ["Телефон", "0888123456"],
     ["Имейл", "baseline@example.com"],
   ]) {
@@ -56,11 +56,11 @@ async function reachReview(
     await expect(input).toHaveValue(value);
   }
   await expect(
-    page.getByRole("button", { name: "Провери данните", exact: true }),
+    page.getByRole("button", { name: "Към преглед", exact: true }),
   ).toBeVisible();
   await capture("details");
   await page
-    .getByRole("button", { name: "Провери данните", exact: true })
+    .getByRole("button", { name: "Към преглед", exact: true })
     .click();
   const review = page.getByRole("region", {
     name: "Преглед и потвърждение",

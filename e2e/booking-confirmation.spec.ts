@@ -26,7 +26,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       );
       await page.setViewportSize({ width: 360, height: 800 });
       await page.goto("/");
-      await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+      await page.getByRole("checkbox", { name: /Мъжко подстригване/ }).check();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page
         .getByRole("radio", {
@@ -45,7 +45,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       }
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page
-        .getByRole("textbox", { name: "Име", exact: true })
+        .getByRole("textbox", { name: "Име и фамилия", exact: true })
         .fill("Демо Възстановяване");
       await page
         .getByRole("textbox", { name: "Телефон", exact: true })
@@ -54,12 +54,9 @@ for (const path of ["staff-first", "time-first"] as const) {
         .getByRole("textbox", { name: "Имейл", exact: true })
         .fill("recovery@example.com");
       await page
-        .getByText("Добави бележка (по желание)", { exact: true })
-        .click();
-      await page
         .getByRole("textbox", { name: /Бележка/ })
         .fill("Запази бележката.");
-      await page.getByRole("button", { name: "Провери данните" }).click();
+      await page.getByRole("button", { name: "Към преглед" }).click();
       // Move only the wall clock so the selected time expires before confirm,
       // without letting the periodic refresh preempt the submit-time check.
       if (scenario === "stale")
@@ -70,17 +67,21 @@ for (const path of ["staff-first", "time-first"] as const) {
           exact: true,
         })
         .click();
-      const summary = page.getByRole("complementary", {
-        name: "Вашата резервация",
-      });
-      await expect(summary).toContainText("Подстригване");
+      const summary =
+        scenario === "retryable"
+          ? page.getByRole("region", {
+              name: "Преглед и потвърждение",
+              exact: true,
+            })
+          : page.getByRole("complementary", { name: "Вашата резервация" });
+      await expect(summary).toContainText("Мъжко подстригване");
       if (scenario === "retryable") {
         await expect(
           page
             .getByRole("region", { name: "Данни и преглед" })
             .getByRole("alert"),
         ).toContainText("Опитай отново");
-        await expect(summary).toContainText("15:00–15:30");
+        await expect(summary).toContainText("15:00 – 15:30");
         await expect(summary).toContainText("Мими Ибрамова");
         const failure = page
           .getByRole("alert")
@@ -114,8 +115,8 @@ for (const path of ["staff-first", "time-first"] as const) {
           page.getByRole("heading", { name: "Кога и с кого", exact: true }),
         ).toBeFocused();
         const recovery = page
-          .getByRole("region", { name: "Дата и час", exact: true })
-          .getByRole("alert");
+          .getByRole("alert")
+          .filter({ hasText: "Избери нов час" });
         await expect(recovery).toHaveCount(1);
         await expect(recovery).toHaveAttribute("data-variant", "error");
         await expect(recovery).toHaveAttribute("aria-atomic", "true");
@@ -154,14 +155,14 @@ for (const path of ["staff-first", "time-first"] as const) {
             .click();
         }
         for (const [name, value] of [
-          ["Име", "Демо Възстановяване"],
+          ["Име и фамилия", "Демо Възстановяване"],
           ["Телефон", "0888123456"],
           ["Имейл", "recovery@example.com"],
         ])
           await expect(
             page.getByRole("textbox", { name, exact: true }),
           ).toHaveValue(value);
-        await page.getByRole("button", { name: "Провери данните" }).click();
+        await page.getByRole("button", { name: "Към преглед" }).click();
         await page
           .getByRole("button", {
             name: "Потвърди резервацията",
@@ -175,6 +176,9 @@ for (const path of ["staff-first", "time-first"] as const) {
           exact: true,
         }),
       ).toBeFocused();
+      await page
+        .getByText("Данни за контакт и нова резервация", { exact: true })
+        .click();
       await expect(
         page.getByText("Запази бележката.", { exact: true }),
       ).toBeVisible();
@@ -214,7 +218,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await page.setViewportSize({ width: 360, height: 800 });
     await page.goto("/");
     async function chooseServiceAndStaff() {
-      await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+      await page.getByRole("checkbox", { name: /Мъжко подстригване/ }).check();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page
         .getByRole("radio", { name: "Специалист", exact: true })
@@ -226,7 +230,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       await chooseServiceAndStaff();
       await page.getByRole("radio", { name: "15:00", exact: true }).check();
     } else {
-      await page.getByRole("checkbox", { name: /Подстригване/ }).check();
+      await page.getByRole("checkbox", { name: /Мъжко подстригване/ }).check();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page
         .getByRole("radio", { name: "Дата и час", exact: true })
@@ -237,7 +241,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     }
     await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await page
-      .getByRole("textbox", { name: "Име", exact: true })
+      .getByRole("textbox", { name: "Име и фамилия", exact: true })
       .fill("Демо Посетител");
     await page
       .getByRole("textbox", { name: "Телефон", exact: true })
@@ -245,15 +249,12 @@ for (const path of ["staff-first", "time-first"] as const) {
     await page
       .getByRole("textbox", { name: "Имейл", exact: true })
       .fill("demo@example.com");
-    await page
-      .getByText("Добави бележка (по желание)", { exact: true })
-      .click();
     const note =
       path === "staff-first"
-        ? `Само демо бележка.\n${"ДългаБележка".repeat(80)}\nКрай на бележката.`
+        ? `Само демо бележка.\n${"ДългаБележка".repeat(20)}\nКрай на бележката.`
         : "Само демо бележка.";
     await page.getByRole("textbox", { name: /Бележка/ }).fill(note);
-    await page.getByRole("button", { name: "Провери данните" }).click();
+    await page.getByRole("button", { name: "Към преглед" }).click();
     const confirm = page.getByRole("button", {
       name: "Потвърди резервацията",
       exact: true,
@@ -286,10 +287,10 @@ for (const path of ["staff-first", "time-first"] as const) {
       fullPage: true,
     });
     await page.setViewportSize({ width: 1280, height: 880 });
-    const pendingSummary = page.getByRole("complementary", {
-      name: "Вашата резервация",
-    });
-    for (const button of await pendingSummary.getByRole("button").all()) {
+    await expect(
+      page.getByRole("complementary", { name: "Вашата резервация" }),
+    ).toHaveCount(0);
+    for (const button of await review.getByRole("button").all()) {
       await expect(button).toBeDisabled();
     }
     await expect(
@@ -310,27 +311,49 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(heading).toBeFocused();
     const visit = page.getByRole("region", { name: "Твоето посещение" });
     for (const text of [
-      "Подстригване",
+      "Мъжко подстригване",
       "Мими Ибрамова",
-      "15:00–15:30",
+      "15:00 – 15:30",
       "30 мин",
     ])
       await expect(visit).toContainText(text);
-    await expect(visit).toContainText(/23,00\s*€/);
+    await expect(visit).toContainText(/18\s*€/);
     const summary = page.getByRole("complementary", {
       name: "Вашата резервация",
     });
     for (const text of [
-      "Подстригване",
+      "Мъжко подстригване",
       "Мими Ибрамова",
-      "15:00–15:30",
+      "15:00 – 15:30",
       "30 мин",
       "ул. „Шипка“ 18",
     ])
       await expect(summary).toContainText(text);
-    await expect(summary).toContainText(/23,00\s*€/);
-    await expect(visit.getByText("Специалист", { exact: true })).toBeVisible();
-    await expect(visit.getByText("Дата и час", { exact: true })).toBeVisible();
+    await expect(summary).toContainText(/18\s*€/);
+    await expect(visit.getByText("Специалист", { exact: true })).toBeAttached();
+    await expect(visit.getByText("Дата и час", { exact: true })).toBeAttached();
+    await expect(
+      page.getByRole("button", { name: "Промени часа", exact: true }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Откажи резервацията", exact: true }),
+    ).toBeDisabled();
+    await page.screenshot({
+      path: `coverage/playwright/success-reference-${path}-mobile.png`,
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 1280, height: 880 });
+    await page.screenshot({
+      path: `coverage/playwright/success-reference-${path}-desktop.png`,
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 360, height: 800 });
+    const contactDisclosure = page.getByText(
+      "Данни за контакт и нова резервация",
+      { exact: true },
+    );
+    await contactDisclosure.focus();
+    await page.keyboard.press("Enter");
     await expect(
       page.getByRole("heading", { name: "Данни за контакт", exact: true }),
     ).toBeVisible();
@@ -341,15 +364,24 @@ for (const path of ["staff-first", "time-first"] as const) {
           exact: true,
         })
         .getByRole("link"),
-    ).toHaveCount(0);
+    ).toHaveCount(1);
+    await expect(
+      page.getByRole("link", { name: "Упътване до салона" }),
+    ).toHaveAttribute(
+      "href",
+      `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent("ул. „Шипка“ 18, София")}`,
+    );
+    await expect(page.getByRole("banner")).toContainText(
+      "Резервацията е потвърдена",
+    );
     for (const text of [
       "Демо Посетител",
       "0888123456",
       "demo@example.com",
       note,
     ])
-      await expect(page.getByText(text, { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Промени/ })).toHaveCount(0);
+      await expect(page.getByText(text, { exact: true }).last()).toBeVisible();
+    await expect(page.getByRole("button", { name: /Промени/ })).toBeDisabled();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(360);
@@ -411,7 +443,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       page.getByRole("heading", { name: "Изберете услуги", exact: true }),
     ).toBeFocused();
     await expect(
-      page.getByRole("checkbox", { name: /Подстригване/ }),
+      page.getByRole("checkbox", { name: /Мъжко подстригване/ }),
     ).not.toBeChecked();
     await chooseServiceAndStaff();
     await expect(
@@ -419,16 +451,18 @@ for (const path of ["staff-first", "time-first"] as const) {
     ).toHaveCount(0);
     await page.getByRole("radio", { name: "16:00", exact: true }).check();
     await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
-    await page
-      .getByText("Добави бележка (по желание)", { exact: true })
-      .click();
-    for (const label of ["Име", "Телефон", "Имейл", "Бележка (по желание)"])
+    for (const label of [
+      "Име и фамилия",
+      "Телефон",
+      "Имейл",
+      "Бележка към салона (по желание)",
+    ])
       await expect(
         page.getByRole("textbox", { name: label, exact: true }),
       ).toHaveValue("");
     await page.reload();
     await expect(
-      page.getByRole("checkbox", { name: /Подстригване/ }),
+      page.getByRole("checkbox", { name: /Мъжко подстригване/ }),
     ).not.toBeChecked();
     await chooseServiceAndStaff();
     await expect(
@@ -437,7 +471,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await page.getByRole("radio", { name: "15:00", exact: true }).check();
     await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
     await expect(
-      page.getByRole("textbox", { name: "Име", exact: true }),
+      page.getByRole("textbox", { name: "Име и фамилия", exact: true }),
     ).toHaveValue("");
     expect(
       requests.filter(

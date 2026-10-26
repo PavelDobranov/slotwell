@@ -19,9 +19,9 @@ test("requires trimmed name, phone and email with Bulgarian errors", () => {
     note: "",
   });
   assert.deepEqual(errors, {
-    name: "Въведи име.",
-    phone: "Въведи телефон.",
-    email: "Въведи имейл.",
+    name: "Въведете име и фамилия.",
+    phone: "Въведете телефонен номер.",
+    email: "Въведете имейл адрес.",
   });
 });
 
@@ -102,7 +102,7 @@ for (const [field, limit, boundary] of [
     254,
     `${"a".repeat(64)}@${"b".repeat(63)}.${"c".repeat(63)}.${"d".repeat(61)}`,
   ],
-  ["note", 1000, "н".repeat(1000)],
+  ["note", 300, "н".repeat(300)],
 ] as const) {
   test(`enforces ${field} limit ${limit} without truncating`, () => {
     assert.equal(boundary.length, limit);

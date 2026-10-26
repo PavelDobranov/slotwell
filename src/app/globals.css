@@ -206,6 +206,43 @@
   }
 }
 
+/* Details reference: white controls, compact helper copy, and a visible note. */
+.booking-contact [data-slot="field-group"] {
+  /* No container queries here; avoid Chromium collapsing nested fieldsets on resize. */
+  container-type: normal;
+}
+
+.booking-contact [data-slot="field"] {
+  gap: 0.375rem;
+  color: var(--foreground);
+}
+
+.booking-contact [data-slot="field-label"] {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.booking-contact [data-slot="field-description"] {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.25rem;
+}
+
+.booking-contact :is(input, textarea) {
+  background: var(--card);
+  border-color: var(--border);
+  border-radius: var(--radius-button);
+}
+
+.booking-contact :is(input, textarea)[aria-invalid="true"] {
+  border-color: var(--destructive);
+  box-shadow: 0 0 0 1px var(--destructive);
+}
+
+.booking-contact [data-slot="alert-title"] {
+  font-weight: 600;
+}
+
 /* Clear Day is light-only. The existing neutral .dark scaffold above is not
    direction B and is not exposed by this app; no dark palette is inferred. */
 @media (prefers-reduced-motion: reduce) {
@@ -222,6 +259,14 @@
 @media (width < 64rem) {
   html:has([data-slot="sheet-trigger"]) {
     scroll-padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (width < 64rem) {
+  .booking-contact [data-slot="alert-description"] a {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
   }
 }
 

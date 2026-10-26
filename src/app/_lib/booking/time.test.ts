@@ -6,6 +6,7 @@ import {
   businessDateAt,
   businessWeekday,
   formatBusinessDate,
+  formatBusinessShortDate,
   formatBusinessTime,
   formatEuro,
   localStart,
@@ -17,6 +18,11 @@ test("business dates and Bulgarian labels use Sofia rather than the device timez
   assert.equal(formatBusinessTime(instant), "00:30");
   assert.match(formatBusinessDate("2027-01-01"), /петък.*1 януари 2027/);
   assert.equal(formatEuro(3550), "35,50\u00a0€");
+});
+
+test("compact booking dates match the reference without a year", () => {
+  assert.equal(formatBusinessShortDate("2026-10-24"), "сб, 24 окт.");
+  assert.equal(formatBusinessShortDate("2026-06-01"), "пн, 1 юни");
 });
 
 test("calendar arithmetic crosses months, leap days, years and both DST changes", () => {

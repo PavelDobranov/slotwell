@@ -10,12 +10,14 @@ import {
 } from "@/app/_components/field";
 import { RadioGroup } from "@/app/_components/radio-group";
 import { qualifiedStaff } from "@/app/_lib/booking/availability";
+import { formatBusinessTime } from "@/app/_lib/booking/time";
 import type { DemoSalon } from "@/app/_lib/booking/types";
 
 export function SpecialistStep({
   salon,
   serviceIds,
   staffId,
+  start,
   availableStaffIds,
   onSelect,
   onNext,
@@ -28,6 +30,7 @@ export function SpecialistStep({
   salon: DemoSalon;
   serviceIds: readonly string[];
   staffId: string | null;
+  start?: number;
   availableStaffIds?: readonly string[];
   onSelect: (id: string) => void;
   onNext: () => void;
@@ -52,12 +55,19 @@ export function SpecialistStep({
 
   return (
     <>
-      <FieldDescription id="specialists-description">
-        {availableStaffIds === undefined
-          ? "Показваме кой може да направи всички избрани услуги. Свободните часове ще видиш в следващата стъпка."
-          : "Избери специалист, свободен за цялото посещение в избрания час, включително времето за подготовка след услугите."}{" "}
-        Изборът е задължителен дори когато има само един специалист.
-      </FieldDescription>
+      <div className="flex flex-col gap-1">
+        <h3 className="text-xl leading-7 font-semibold">Изберете специалист</h3>
+        <FieldDescription
+          id="specialists-description"
+          className="text-base leading-6"
+        >
+          {availableStaffIds === undefined
+            ? "Показваме кой може да направи всички избрани услуги."
+            : start === undefined
+              ? "Показваме кой е свободен за цялото посещение в избрания час."
+              : `Показваме кой е свободен за цялото посещение в ${formatBusinessTime(start)}–${formatBusinessTime(start + selectedServices.reduce((total, service) => total + service.durationMinutes, 0) * 60_000)}.`}
+        </FieldDescription>
+      </div>
       {noCoverage && (
         <Alert variant="warning" className="gap-x-3 px-4 py-3.5">
           <TriangleAlertIcon aria-hidden="true" />
@@ -127,10 +137,7 @@ export function SpecialistStep({
               <SpecialistOption
                 key={member.id}
                 member={member}
-                services={salon.services
-                  .filter(({ id }) => member.serviceIds.includes(id))
-                  .map(({ name }) => name)
-                  .join(" · ")}
+                description={`${member.description}${availableStaffIds !== undefined && start !== undefined ? ` · свободен в ${formatBusinessTime(start)}` : ""}`}
                 selected={!reason && staffId === member.id}
                 reason={reason}
               />

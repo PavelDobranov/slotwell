@@ -19,7 +19,7 @@ test("path switches preserve valid choices and service edits explain only invali
   await page.getByRole("radio", { name: "15:00", exact: true }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   await page
-    .getByRole("textbox", { name: "Име", exact: true })
+    .getByRole("textbox", { name: "Име и фамилия", exact: true })
     .fill("Демо Клиент");
   await page
     .getByRole("textbox", { name: "Телефон", exact: true })
@@ -88,7 +88,7 @@ test("path switches preserve valid choices and service edits explain only invali
   await page.getByRole("radio", { name: /Павел Добранов/ }).check();
   await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
   for (const [name, value] of [
-    ["Име", "Демо Клиент"],
+    ["Име и фамилия", "Демо Клиент"],
     ["Телефон", "0888123456"],
     ["Имейл", "demo@example.com"],
   ])

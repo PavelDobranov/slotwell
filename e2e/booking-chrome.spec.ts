@@ -181,7 +181,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       ).toBeFocused();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page
-        .getByRole("textbox", { name: "Име", exact: true })
+        .getByRole("textbox", { name: "Име и фамилия", exact: true })
         .fill("Demo Chrome");
       await page
         .getByRole("textbox", { name: "Телефон", exact: true })
@@ -193,7 +193,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
         "Вашите данни",
       );
       await expect(nav.getByRole("link")).toHaveCount(2);
-      await page.getByRole("button", { name: "Провери данните" }).click();
+      await page.getByRole("button", { name: "Към преглед" }).click();
       await expect(nav.locator('[aria-current="step"]')).toContainText(
         "Преглед",
       );
@@ -210,9 +210,9 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
           page.getByRole("heading", { name: "Данни и преглед", exact: true }),
         ).toBeFocused();
         await expect(
-          page.getByRole("textbox", { name: "Име", exact: true }),
+          page.getByRole("textbox", { name: "Име и фамилия", exact: true }),
         ).toHaveValue("Demo Chrome");
-        await page.getByRole("button", { name: "Провери данните" }).click();
+        await page.getByRole("button", { name: "Към преглед" }).click();
       }
       await page.screenshot({
         path: `coverage/playwright/shell-review-${width}-${path}.png`,
@@ -223,9 +223,9 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
         page.getByRole("heading", { name: "Данни и преглед", exact: true }),
       ).toBeFocused();
       await expect(
-        page.getByRole("textbox", { name: "Име", exact: true }),
+        page.getByRole("textbox", { name: "Име и фамилия", exact: true }),
       ).toHaveValue("Demo Chrome");
-      await page.getByRole("button", { name: "Провери данните" }).click();
+      await page.getByRole("button", { name: "Към преглед" }).click();
       for (const [label, heading] of [
         ["Промени специалиста", "Кога и с кого"],
         ["Промени датата и часа", "Кога и с кого"],
@@ -241,7 +241,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
           let step = 0;
           step < 3 &&
           !(await page
-            .getByRole("textbox", { name: "Име", exact: true })
+            .getByRole("textbox", { name: "Име и фамилия", exact: true })
             .isVisible());
           step++
         )
@@ -249,12 +249,12 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
             .getByRole("button", { name: /^(Продължи|Напред:)/ })
             .click();
         await expect(
-          page.getByRole("textbox", { name: "Име", exact: true }),
+          page.getByRole("textbox", { name: "Име и фамилия", exact: true }),
         ).toHaveValue("Demo Chrome");
         await expect(nav.locator('[aria-current="step"]')).toContainText(
           "Вашите данни",
         );
-        await page.getByRole("button", { name: "Провери данните" }).click();
+        await page.getByRole("button", { name: "Към преглед" }).click();
         await expect(nav.locator('[aria-current="step"]')).toContainText(
           "Преглед",
         );
@@ -284,12 +284,12 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       await expect(
-        page.getByRole("textbox", { name: "Име", exact: true }),
+        page.getByRole("textbox", { name: "Име и фамилия", exact: true }),
       ).toHaveValue("Demo Chrome");
       await expect(nav.locator('[aria-current="step"]')).toContainText(
         "Вашите данни",
       );
-      await page.getByRole("button", { name: "Провери данните" }).click();
+      await page.getByRole("button", { name: "Към преглед" }).click();
       await expect(nav.getByRole("link")).toHaveCount(3);
       await page
         .getByRole("button", { name: "Назад към данните", exact: true })
@@ -298,7 +298,7 @@ for (const width of [360, 390, 768, 1024, 1280, 1440]) {
         "Вашите данни",
       );
       await expect(
-        page.getByRole("textbox", { name: "Име", exact: true }),
+        page.getByRole("textbox", { name: "Име и фамилия", exact: true }),
       ).toBeFocused();
       expect(new URL(page.url()).hash).toBe("");
       expect(
@@ -342,7 +342,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       const nav = page.getByRole("navigation", {
         name: "Стъпки на резервацията",
       });
-      const name = page.getByRole("textbox", { name: "Име", exact: true });
+      const name = page.getByRole("textbox", { name: "Име и фамилия", exact: true });
       await name.fill("Demo Recovery");
       await page
         .getByRole("textbox", { name: "Телефон", exact: true })
@@ -354,7 +354,7 @@ for (const path of ["staff-first", "time-first"] as const) {
         // Move only Date.now: no interval can revalidate before the form submits.
         await page.clock.setFixedTime(new Date("2026-06-01T11:01:00Z"));
       }
-      await page.getByRole("button", { name: "Провери данните" }).click();
+      await page.getByRole("button", { name: "Към преглед" }).click();
       if (recovery !== "entry-clock")
         await expect(nav.locator('[aria-current="step"]')).toContainText(
           "Преглед",
@@ -399,7 +399,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       await expect(nav.locator('[aria-current="step"]')).toContainText(
         "Вашите данни",
       );
-      await page.getByRole("button", { name: "Провери данните" }).click();
+      await page.getByRole("button", { name: "Към преглед" }).click();
       await expect(nav.locator('[aria-current="step"]')).toContainText(
         "Преглед",
       );
