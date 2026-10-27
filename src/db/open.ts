@@ -1,5 +1,3 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
 import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
 import pg from "pg";
 
@@ -63,11 +61,4 @@ export function openPostgresDatabase(url: string) {
       return closing;
     },
   };
-}
-
-export function openDatabase(filename: string) {
-  const sqlite = new Database(filename);
-  sqlite.pragma("foreign_keys = ON");
-
-  return { sqlite, db: drizzle({ client: sqlite }) };
 }

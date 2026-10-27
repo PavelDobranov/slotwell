@@ -58,6 +58,175 @@ const invalidUrls = [
   `${appUrl}#fictional-secret`,
 ];
 
+// Fresh process per case: exercise the real server-only export condition, not a marker stub.
+function checkApplicationEntry(body: string) {
+  const child = spawnSync(
+    process.execPath,
+    [
+      "--conditions=react-server",
+      "--import",
+      "tsx",
+      "--input-type=module",
+      "-e",
+      `
+        import assert from 'node:assert/strict';
+        import net from 'node:net';
+        import pg from 'pg';
+        let connections = 0;
+        net.Socket.prototype.connect = () => {
+          connections++;
+          throw new Error('Network forbidden');
+        };
+        const pools = [];
+        const Pool = pg.Pool;
+        pg.Pool = class extends Pool {
+          constructor(options) { super(options); pools.push(this); }
+        };
+        let envReads = 0;
+        const env = process.env;
+        process.env = new Proxy(env, {
+          get(target, key) {
+            if (['DATABASE_URL', 'TEST_DATABASE_URL', 'DB_FILE_NAME'].includes(key)) envReads++;
+            return Reflect.get(target, key);
+          }
+        });
+        const imported = await import('./src/db/index.ts');
+        const entry = imported.default ?? imported;
+        assert.equal(envReads, 0);
+        assert.equal(pools.length, 0);
+        assert.equal(connections, 0);
+        assert.deepEqual(Object.keys(entry).sort(), ['closeDatabase', 'getDatabase']);
+        const appUrl = ${JSON.stringify(appUrl)};
+        const testUrl = ${JSON.stringify(testUrl)};
+        const closedError = { message: 'Database is closed' };
+        ${body}
+        assert.equal(connections, 0);
+        assert.equal(env.TEST_DATABASE_URL, undefined);
+      `,
+    ],
+    { env: { NODE_ENV: "test" }, encoding: "utf8", timeout: 10000 },
+  );
+  assert.equal(child.error, undefined);
+  assert.equal(child.status, 0, child.stderr);
+  assert.equal(child.stdout, "");
+  assert.equal(child.stderr, "");
+}
+
+test("application import is lazy; first use requires a validated app URL without fallback", () => {
+  checkApplicationEntry(`
+    env.DB_FILE_NAME = 'legacy.db';
+    env.TEST_DATABASE_URL = appUrl;
+    for (const value of ${JSON.stringify(invalidUrls)}.concat([testUrl])) {
+      if (value == null) delete env.DATABASE_URL;
+      else env.DATABASE_URL = value;
+      assert.throws(() => entry.getDatabase(), error => {
+        assert.ok(error instanceof Error);
+        assert.ok(['Invalid database URL', 'Application database required'].includes(error.message));
+        assert.equal(error.cause, undefined);
+        assert.doesNotMatch(String(error.stack), /fictional-secret|remote\\.example/);
+        return true;
+      });
+      assert.equal(pools.length, 0);
+    }
+    delete env.TEST_DATABASE_URL;
+    env.DATABASE_URL = appUrl;
+    const db = entry.getDatabase();
+    assert.equal(pools.length, 1);
+    assert.equal(db.$client, pools[0]);
+    assert.equal(pools[0].totalCount, 0);
+    const reads = envReads;
+    delete env.DATABASE_URL;
+    assert.equal(entry.getDatabase(), db);
+    assert.equal(envReads, reads);
+    await entry.closeDatabase();
+    assert.equal(pools[0].ended, true);
+  `);
+});
+
+test("shutdown before first use touches no resources or env and permanently closes the entry", () => {
+  checkApplicationEntry(`
+    const closing = entry.closeDatabase();
+    assert.equal(entry.closeDatabase(), closing);
+    await closing;
+    assert.equal(envReads, 0);
+    assert.equal(pools.length, 0);
+    env.DATABASE_URL = appUrl;
+    assert.throws(() => entry.getDatabase(), closedError);
+    assert.equal(envReads, 0);
+    assert.equal(pools.length, 0);
+    assert.equal(entry.closeDatabase(), closing);
+  `);
+});
+
+test("shutdown after first use awaits one real pool end and cannot resurrect while closing or closed", () => {
+  checkApplicationEntry(`
+    env.DATABASE_URL = appUrl;
+    entry.getDatabase();
+    let finish;
+    const pending = new Promise(resolve => { finish = resolve; });
+    const end = pools[0].end.bind(pools[0]);
+    let ends = 0;
+    pools[0].end = async () => { ends++; await pending; await end(); };
+    const closing = entry.closeDatabase();
+    assert.equal(entry.closeDatabase(), closing);
+    assert.throws(() => entry.getDatabase(), closedError);
+    let settled = false;
+    void closing.then(() => { settled = true; });
+    await Promise.resolve();
+    assert.equal(ends, 1);
+    assert.equal(settled, false);
+    finish();
+    await closing;
+    assert.equal(pools[0].ended, true);
+    assert.equal(entry.closeDatabase(), closing);
+    assert.throws(() => entry.getDatabase(), closedError);
+    assert.equal(pools.length, 1);
+    assert.equal(ends, 1);
+  `);
+});
+
+for (const synchronous of [false, true]) {
+  test(`application shutdown caches redacted ${synchronous ? "synchronous" : "asynchronous"} failures without resurrection`, () => {
+    checkApplicationEntry(`
+      env.DATABASE_URL = appUrl;
+      entry.getDatabase();
+      const end = pools[0].end.bind(pools[0]);
+      let ends = 0;
+      const raw = new Error('fictional-secret SELECT private_value', { cause: new Error(appUrl) });
+      pools[0].end = () => {
+        ends++;
+        if (${synchronous}) throw raw;
+        return Promise.reject(raw);
+      };
+      const closing = entry.closeDatabase();
+      for (let attempt = 0; attempt < 2; attempt++) {
+        assert.equal(entry.closeDatabase(), closing);
+        await assert.rejects(closing, error => {
+          assert.equal(error.message, 'Database shutdown failed');
+          assert.equal(error.cause, undefined);
+          assert.doesNotMatch(String(error.stack), /fictional-secret|SELECT|postgresql:/);
+          return true;
+        });
+        assert.throws(() => entry.getDatabase(), closedError);
+      }
+      assert.equal(ends, 1);
+      assert.equal(pools.length, 1);
+      await end();
+    `);
+  });
+}
+
+test("application entry retains the server-only guard outside the react-server graph", () => {
+  const child = spawnSync(
+    process.execPath,
+    ["--import", "tsx", "-e", "require('./src/db/index.ts')"],
+    { env: { NODE_ENV: "test" }, encoding: "utf8", timeout: 10000 },
+  );
+  assert.equal(child.error, undefined);
+  assert.equal(child.status, 1);
+  assert.match(child.stderr, /cannot be imported from a Client Component/);
+});
+
 test("cold import and construction need no environment, credential loader or network", () => {
   const child = spawnSync(
     process.execPath,

@@ -12,12 +12,12 @@ npm run dev
 - Frontend: http://localhost:3000
 - API health: http://localhost:3000/api/health → `{"status":"ok"}`
 
-## Local PostgreSQL (M1 transitional tooling and factory)
+## Local PostgreSQL (M1 scaffold and lazy application entry)
 
-Requires Docker/Compose and Node >=22.13 for the pinned Hono CLI. This provisions
-only a local database, not a cloud deployment or a runtime migration: existing
-SQLite dependencies, `DB_FILE_NAME=local.db`, callers and Drizzle commands remain
-unchanged. Do not run existing SQLite migration/smoke commands against PostgreSQL.
+Requires Docker/Compose and Node >=22.13 for the pinned Hono CLI. The database
+factory, application entry, schema, migrations and smoke use PostgreSQL. This is
+local scaffold infrastructure, not a cloud deployment or persisted booking flow.
+Installed SQLite packages are retained but have no runtime factory/callers.
 `pg`/`@types/pg` are pinned to 8.23.1; official `@hono/cli` is the explicitly
 approved 1.0.0-rc.8, not a floating `next` tag. Install with scripts disabled;
 esbuild has a postinstall, so if its binary is unavailable, stop for scoped review
@@ -100,16 +100,27 @@ These independent LOGIN roles have no memberships or cluster-management powers.
 Each owns only its matching database and cannot connect to the other or the
 maintenance databases. They are **local database-owner/migration credentials**,
 not production least-privilege runtime roles. Never use admin credentials in the
-application/tests. The additive pool factory and URL guards are available below;
-application wiring and disposable test-worker/reset contracts remain staged
-(#57/#59). Do not run destructive tests against this shared development/test volume.
+application/tests. The pool factory, lazy application entry and URL guards are
+available below; disposable test-worker/reset contracts remain owned by #59.
+Do not run destructive tests against this shared development/test volume.
 
-### Additive PostgreSQL factory (#79; not runtime/foundation acceptance)
+### PostgreSQL factory and application lifecycle
 
 `src/db/open.ts` is a framework-independent Node script/test factory. Importing it
-loads no environment file and creates no pool/connection. The original SQLite
-`openDatabase`, application entry, schema, config and smoke caller remain intact.
-The frontend still stores bookings only in page memory.
+loads no environment file and creates no pool/connection. The frontend still
+stores bookings only in page memory; no catalog/appointment persistence is claimed.
+
+`src/db/index.ts` is server-only and exports `getDatabase()` and
+`closeDatabase()`, not an eager `db`. Import does not read environment, validate a
+URL, create a pool or connect. First `getDatabase()` requires a validated
+`DATABASE_URL` for **slotwell_app / slotwell_dev only**; the test role is refused.
+It returns one cached process-local Drizzle handle; changing env later does not
+replace it. There is no automatic migration, connection, global/HMR cache or
+signal handler. The lifecycle owner must explicitly await `closeDatabase()`.
+Concurrent/repeated closes share one promise, including shutdown failures.
+Closing before creation reads no env and creates no pool, but is still terminal:
+`getDatabase()` refuses with `Database is closed` during/after any shutdown,
+even if no handle was ever created. A closed entry cannot resurrect a pool.
 
 - `validateDatabaseUrl(value: string | undefined)` returns the accepted URL
   unchanged or throws `Invalid database URL` without raw input/cause. Require
@@ -134,8 +145,8 @@ The frontend still stores bookings only in page memory.
   later transaction-conflict/rollback mapping. Query failures still reject.
   Never log or serialize these errors or their cause chains, SQL, parameters,
   credentials or connection config. API/script boundaries must map internal
-  failures to allowlisted outward errors without raw causes; #80 smoke must use
-  generic failures. This is not permission for SQL/PII telemetry exposure.
+  failures to allowlisted outward errors without raw causes; the smoke uses
+  a fixed `PostgreSQL smoke failed` diagnostic. This is not permission for SQL/PII telemetry exposure.
 - URL validation authorizes neither schema selection nor cleanup/reset. #59 may
   separately validate session/schema isolation **inside `slotwell_test`**, without
   URL query/search_path overrides or admitting extra databases/admin roles.
@@ -146,18 +157,48 @@ Units require no PostgreSQL, credentials, environment loading or network:
 npx --no-install tsx --test src/db/open.test.ts
 ```
 
-**Staged commands:** today `db:generate`, `db:migrate` and `db:smoke` still use
-SQLite and explicit `DB_FILE_NAME` (for example
-`DB_FILE_NAME=local.db npm run db:smoke`, after applying its SQLite scaffold
-migration). These are not
-PostgreSQL acceptance commands. After #80 converts schema/config/smoke together,
-those same npm commands will target PostgreSQL; only then follow its verified
-migration/smoke instructions. #57 subsequently converts the application entry to
-lazy PostgreSQL access. Those future CLI callers will explicitly load root
-`.env.local` without overriding inherited environment; the factory itself never
-loads env. Future #59 must explicitly use `TEST_DATABASE_URL`, never fall back to
-`DATABASE_URL`. Next's test-mode env loader skips `.env.local`; unit discovery
-must remain independent of credential files.
+### PostgreSQL migrations and smoke
+
+After provisioning (reuse existing roles/volume; do not bootstrap again):
+
+```sh
+npm run db:generate
+# Inspect any generated migration.sql and snapshot.json before applying.
+npm run db:migrate
+npm run db:smoke
+```
+
+The installed generator writes `drizzle/<tag>/migration.sql` and `snapshot.json`
+for a changed schema, with no generated journal; no-change generation writes no
+new pair. The committed scaffold migration creates only `scaffold_checks` with
+an integer generated-always identity primary key and non-null text label.
+Migrate applies pending migrations; repeating it with no changes is safe. No
+migration runs on application import or getter use.
+
+Smoke uses two independently owned app-role pools: insert a fictional row,
+read the committed row through the second pool, then delete only its returned
+primary key. Cleanup is attempted even after read/assertion failure; both pools
+are awaited even if deletion or either close fails. Success prints
+`PostgreSQL write/read/delete passed`; failures print only
+`PostgreSQL smoke failed` and exit nonzero. This is not a reset/integration harness.
+
+Config and smoke explicitly load **root `.env.local`**, quietly and without
+overriding inherited process env (even an inherited empty/invalid value wins).
+They require app-role `DATABASE_URL`; no implicit `.env` or `DB_FILE_NAME`
+fallback exists. The factory/entry never load env files themselves. Next uses
+its built-in server env loader: inherited env takes precedence over env files;
+keep database variables private, never `NEXT_PUBLIC_`.
+Future #59 must explicitly load `TEST_DATABASE_URL`, never fall back to
+`DATABASE_URL`. Next's test-mode env loader skips `.env.local`; units load no
+credential file. Schema/session isolation inside `slotwell_test` must be
+separately validated, never selected with URL query/search_path overrides.
+
+Build requires no database connection. Without stopping shared PostgreSQL,
+verify using an inherited deliberately unusable credential:
+
+```sh
+DATABASE_URL=postgresql://slotwell_app:unusable@127.0.0.1:55432/slotwell_dev npm run build
+```
 
 ### Authenticated SQL, isolation, extension and persistence check
 
