@@ -3,12 +3,196 @@
 ## Development
 
 ```sh
-npm install
+npm ci --ignore-scripts
+# Review any required dependency lifecycle scripts before narrowly approving them.
+# Do not enable all install scripts or run an unrestricted rebuild.
 npm run dev
 ```
 
 - Frontend: http://localhost:3000
 - API health: http://localhost:3000/api/health → `{"status":"ok"}`
+
+## Local PostgreSQL (M1 tooling only)
+
+Requires Docker/Compose and Node >=22.13 for the pinned Hono CLI. This provisions
+only a local database, not a cloud deployment or a runtime migration: existing
+SQLite dependencies, `DB_FILE_NAME=local.db`, callers and Drizzle commands remain
+unchanged. Do not run existing SQLite migration/smoke commands against PostgreSQL.
+`pg`/`@types/pg` are pinned to 8.23.1; official `@hono/cli` is the explicitly
+approved 1.0.0-rc.8, not a floating `next` tag. Install with scripts disabled;
+esbuild has a postinstall, so if its binary is unavailable, stop for scoped review
+rather than enabling scripts globally.
+
+### Credentials and start
+
+Inspect/preserve any existing ignored `.env.local` first. Never overwrite it or
+unrelated secrets. For a fresh checkout the following **refuses an existing file**
+and generates independent hex passwords without printing them:
+
+```sh
+node --input-type=module <<'JS'
+import { writeFileSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+const [admin, app, test] = Array.from({ length: 3 }, () => randomBytes(32).toString('hex'));
+writeFileSync('.env.local', [
+  `POSTGRES_PASSWORD=${admin}`,
+  `APP_DB_PASSWORD=${app}`,
+  `TEST_DB_PASSWORD=${test}`,
+  `DATABASE_URL=postgresql://slotwell_app:${app}@127.0.0.1:55432/slotwell_dev`,
+  `TEST_DATABASE_URL=postgresql://slotwell_test:${test}@127.0.0.1:55432/slotwell_test`,
+  '',
+].join('\n'), { flag: 'wx', mode: 0o600 });
+JS
+
+docker compose --env-file .env.local config --quiet
+docker compose --env-file .env.local up -d --wait postgres
+```
+
+The project is `slotwell-m1`, bound only to `127.0.0.1:55432`; leave unrelated
+PostgreSQL on 5432 alone. Do not print expanded Compose config, inspect container
+environments, or put passwords/URLs in command arguments. The three passwords
+are required (no reusable defaults). Local Docker access can read container
+secrets: this is a trusted-workstation setup, not production hardening.
+
+The digest-pinned official PostgreSQL 18.6 Bookworm image mounts the named volume
+`slotwell-m1-pg18-data` at **`/var/lib/postgresql`** (18's default PGDATA is
+`/var/lib/postgresql/18/docker`, not the older image's data mount). Health checks
+prove readiness only, not password authentication or successful SQL writes.
+
+### One-time isolated role/database bootstrap
+
+On a freshly initialized project volume, run this once. The admin uses local
+container psql; subsequent verification uses TCP/SCRAM authentication. Preflight
+refuses existing target roles/databases. If anything fails, stop and inspect:
+**do not retry destructively, adopt existing objects, or drop/recreate them**.
+Database creation cannot be wrapped in a transaction; partial state needs review.
+Do not run competing bootstrap sessions.
+
+```sh
+docker compose --env-file .env.local exec -T postgres \
+  psql -X -v ON_ERROR_STOP=1 -U slotwell_admin -d postgres <<'SQL'
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_roles WHERE rolname IN ('slotwell_app', 'slotwell_test'))
+     OR EXISTS (SELECT FROM pg_database WHERE datname IN ('slotwell_dev', 'slotwell_test')) THEN
+    RAISE EXCEPTION 'Target roles/databases already exist; stop for inspection';
+  END IF;
+END $$;
+\getenv app_password APP_DB_PASSWORD
+\getenv test_password TEST_DB_PASSWORD
+SET password_encryption = 'scram-sha-256';
+CREATE ROLE slotwell_app LOGIN PASSWORD :'app_password'
+  NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+CREATE ROLE slotwell_test LOGIN PASSWORD :'test_password'
+  NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+CREATE DATABASE slotwell_dev OWNER slotwell_app;
+CREATE DATABASE slotwell_test OWNER slotwell_test;
+REVOKE ALL ON DATABASE slotwell_dev, slotwell_test FROM PUBLIC;
+REVOKE CONNECT ON DATABASE postgres, template1 FROM PUBLIC;
+GRANT CONNECT ON DATABASE slotwell_dev TO slotwell_app;
+GRANT CONNECT ON DATABASE slotwell_test TO slotwell_test;
+COMMENT ON DATABASE slotwell_dev IS 'slotwell-m1:development:slotwell_app';
+COMMENT ON DATABASE slotwell_test IS 'slotwell-m1:test:slotwell_test';
+SQL
+```
+
+These independent LOGIN roles have no memberships or cluster-management powers.
+Each owns only its matching database and cannot connect to the other or the
+maintenance databases. They are **local database-owner/migration credentials**,
+not production least-privilege runtime roles. Never use admin credentials in the
+application/tests. Pool wiring, URL guards and disposable test-worker/reset
+contracts belong to later tasks (#57/#59); do not run destructive tests against
+this shared development/test volume.
+
+### Authenticated SQL, isolation, extension and persistence check
+
+After installing the pinned dependencies, run the following with Node. It reads
+secrets from the ignored file, not CLI arguments. It creates the dedicated
+`task56_provisioning_proof` schema in each matching database, containing only fictional data, and
+retains it for restart verification. No existing tables are changed or removed.
+A repeat in the same checkout intentionally refuses existing proof schemas.
+
+```sh
+node --input-type=module <<'JS'
+import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+import dotenv from 'dotenv';
+import pg from 'pg';
+const env = dotenv.parse(readFileSync('.env.local'));
+const proof = 'task56_provisioning_proof';
+for (const [key, role, other] of [
+  ['DATABASE_URL', 'slotwell_app', 'slotwell_test'],
+  ['TEST_DATABASE_URL', 'slotwell_test', 'slotwell_dev'],
+]) {
+  const client = new pg.Client({ connectionString: env[key], connectionTimeoutMillis: 5000 });
+  await client.connect();
+  try {
+    assert.equal((await client.query('SELECT current_user AS role')).rows[0].role, role);
+    await client.query('CREATE EXTENSION IF NOT EXISTS btree_gist');
+    assert.equal((await client.query("SELECT extname FROM pg_extension WHERE extname = 'btree_gist'")).rowCount, 1);
+    await client.query(`CREATE SCHEMA ${proof}`);
+    await client.query(`CREATE TABLE ${proof}.persistence (value text NOT NULL)`);
+    await client.query(`INSERT INTO ${proof}.persistence VALUES ($1)`, ['fictional-task56-proof']);
+    assert.equal((await client.query(`SELECT value FROM ${proof}.persistence`)).rows[0].value, 'fictional-task56-proof');
+  } finally { await client.end(); }
+  for (const database of [other, 'postgres', 'template1']) {
+    const url = new URL(env[key]);
+    url.pathname = '/' + database;
+    const denied = new pg.Client({ connectionString: url.toString(), connectionTimeoutMillis: 5000 });
+    try { await assert.rejects(denied.connect(), { code: '42501' }); }
+    finally { await denied.end(); }
+  }
+}
+console.log('Authenticated writes, btree_gist and cross/maintenance isolation passed');
+JS
+
+docker compose --env-file .env.local restart postgres
+docker compose --env-file .env.local up -d --wait postgres
+
+node --input-type=module <<'JS'
+import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+import dotenv from 'dotenv';
+import pg from 'pg';
+const env = dotenv.parse(readFileSync('.env.local'));
+const proof = 'task56_provisioning_proof';
+for (const key of ['DATABASE_URL', 'TEST_DATABASE_URL']) {
+  const client = new pg.Client({ connectionString: env[key], connectionTimeoutMillis: 5000 });
+  await client.connect();
+  try {
+    assert.equal((await client.query(`SELECT value FROM ${proof}.persistence`)).rows[0].value, 'fictional-task56-proof');
+  } finally { await client.end(); }
+}
+console.log('Both fictional proof values survived restart');
+JS
+
+npm_config_yes=false npm_config_offline=true npx hono --help
+```
+
+### Safe lifecycle and reset boundary
+
+All commands use the same project and credential file:
+
+```sh
+docker compose --env-file .env.local stop postgres
+docker compose --env-file .env.local start postgres
+docker compose --env-file .env.local restart postgres
+# Remove containers/network, KEEP named volume and data:
+docker compose --env-file .env.local down
+```
+
+Restart policy is `no`; start deliberately after a machine/Docker restart. Keep
+`.env.local` with the volume: changing its passwords does not rotate stored role
+passwords on an initialized volume. Never swap PostgreSQL major versions against
+existing data; image digest/security updates require deliberate review.
+
+**No routine reset or automatic deletion is provided.** Do not use `down -v`,
+volume prune, or remove the shared volume for test cleanup. Reset requires
+separate explicit approval, exact project/volume confirmation, inspection of
+volume labels (`dev.slotwell.project=slotwell-m1`,
+`dev.slotwell.purpose=local-development-and-test-postgresql18`) and matching
+database ownership comments, plus a backup and data-loss acknowledgment.
+Mismatched/missing ownership evidence means stop, not broaden the target.
 
 ## Booking demo
 
