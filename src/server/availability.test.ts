@@ -80,6 +80,39 @@ function input(overrides: InputOverrides = {}): AvailabilityInput {
   };
 }
 
+test("bounded dates restrict work without changing lead time or horizon", () => {
+  const base = input({ business: { horizonDays: 3 } });
+  const all = computeAvailability(base);
+  const dateRange = { from: "2026-06-02", to: "2026-06-03" };
+  assert.deepEqual(
+    computeAvailability({ ...base, dateRange }),
+    all.filter(
+      (slot) => slot.date >= dateRange.from && slot.date <= dateRange.to,
+    ),
+  );
+  assert.deepEqual(
+    computeAvailability({
+      ...base,
+      dateRange: { from: "2026-05-30", to: "2026-06-05" },
+    }),
+    all,
+  );
+  for (const date of ["2026-05-31", "2026-06-05"]) {
+    assert.deepEqual(
+      computeAvailability({ ...base, dateRange: { from: date, to: date } }),
+      [],
+    );
+  }
+  const late = input({ now: Date.parse("2026-06-01T16:00:00+03:00") });
+  assert.deepEqual(
+    computeAvailability({
+      ...late,
+      dateRange: { from: "2026-06-01", to: "2026-06-01" },
+    }),
+    [],
+  );
+});
+
 const MINUTE_MS = 60_000;
 
 test("single service: 15-minute grid within hours, whole interval fits", () => {

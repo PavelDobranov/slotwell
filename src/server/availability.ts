@@ -87,6 +87,8 @@ export type AvailabilityInput = {
   readonly staff: readonly AvailabilityStaff[];
   /** Selected services, in booking order; all must be qualified for a staff member. */
   readonly services: readonly SelectedService[];
+  /** Optional inclusive business-local query bounds; does not alter booking limits. */
+  readonly dateRange?: { readonly from: string; readonly to: string };
 };
 
 /** An offered start time and the qualified staff free to take it. */
@@ -246,11 +248,23 @@ export function computeAvailability(input: AvailabilityInput): AvailableSlot[] {
 
   const earliestStart = now + business.leadTimeMinutes * MINUTE_MS;
   const today = businessDate(now, timeZone);
-  const lastDate = addCalendarDays(today, business.horizonDays);
+  const horizonDate = addCalendarDays(today, business.horizonDays);
+  const firstDate =
+    input.dateRange && input.dateRange.from > today
+      ? input.dateRange.from
+      : today;
+  const lastDate =
+    input.dateRange && input.dateRange.to < horizonDate
+      ? input.dateRange.to
+      : horizonDate;
 
   const slots: AvailableSlot[] = [];
 
-  for (let date = today; date <= lastDate; date = addCalendarDays(date, 1)) {
+  for (
+    let date = firstDate;
+    date <= lastDate;
+    date = addCalendarDays(date, 1)
+  ) {
     const weekday = businessWeekday(date);
     const businessWindows = windowsForDate(
       business.weekly,
