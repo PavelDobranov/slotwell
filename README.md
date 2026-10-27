@@ -101,8 +101,8 @@ Each owns only its matching database and cannot connect to the other or the
 maintenance databases. They are **local database-owner/migration credentials**,
 not production least-privilege runtime roles. Never use admin credentials in the
 application/tests. The pool factory, lazy application entry and URL guards are
-available below; disposable test-worker/reset contracts remain owned by #59.
-Do not run destructive tests against this shared development/test volume.
+available below. The disposable harness owns only fresh private schemas inside
+`slotwell_test`, never shared development/test objects or the volume.
 
 ### PostgreSQL factory and application lifecycle
 
@@ -188,10 +188,10 @@ They require app-role `DATABASE_URL`; no implicit `.env` or `DB_FILE_NAME`
 fallback exists. The factory/entry never load env files themselves. Next uses
 its built-in server env loader: inherited env takes precedence over env files;
 keep database variables private, never `NEXT_PUBLIC_`.
-Future #59 must explicitly load `TEST_DATABASE_URL`, never fall back to
+The test harness explicitly loads `TEST_DATABASE_URL`, never falling back to
 `DATABASE_URL`. Next's test-mode env loader skips `.env.local`; units load no
-credential file. Schema/session isolation inside `slotwell_test` must be
-separately validated, never selected with URL query/search_path overrides.
+credential file. Schema/session isolation is internal to the harness, never
+selected with URL query/search_path overrides.
 
 Build requires no database connection. Without stopping shared PostgreSQL,
 verify using an inherited deliberately unusable credential:
@@ -199,6 +199,62 @@ verify using an inherited deliberately unusable credential:
 ```sh
 DATABASE_URL=postgresql://slotwell_app:unusable@127.0.0.1:55432/slotwell_dev npm run build
 ```
+
+### Disposable PostgreSQL integration tests
+
+```sh
+npm run test:db
+# Database-independent, no credential-file reads/network:
+env -u DATABASE_URL -u TEST_DATABASE_URL npm run test:unit
+```
+
+Node-only repository tests import `withTestDatabase` from `@/db/testing`, not the
+application singleton. Each call runs committed migrations before the callback:
+
+```ts
+await withTestDatabase({ now: 1800000000000 }, async ({ db, independentDb, migrate, now }) => {
+  // Two distinct checked-out pg sessions, each bound to this run's private schema.
+  // now is one fixed epoch-ms value (defaults to Date.now() captured once).
+  await migrate(); // Same installed migrator, idempotent; private ledger too.
+  // Return a value if desired; never retain either handle beyond this callback.
+});
+```
+
+Invocation quietly loads root `.env.local` without overriding inherited values;
+import does not read env or create connections. Only explicit `TEST_DATABASE_URL`
+is accepted: **slotwell_test / slotwell_test at 127.0.0.1:55432**, with the unchanged
+local URL validator (no options/query/fragment overrides). Both held sessions
+verify current database/user, matching database owner and pre-existing database
+comment `slotwell-m1:test:slotwell_test` before schema mutation. No admin,
+development, remote, provisioning or fallback authority is granted.
+
+The harness atomically creates a random `slotwell_test_<UUID hex>` schema and
+cryptographic ownership comment, retaining its exact name/OID/owner/nonce.
+Collisions are refused, never adopted. Session search paths contain only that
+private schema, not public; Drizzle wraps held clients, never an unrestricted
+pool. Logging is off and query parameters are excluded from Drizzle errors.
+The installed migrator uses this same schema for its ledger and the fixed
+committed `drizzle/` folder; no caller-selected schema/path/reset is accepted.
+The entire SQL set is inspected before execution, without rewriting SQL. The
+bounded supported form is unqualified `CREATE TABLE` with ordinary constraints,
+identity sequences and a small builtin/type allowlist. Schema qualification,
+secondary statements, procedural/session SQL, comments/escapes and unsupported
+calls/constructs fail closed. This is trusted repository test code, **not an
+arbitrary-SQL sandbox**: inspect every new generated migration (including #81)
+again; unsupported forms require a separate reviewed extension to the guard.
+
+Finally both sessions are rolled back, all held clients are released/destroyed,
+and every owned pool gets an awaited close attempt even after failures. The sole
+DROP authority is the freshly created schema after exact database and retained
+schema identity revalidation; mismatch means refusal, never a broader deletion.
+Parallel siblings, public, proof and unknown/crashed schemas are never swept or
+adopted. Unknown leftovers require separate reviewed cleanup, not a rerun/reset.
+Original callback failures are rethrown unchanged; secondary cleanup failures
+emit only `test_database_cleanup_failed`. Cleanup-only failures reject with
+`Test database cleanup failed`; setup/migration failures have fixed safe messages.
+Callback/query errors can still contain SQL/driver causes: never print or serialize
+them, parameters, credentials or PII. This command never repoints app-only
+`db:migrate`/`db:smoke`, changes shared data or manages the database volume.
 
 ### Authenticated SQL, isolation, extension and persistence check
 

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "biome check src",
     "test:unit": "tsx --test \"src/**/*.test.ts\"",
+    "test:db": "tsx --test \"src/**/*.db-test.ts\"",
     "test:e2e": "playwright test",
     "format": "biome format --write",
     "db:generate": "drizzle-kit generate",
