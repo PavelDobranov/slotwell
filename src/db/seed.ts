@@ -1,14 +1,26 @@
 import { isDeepStrictEqual } from "node:util";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import {
   businessHours,
   businessSettings,
+  scheduleExceptions,
   services,
   staff,
+  staffOccupancy,
+  staffSchedules,
   staffServices,
 } from "@/db/schema";
+// Pure, db-independent scheduling-time utilities (no cycle): the seed resolves
+// rolling dates/instants in the configured business zone, never the machine zone.
+import {
+  addCalendarDays,
+  assertIanaTimeZone,
+  businessDate,
+  resolveLocalStart,
+  toUtcIso,
+} from "@/server/booking-time";
 
 // Frozen fictional catalog, owned by the server. No dated frontend fixture import.
 const catalogServices: (typeof services.$inferInsert)[] = [
@@ -226,6 +238,191 @@ export async function seedCatalog(db: CatalogDatabase): Promise<void> {
       )
     ) {
       throw new Error("Catalog fixture drift");
+    }
+  });
+}
+
+// ---- Scheduling / occupancy seed (#63) ----
+
+// Business weekly hours by local weekday (Sunday = 0), mirroring the catalog
+// business_hours so every staff window stays within the business's open hours.
+const businessDayHours: Record<number, readonly [string, string]> = {
+  1: ["09:00:00", "18:00:00"],
+  2: ["09:00:00", "18:00:00"],
+  3: ["09:00:00", "18:00:00"],
+  4: ["09:00:00", "18:00:00"],
+  5: ["09:00:00", "18:00:00"],
+  6: ["10:00:00", "16:00:00"],
+};
+
+// Modest per-staff variation: each works a subset of the open days.
+const staffWorkingDays: Record<string, readonly number[]> = {
+  mimi: [1, 2, 4, 5, 6], // off Wednesday
+  pavel: [1, 2, 3, 4, 5], // off Saturday
+  emil: [2, 3, 4, 5, 6], // off Monday
+};
+
+const staffScheduleRows: (typeof staffSchedules.$inferInsert)[] =
+  Object.entries(staffWorkingDays).flatMap(([staffId, days]) =>
+    days.map((weekday) => ({
+      staffId,
+      weekday,
+      windowIndex: 0,
+      opensAt: businessDayHours[weekday][0],
+      closesAt: businessDayHours[weekday][1],
+    })),
+  );
+
+type SeedException = {
+  businessId: number | null;
+  staffId: string | null;
+  dayOffset: number;
+  windowIndex: number;
+  isClosed: boolean;
+  opensAt: string | null;
+  closesAt: string | null;
+};
+
+// Rolling dated exceptions, positioned relative to the injected anchor so the
+// demo keeps a live future holiday/override as calendar time advances.
+const rollingExceptions: readonly SeedException[] = [
+  // A business-wide holiday closure.
+  {
+    businessId: 1,
+    staffId: null,
+    dayOffset: 10,
+    windowIndex: 0,
+    isClosed: true,
+    opensAt: null,
+    closesAt: null,
+  },
+  // A staff member works a shorter day.
+  {
+    businessId: null,
+    staffId: "mimi",
+    dayOffset: 3,
+    windowIndex: 0,
+    isClosed: false,
+    opensAt: "12:00:00",
+    closesAt: "16:00:00",
+  },
+  // A staff member takes a day off.
+  {
+    businessId: null,
+    staffId: "emil",
+    dayOffset: 5,
+    windowIndex: 0,
+    isClosed: true,
+    opensAt: null,
+    closesAt: null,
+  },
+];
+
+type SeedBlock = {
+  staffId: string;
+  dayOffset: number;
+  startMinute: number;
+  endMinute: number;
+};
+
+// Rolling non-client blocks (e.g. a standing lunch, a personal errand).
+const rollingBlocks: readonly SeedBlock[] = [
+  { staffId: "emil", dayOffset: 1, startMinute: 13 * 60, endMinute: 14 * 60 },
+  {
+    staffId: "pavel",
+    dayOffset: 2,
+    startMinute: 15 * 60,
+    endMinute: 16 * 60 + 30,
+  },
+];
+
+/**
+ * Seed static per-staff weekly schedules and rolling dated exceptions/blocks,
+ * positioned by an injected business-local `anchor` (epoch ms). Non-destructive
+ * and idempotent: existing rows — including any booked appointments — are
+ * preserved, reinserting a schedule is a no-op, an existing exception is left
+ * untouched, and a block that would overlap existing occupancy is skipped. The
+ * catalog must already be seeded (the business time zone is read from it).
+ */
+export async function seedSchedules(
+  db: CatalogDatabase,
+  { anchor }: { anchor: number },
+): Promise<void> {
+  if (!Number.isSafeInteger(anchor)) throw new Error("Invalid seed anchor");
+  await db.transaction(async (tx) => {
+    // Stable application namespace/key, transaction-scoped on the SAME session.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(583104, 63)`);
+    const [settingsRow] = await tx
+      .select({ timeZone: businessSettings.timeZone })
+      .from(businessSettings)
+      .where(eq(businessSettings.id, 1));
+    if (!settingsRow) {
+      throw new Error("Catalog must be seeded before schedules");
+    }
+    const { timeZone } = settingsRow;
+    assertIanaTimeZone(timeZone);
+    const today = businessDate(anchor, timeZone);
+
+    // Static weekly schedules: the composite key makes reinsertion a no-op.
+    await tx
+      .insert(staffSchedules)
+      .values(staffScheduleRows)
+      .onConflictDoNothing();
+
+    // Rolling exceptions: insert only when the same subject/date/window is absent.
+    for (const exception of rollingExceptions) {
+      const onDate = addCalendarDays(today, exception.dayOffset);
+      const existing = await tx
+        .select({ id: scheduleExceptions.id })
+        .from(scheduleExceptions)
+        .where(
+          and(
+            exception.businessId === null
+              ? isNull(scheduleExceptions.businessId)
+              : eq(scheduleExceptions.businessId, exception.businessId),
+            exception.staffId === null
+              ? isNull(scheduleExceptions.staffId)
+              : eq(scheduleExceptions.staffId, exception.staffId),
+            eq(scheduleExceptions.onDate, onDate),
+            eq(scheduleExceptions.windowIndex, exception.windowIndex),
+          ),
+        )
+        .limit(1);
+      if (existing.length === 0) {
+        await tx.insert(scheduleExceptions).values({
+          businessId: exception.businessId,
+          staffId: exception.staffId,
+          onDate,
+          windowIndex: exception.windowIndex,
+          isClosed: exception.isClosed,
+          opensAt: exception.opensAt,
+          closesAt: exception.closesAt,
+        });
+      }
+    }
+
+    // Rolling blocks: skip DST-invalid local times, and skip any that would
+    // overlap existing occupancy so reseeds and real appointments are preserved.
+    for (const block of rollingBlocks) {
+      const onDate = addCalendarDays(today, block.dayOffset);
+      const start = resolveLocalStart(onDate, block.startMinute, timeZone);
+      const end = resolveLocalStart(onDate, block.endMinute, timeZone);
+      if (start.kind !== "ok" || end.kind !== "ok") continue;
+      const period = sql`tstzrange(${toUtcIso(start.instant)}::timestamptz, ${toUtcIso(
+        end.instant,
+      )}::timestamptz, '[)')`;
+      const overlapping = await tx
+        .select({ one: sql`1` })
+        .from(staffOccupancy)
+        .where(
+          sql`${staffOccupancy.staffId} = ${block.staffId} AND ${staffOccupancy.period} && ${period}`,
+        )
+        .limit(1);
+      if (overlapping.length === 0) {
+        await tx.execute(
+          sql`INSERT INTO staff_occupancy (staff_id, period, kind) VALUES (${block.staffId}, ${period}, 'block')`,
+        );
+      }
     }
   });
 }

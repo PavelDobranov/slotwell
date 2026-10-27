@@ -8,12 +8,20 @@ import { createDemoSalon } from "@/app/_lib/booking/fixtures";
 import {
   businessHours,
   businessSettings,
+  scheduleExceptions,
   services,
   staff,
+  staffSchedules,
   staffServices,
 } from "@/db/schema";
-import { seedCatalog, validateNamedTimeZone } from "@/db/seed";
+import { seedCatalog, seedSchedules, validateNamedTimeZone } from "@/db/seed";
 import { withTestDatabase } from "@/db/testing";
+import {
+  addCalendarDays,
+  businessDate,
+  resolveLocalStart,
+  toUtcIso,
+} from "@/server/booking-time";
 
 const demo = createDemoSalon(() => Date.UTC(2026, 9, 26, 12));
 const serviceIds = demo.services.map(({ id }) => id);
@@ -430,4 +438,211 @@ test("CLI awaits owned pool close after query failure; close failure is redacted
       `${idleError ? "database_pool_idle_error\n" : ""}Catalog seed failed\n`,
     );
   }
+});
+
+async function rows(db: NodePgDatabase, query: ReturnType<typeof sql>) {
+  return db.execute(query, "objects");
+}
+// Occupancy periods compared by epoch milliseconds of each half-open bound.
+async function occupancyRows(db: NodePgDatabase) {
+  return rows(
+    db,
+    sql`SELECT staff_id,
+      (EXTRACT(EPOCH FROM lower(period)) * 1000)::bigint AS lower_ms,
+      (EXTRACT(EPOCH FROM upper(period)) * 1000)::bigint AS upper_ms,
+      kind
+      FROM staff_occupancy ORDER BY staff_id, lower(period)`,
+  );
+}
+const scheduleAnchor = Date.UTC(2026, 10, 2, 9, 0); // 2026-11-02T09:00:00Z
+const scheduleZone = "Europe/Sofia";
+function expectedBlock(
+  today: string,
+  dayOffset: number,
+  startMin: number,
+  endMin: number,
+) {
+  const date = addCalendarDays(today, dayOffset);
+  const start = resolveLocalStart(date, startMin, scheduleZone);
+  const end = resolveLocalStart(date, endMin, scheduleZone);
+  assert.ok(start.kind === "ok" && end.kind === "ok");
+  return { lower: start.instant, upper: end.instant };
+}
+
+test("seedSchedules projects static weekly schedules and anchored rolling exceptions/blocks", async () => {
+  await withTestDatabase({}, async ({ db, migrate }) => {
+    await migrate();
+    await seedCatalog(db);
+    await seedSchedules(db, { anchor: scheduleAnchor });
+    const today = businessDate(scheduleAnchor, scheduleZone);
+
+    const schedules = await db
+      .select()
+      .from(staffSchedules)
+      .orderBy(staffSchedules.staffId, staffSchedules.weekday);
+    const expectedSchedules = Object.entries({
+      emil: [2, 3, 4, 5, 6],
+      mimi: [1, 2, 4, 5, 6],
+      pavel: [1, 2, 3, 4, 5],
+    }).flatMap(([staffId, days]) =>
+      days.map((weekday) => ({
+        staffId,
+        weekday,
+        windowIndex: 0,
+        opensAt: weekday === 6 ? "10:00:00" : "09:00:00",
+        closesAt: weekday === 6 ? "16:00:00" : "18:00:00",
+      })),
+    );
+    assert.deepEqual(schedules, expectedSchedules);
+
+    const exceptions = await db
+      .select()
+      .from(scheduleExceptions)
+      .orderBy(scheduleExceptions.onDate);
+    assert.deepEqual(
+      exceptions.map((e) => ({
+        businessId: e.businessId,
+        staffId: e.staffId,
+        onDate: e.onDate,
+        isClosed: e.isClosed,
+        opensAt: e.opensAt,
+        closesAt: e.closesAt,
+      })),
+      [
+        {
+          businessId: null,
+          staffId: "mimi",
+          onDate: addCalendarDays(today, 3),
+          isClosed: false,
+          opensAt: "12:00:00",
+          closesAt: "16:00:00",
+        },
+        {
+          businessId: null,
+          staffId: "emil",
+          onDate: addCalendarDays(today, 5),
+          isClosed: true,
+          opensAt: null,
+          closesAt: null,
+        },
+        {
+          businessId: 1,
+          staffId: null,
+          onDate: addCalendarDays(today, 10),
+          isClosed: true,
+          opensAt: null,
+          closesAt: null,
+        },
+      ],
+    );
+
+    const blocks = await occupancyRows(db);
+    const emil = expectedBlock(today, 1, 13 * 60, 14 * 60);
+    const pavel = expectedBlock(today, 2, 15 * 60, 16 * 60 + 30);
+    assert.deepEqual(
+      blocks.map((b) => ({
+        staffId: b.staff_id,
+        lower: Number(b.lower_ms),
+        upper: Number(b.upper_ms),
+        kind: b.kind,
+      })),
+      [
+        {
+          staffId: "emil",
+          lower: emil.lower,
+          upper: emil.upper,
+          kind: "block",
+        },
+        {
+          staffId: "pavel",
+          lower: pavel.lower,
+          upper: pavel.upper,
+          kind: "block",
+        },
+      ],
+    );
+  });
+});
+
+test("seedSchedules is idempotent: a second run with the same anchor is a physical no-op", async () => {
+  await withTestDatabase({}, async ({ db, migrate }) => {
+    await migrate();
+    await seedCatalog(db);
+    await seedSchedules(db, { anchor: scheduleAnchor });
+    const counts = async () => ({
+      schedules: (
+        await rows(db, sql`SELECT count(*)::int AS c FROM staff_schedules`)
+      )[0].c,
+      exceptions: (
+        await rows(db, sql`SELECT count(*)::int AS c FROM schedule_exceptions`)
+      )[0].c,
+      blocks: (
+        await rows(db, sql`SELECT count(*)::int AS c FROM staff_occupancy`)
+      )[0].c,
+    });
+    const before = await counts();
+    assert.deepEqual(before, { schedules: 15, exceptions: 3, blocks: 2 });
+    // A second identical run must not duplicate rows or trip the overlap guard.
+    await seedSchedules(db, { anchor: scheduleAnchor });
+    assert.deepEqual(await counts(), before);
+  });
+});
+
+test("seedSchedules preserves appointments and advances rolling fixtures without deleting", async () => {
+  await withTestDatabase({}, async ({ db, migrate }) => {
+    await migrate();
+    await seedCatalog(db);
+    await seedSchedules(db, { anchor: scheduleAnchor });
+    const laterAnchor = scheduleAnchor + 30 * 86_400_000;
+    const laterToday = businessDate(laterAnchor, scheduleZone);
+
+    // A real appointment that overlaps the later run's emil block.
+    const emilDate = addCalendarDays(laterToday, 1);
+    const apptStart = resolveLocalStart(emilDate, 13 * 60 + 30, scheduleZone);
+    const apptEnd = resolveLocalStart(emilDate, 14 * 60 + 30, scheduleZone);
+    assert.ok(apptStart.kind === "ok" && apptEnd.kind === "ok");
+    await db.execute(
+      sql`INSERT INTO staff_occupancy (staff_id, period, kind) VALUES ('emil', tstzrange(${toUtcIso(apptStart.instant)}::timestamptz, ${toUtcIso(apptEnd.instant)}::timestamptz, '[)'), 'appointment')`,
+    );
+
+    const beforeBlocks = (await occupancyRows(db)).filter(
+      (r) => r.kind === "block",
+    ).length;
+    await seedSchedules(db, { anchor: laterAnchor });
+
+    const all = await occupancyRows(db);
+    // The appointment survives the reseed untouched.
+    assert.equal(all.filter((r) => r.kind === "appointment").length, 1);
+    // The later pavel block is added; the later emil block is skipped (overlaps
+    // the appointment); earlier blocks remain (non-destructive).
+    const blocks = all.filter((r) => r.kind === "block");
+    assert.equal(blocks.length, beforeBlocks + 1);
+    const emilBlockStart = resolveLocalStart(emilDate, 13 * 60, scheduleZone);
+    assert.ok(emilBlockStart.kind === "ok");
+    assert.equal(
+      blocks.find(
+        (b) =>
+          b.staff_id === "emil" &&
+          Number(b.lower_ms) === emilBlockStart.instant,
+      ),
+      undefined,
+    );
+  });
+});
+
+test("seedSchedules requires a seeded catalog and a valid anchor", async () => {
+  await withTestDatabase({}, async ({ db, migrate }) => {
+    await migrate();
+    await assert.rejects(
+      seedSchedules(db, { anchor: scheduleAnchor }),
+      /Catalog must be seeded before schedules/,
+    );
+    await seedCatalog(db);
+    for (const anchor of [1.5, Number.NaN, 2 ** 60]) {
+      await assert.rejects(
+        seedSchedules(db, { anchor }),
+        /Invalid seed anchor/,
+      );
+    }
+  });
 });

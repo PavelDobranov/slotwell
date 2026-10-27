@@ -5,7 +5,7 @@ import {
   openPostgresDatabase,
   validateApplicationDatabaseUrl,
 } from "@/db/open";
-import { seedCatalog } from "@/db/seed";
+import { seedCatalog, seedSchedules } from "@/db/seed";
 
 async function main() {
   config({
@@ -19,10 +19,13 @@ async function main() {
   const database = openPostgresDatabase(url);
   try {
     await seedCatalog(database.db);
+    // Inject the real clock as the business-local calendar anchor for rolling
+    // schedules/exceptions/blocks; the seed resolves it in the configured zone.
+    await seedSchedules(database.db, { anchor: Date.now() });
   } finally {
     await database.close();
   }
-  console.log("Catalog seed passed");
+  console.log("Seed passed");
 }
 
 void main().catch(() => {
