@@ -96,8 +96,13 @@ test("committed catalog migrations repeat privately; sibling data survives and o
         tables.map((row) => row.table_name),
         [
           "__drizzle_migrations",
+          "appointment_access",
+          "appointment_services",
+          "appointments",
+          "booking_operations",
           "business_hours",
           "business_settings",
+          "clients",
           "scaffold_checks",
           "schedule_exceptions",
           "services",
@@ -122,8 +127,8 @@ test("committed catalog migrations repeat privately; sibling data survives and o
         db,
         sql`SELECT * FROM __drizzle_migrations ORDER BY id`,
       );
-      // scaffold + catalog + scheduling/occupancy (#63) migrations.
-      assert.equal(ledger.length, 3);
+      // Scaffold, catalog, scheduling/occupancy and booking snapshots.
+      assert.equal(ledger.length, 4);
       await insertCatalog(db);
       await migrate();
       assert.deepEqual(
@@ -437,7 +442,7 @@ test("named catalog checks reject invalid configuration, blank text, negative va
   });
 });
 
-test("singleton/composite keys, orphan refusal and all seven RESTRICT FKs protect parents on delete and update", async () => {
+test("singleton/composite keys, orphan refusal and RESTRICT FKs protect parents on delete and update", async () => {
   await withTestDatabase({}, async ({ db }) => {
     await insertCatalog(db);
     await assert.rejects(
@@ -504,8 +509,8 @@ test("singleton/composite keys, orphan refusal and all seven RESTRICT FKs protec
       sql`SELECT c.confdeltype, c.confupdtype
       FROM pg_catalog.pg_constraint c WHERE c.connamespace = pg_catalog.to_regnamespace(current_schema()) AND c.contype = 'f'`,
     );
-    // Three catalog FKs plus the four scheduling/occupancy FKs (#63), all RESTRICT.
-    assert.equal(fks.length, 7);
+    // Catalog (3), scheduling (4), and booking (7), all RESTRICT.
+    assert.equal(fks.length, 14);
     assert.ok(
       fks.every((fk) => fk.confdeltype === "r" && fk.confupdtype === "r"),
     );

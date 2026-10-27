@@ -599,10 +599,35 @@ test("seedSchedules preserves appointments and advances rolling fixtures without
     // A real appointment that overlaps the later run's emil block.
     const emilDate = addCalendarDays(laterToday, 1);
     const apptStart = resolveLocalStart(emilDate, 13 * 60 + 30, scheduleZone);
-    const apptEnd = resolveLocalStart(emilDate, 14 * 60 + 30, scheduleZone);
+    // massage_relax: 75 service minutes + 15 cleanup minutes.
+    const apptEnd = resolveLocalStart(emilDate, 15 * 60, scheduleZone);
     assert.ok(apptStart.kind === "ok" && apptEnd.kind === "ok");
+    const clientId = "00000000-0000-4000-8000-000000000087";
+    const appointmentId = "00000000-0000-4000-8000-000000000088";
+    const serviceEnd = toUtcIso(apptStart.instant + 75 * 60_000);
     await db.execute(
-      sql`INSERT INTO staff_occupancy (staff_id, period, kind) VALUES ('emil', tstzrange(${toUtcIso(apptStart.instant)}::timestamptz, ${toUtcIso(apptEnd.instant)}::timestamptz, '[)'), 'appointment')`,
+      sql`INSERT INTO clients VALUES (${clientId}, '+359888123456')`,
+    );
+    await db.execute(sql`INSERT INTO appointments
+      (id, client_id, staff_id, contact_name, contact_phone, contact_email, staff_name,
+       business_address, booking_time_zone, starts_at, service_ends_at, occupied_ends_at, created_at, confirmation_expires_at)
+      SELECT ${appointmentId}, ${clientId}, s.id, 'Fictional guest', '+359888123456', 'guest@example.test', s.name,
+        b.address, b.time_zone, ${toUtcIso(apptStart.instant)}, ${serviceEnd}, ${toUtcIso(apptEnd.instant)},
+        ${toUtcIso(scheduleAnchor)}, ${serviceEnd}::timestamptz + INTERVAL '168 hours'
+      FROM staff s CROSS JOIN business_settings b WHERE s.id = 'emil'`);
+    await db.execute(sql`INSERT INTO appointment_services
+      (appointment_id, position, service_id, name, price_cents, currency, duration_minutes, cleanup_minutes)
+      SELECT ${appointmentId}, 0, id, name, price_cents, currency, duration_minutes, cleanup_minutes FROM services WHERE id = 'massage_relax'`);
+    await db.execute(
+      sql`INSERT INTO staff_occupancy (staff_id, period, kind, appointment_id) VALUES ('emil', tstzrange(${toUtcIso(apptStart.instant)}::timestamptz, ${toUtcIso(apptEnd.instant)}::timestamptz, '[)'), 'appointment', ${appointmentId})`,
+    );
+    const agreement = await rows(
+      db,
+      sql`SELECT * FROM appointments WHERE id = ${appointmentId}`,
+    );
+    const bookedServices = await rows(
+      db,
+      sql`SELECT * FROM appointment_services WHERE appointment_id = ${appointmentId}`,
     );
 
     const beforeBlocks = (await occupancyRows(db)).filter(
@@ -611,8 +636,22 @@ test("seedSchedules preserves appointments and advances rolling fixtures without
     await seedSchedules(db, { anchor: laterAnchor });
 
     const all = await occupancyRows(db);
-    // The appointment survives the reseed untouched.
+    // The appointment and its immutable agreement survive the reseed untouched.
     assert.equal(all.filter((r) => r.kind === "appointment").length, 1);
+    assert.deepEqual(
+      await rows(
+        db,
+        sql`SELECT * FROM appointments WHERE id = ${appointmentId}`,
+      ),
+      agreement,
+    );
+    assert.deepEqual(
+      await rows(
+        db,
+        sql`SELECT * FROM appointment_services WHERE appointment_id = ${appointmentId}`,
+      ),
+      bookedServices,
+    );
     // The later pavel block is added; the later emil block is skipped (overlaps
     // the appointment); earlier blocks remain (non-destructive).
     const blocks = all.filter((r) => r.kind === "block");

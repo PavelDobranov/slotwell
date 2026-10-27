@@ -4,8 +4,11 @@ import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import {
+  appointmentServices,
+  appointments,
   businessHours,
   businessSettings,
+  clients,
   scheduleExceptions,
   services,
   staff,
@@ -137,9 +140,47 @@ test("persisted timing and occupancy determine public slots with touching bounda
       before.days[0].slots.at(-1)?.start,
       "2026-06-01T02:00:00.000Z",
     );
+    const clientId = "00000000-0000-4000-8000-000000000087";
+    const appointmentId = "00000000-0000-4000-8000-000000000088";
+    await db
+      .insert(clients)
+      .values({ id: clientId, normalizedPhone: "+359888123456" });
+    const [person] = await db.select().from(staff).where(eq(staff.id, "mimi"));
+    const [business] = await db.select().from(businessSettings);
+    const [service] = await db
+      .select()
+      .from(services)
+      .where(eq(services.id, "cut_w"));
+    await db.insert(appointments).values({
+      id: appointmentId,
+      clientId,
+      staffId: "mimi",
+      contactName: "Fictional guest",
+      contactPhone: "+359888123456",
+      contactEmail: "guest@example.test",
+      staffName: person.name,
+      businessAddress: business.address,
+      bookingTimeZone: business.timeZone,
+      startsAt: "2026-06-01T01:00:00Z",
+      serviceEndsAt: "2026-06-01T01:45:00Z",
+      occupiedEndsAt: "2026-06-01T02:00:00Z",
+      createdAt: new Date(NOW).toISOString(),
+      confirmationExpiresAt: "2026-06-08T01:45:00Z",
+    });
+    await db.insert(appointmentServices).values({
+      appointmentId,
+      position: 0,
+      serviceId: service.id,
+      name: service.name,
+      priceCents: service.priceCents,
+      currency: service.currency,
+      durationMinutes: service.durationMinutes,
+      cleanupMinutes: service.cleanupMinutes,
+    });
     await db.insert(staffOccupancy).values({
       staffId: "mimi",
       kind: "appointment",
+      appointmentId,
       period: "[2026-06-01T01:00:00Z,2026-06-01T02:00:00Z)",
     });
     assert.deepEqual(
