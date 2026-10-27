@@ -1,6 +1,6 @@
 # Slotwell — product brief
 
-**Slotwell** is a scheduling web app for a **single business**. Clients book appointments
+**Slotwell** is a scheduling web app for a **single business at one location**. Clients book appointments
 through a self-service wizard; the business manages the calendar, services, and schedules
 through an admin area. This document is for validating scope with the client before build.
 
@@ -19,8 +19,10 @@ user accounts or login.
   login account. Has **working hours**, **exceptions**, **service competencies**
   (which catalog services they handle), and **appointments**, managed through the admin
   area. Separate staff access and owner/staff permissions are deferred.
-- **Client** — books via the wizard as a guest. Identified uniquely by **phone number**;
-  provides name, phone, and **email** (all required).
+- **Client** — books via the wizard as a guest and has a stable internal client ID.
+  Provides name, phone, and **email** (all required). A normalized international phone
+  number matches a possible returning client; it does not prove identity or ownership.
+  Use one name field without requiring a fixed number of name parts.
 
 ## 2. Core concepts
 
@@ -39,12 +41,13 @@ whichever they care about first — a specialist or a time.
 
 1. **Service(s)** — pick one or more.
 2. **Choose your route:**
-   - **Path A — staff-first:** pick a specific staff member (or **"any available"**).
+   - **Path A — staff-first:** pick a specific staff member.
    - **Path B — time-first:** pick a date & time.
 3. **Complete the pair (conditional on step 2):**
    - After Path A → choose a date & time from that staff member's open **slots**.
-   - After Path B → choose from the qualified staff free at that time (or **"any available"**).
+   - After Path B → explicitly choose a specific qualified staff member free at that time.
 4. **Your details** — name, phone, and email (all required), optional notes.
+   Limits: name 100 characters, phone 32 before normalization, email 254, notes 1,000.
 5. **Confirm** — appointment is **auto-confirmed** immediately.
 
 Rules:
@@ -53,18 +56,25 @@ Rules:
   chosen staff member's working hours, that staff member handles **all** chosen
   services, and they are free for the full duration (+ buffers). The same rule applies
   in both paths — only the order of narrowing differs.
-- **"Any available"** assigns a concrete staff member at confirmation, load-balanced by
-  that day's booking count (ties → first eligible). Offered in both paths.
+- Clients explicitly choose a concrete staff member in both paths, even when only one
+  is eligible. **"Any available"** and automatic staff assignment are outside the MVP.
+- The business has one location. Show its address in the wizard; do not add a location
+  picker or a location-selection prerequisite.
 - **Booking horizon:** up to **60 days** ahead (configurable).
 - **Minimum lead time:** at least **1 hour** before start (configurable).
 - **Concurrency:** first to confirm wins; a client who loses the race is re-shown live
   availability. Slots are not held during the wizard.
-- All times are in the business's **single fixed time zone**.
+- Scheduling uses the business's **configured IANA time zone**, not the device's
+  time zone. Store appointment start/end instants as PostgreSQL `timestamptz` and
+  preserve the booking's IANA zone separately. Weekly hours and dated exceptions
+  remain local scheduling rules; display formatting is separate. M1 excludes
+  nonexistent or ambiguous local start times.
 
 ## 4. Client self-service after booking
 
-- Via a link (tied to their phone), a client can **cancel** or **reschedule** their own
-  appointment.
+- Via an unguessable, appointment-specific access link, a client can **cancel** or
+  **reschedule** that appointment. Entering name, phone, or email does not grant access
+  to existing bookings; a link does not grant access to the client's other appointments.
 - An optional client-side **cutoff** can forbid changes within N hours of the start
   (default: none in the MVP).
 
@@ -104,9 +114,10 @@ to their own records are deferred.
 
 ## 7. Notifications (email only)
 
-Sent to the client's required **email address**. Phone remains required for client
-identity and contact, but no SMS messages are sent; SMS notifications are out of scope
-for the MVP.
+Sent to the **email address supplied for the appointment**. Phone remains required
+for returning-client matching and contact, but no SMS messages are sent; SMS
+notifications are out of scope for the MVP. Format validation of email and phone
+is not verification of ownership.
 
 - **Confirmation** — at booking.
 - **Reminder** — one, configurable offset, **default 24h** before.
@@ -121,15 +132,20 @@ Staff invitation emails are deferred along with authentication.
 - Staff and services are **deactivated** (hidden from the wizard), never hard-deleted
   while referenced. Future appointments under a deactivated staff member are **flagged
   for the owner** to reassign or cancel.
-- On a known phone with a new name or email, the record is treated as the **same
-  client** and the stored name/email are overwritten (phone is identity; email is
-  contact only).
+- Match a normalized phone to an existing client internally, without revealing that
+  client's stored details. Store the submitted name, phone, and email on each new
+  appointment. Guest submissions do not overwrite an existing client's contact profile
+  or change contact details on earlier appointments. Do not automatically merge clients
+  by name or email. Phone matches may represent shared or reassigned numbers, not
+  necessarily the same person.
 
 ## 9. Explicitly out of scope for the MVP
 
 - Online payments / deposits (price is display-only).
 - Client accounts / login / self-service history.
 - Multi-tenant / multiple businesses.
+- Multiple locations and location selection before or within the wizard.
+- "Any available" staff selection and automatic staff assignment.
 - Multiple staff within one appointment.
 - Authentication: owner/staff accounts, login/logout, passwords, and staff invitations
   (deferred beyond the initial version).
@@ -139,4 +155,12 @@ Staff invitation emails are deferred along with authentication.
 - Per-client channel preference (email is the only notification channel).
 - Multiple reminders per appointment.
 - Slot-holding / reservation timeouts.
-- Email as a client **identifier** (email is contact only; phone is identity).
+- Email-based automatic client merging or access based solely on entered contact details.
+
+## Decision records
+
+- [ADR-001: Clients choose the staff member for their appointment](decisions/001-explicit-staff-selection.md).
+- [ADR-002: Book services at one business location](decisions/002-defer-multiple-locations.md).
+- [ADR-003: Use PostgreSQL from development through deployment](decisions/003-postgresql-from-development-to-deployment.md).
+- [ADR-004: Separate guest contact matching from appointment access](decisions/004-guest-contact-matching-and-access.md).
+- [ADR-005: Separate appointment instants from local scheduling rules](decisions/005-timezone-independent-appointment-storage.md).
