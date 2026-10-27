@@ -41,6 +41,14 @@ const addForeignKey = new RegExp(
   "i",
 );
 
+// #86: only the three reviewed additions to the existing occupancy table.
+// Match the original statement (including literals), never masked SQL.
+const bookingOccupancyAlterations = [
+  /^ALTER\s+TABLE\s+"staff_occupancy"\s+ADD\s+COLUMN\s+"appointment_id"\s+uuid;$/i,
+  /^ALTER\s+TABLE\s+"staff_occupancy"\s+ADD\s+CONSTRAINT\s+"staff_occupancy_appointment_id_unique"\s+UNIQUE\s*\(\s*"appointment_id"\s*\);$/i,
+  /^ALTER\s+TABLE\s+"staff_occupancy"\s+ADD\s+CONSTRAINT\s+"staff_occupancy_appointment_kind"\s+CHECK\s*\(\s*\(\s*"kind"\s*=\s*'appointment'\s*\)\s*=\s*\(\s*"appointment_id"\s+IS\s+NOT\s+NULL\s*\)\s*\);$/,
+];
+
 function inspectMigrations() {
   const migrations = readMigrationFiles({ migrationsFolder });
   if (!migrations.length) throw new Error("Unsupported test migration");
@@ -51,8 +59,12 @@ function inspectMigrations() {
 
 function inspectMigrationStatement(statement: string) {
   // Match the original FULL statement, before any inspection-only masking.
-  // A successful match cannot contain literals, comments or extra clauses.
-  if (addForeignKey.test(statement.trim())) return;
+  // A successful match cannot contain unreviewed literals, comments or clauses.
+  if (
+    addForeignKey.test(statement.trim()) ||
+    bookingOccupancyAlterations.some((form) => form.test(statement.trim()))
+  )
+    return;
   const code = statement.replace(/'(?:''|[^'\\])*'/g, "''").trim();
   const inspected = code
     .replace(

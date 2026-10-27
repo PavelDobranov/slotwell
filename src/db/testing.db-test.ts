@@ -43,6 +43,59 @@ async function absent(db: NodePgDatabase, name: string, pids: number[] = []) {
   }
 }
 
+test("booking occupancy alterations preserve blocks and enforce kind/unique associations privately", async () => {
+  await withTestDatabase({}, async ({ db }) => {
+    // Test PostgreSQL alteration semantics on an owned probe so this test
+    // remains valid after the actual booking migration lands. Only identifiers
+    // differ from the exact original-statement preflight unit fixtures.
+    await db.execute(sql`CREATE TABLE occupancy_alter_probe
+      (staff_id text NOT NULL, period tstzrange NOT NULL, kind text NOT NULL)`);
+    await db.execute(sql`INSERT INTO occupancy_alter_probe (staff_id, period, kind)
+      VALUES ('guard-probe', tstzrange('2030-01-01 09:00Z', '2030-01-01 10:00Z', '[)'), 'block')`);
+    await db.execute(
+      sql`ALTER TABLE "occupancy_alter_probe" ADD COLUMN "appointment_id" uuid`,
+    );
+    await db.execute(
+      sql`ALTER TABLE "occupancy_alter_probe" ADD CONSTRAINT "occupancy_alter_probe_appointment_id_unique" UNIQUE("appointment_id")`,
+    );
+    await db.execute(
+      sql`ALTER TABLE "occupancy_alter_probe" ADD CONSTRAINT "occupancy_alter_probe_appointment_kind" CHECK (("kind" = 'appointment') = ("appointment_id" IS NOT NULL))`,
+    );
+    assert.deepEqual(
+      await rows(
+        db,
+        sql`SELECT kind, appointment_id FROM occupancy_alter_probe`,
+      ),
+      [{ kind: "block", appointment_id: null }],
+    );
+    const violation = (code: string) => (error: unknown) => {
+      let cause = error;
+      while (cause instanceof Error) {
+        if ("code" in cause && cause.code === code) return true;
+        cause = cause.cause;
+      }
+      return false;
+    };
+    for (const [kind, appointment] of [
+      ["appointment", null],
+      ["block", "00000000-0000-4000-8000-000000000086"],
+    ]) {
+      await assert.rejects(
+        db.execute(sql`INSERT INTO occupancy_alter_probe (staff_id, period, kind, appointment_id)
+        VALUES ('guard-probe', tstzrange('2030-01-01 10:00Z', '2030-01-01 11:00Z', '[)'), ${kind}, ${appointment})`),
+        violation("23514"),
+      );
+    }
+    await db.execute(sql`INSERT INTO occupancy_alter_probe (staff_id, period, kind, appointment_id)
+      VALUES ('guard-probe', tstzrange('2030-01-01 10:00Z', '2030-01-01 11:00Z', '[)'), 'appointment', '00000000-0000-4000-8000-000000000086')`);
+    await assert.rejects(
+      db.execute(sql`INSERT INTO occupancy_alter_probe (staff_id, period, kind, appointment_id)
+      VALUES ('guard-probe', tstzrange('2030-01-01 11:00Z', '2030-01-01 12:00Z', '[)'), 'appointment', '00000000-0000-4000-8000-000000000086')`),
+      violation("23505"),
+    );
+  });
+});
+
 // Never create/drop shared sentinels: a second live harness is the sibling owner.
 // Snapshot shared identities without adopting or depending on developer data.
 test("real migrations twice, private ledger/search paths, independent held sessions, fixed clock and closed resources", async () => {

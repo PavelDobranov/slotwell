@@ -326,7 +326,16 @@ const occupancySeq = occupancy.replace(
   'GENERATED ALWAYS AS IDENTITY (sequence name "staff_occupancy_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),',
 );
 
+const bookingOccupancyAlterations = [
+  'ALTER TABLE "staff_occupancy" ADD COLUMN "appointment_id" uuid;',
+  'ALTER TABLE "staff_occupancy" ADD CONSTRAINT "staff_occupancy_appointment_id_unique" UNIQUE("appointment_id");',
+  'ALTER TABLE "staff_occupancy" ADD CONSTRAINT "staff_occupancy_appointment_kind" CHECK (("kind" = \'appointment\') = ("appointment_id" IS NOT NULL));',
+];
+
 for (const statement of [
+  ...bookingOccupancyAlterations,
+  bookingOccupancyAlterations.join("--> statement-breakpoint"),
+  ...bookingOccupancyAlterations.map((part) => part.replaceAll(" ", "\n")),
   occupancy,
   occupancySeq,
   generatorFk,
@@ -352,6 +361,23 @@ for (const statement of [
 }
 
 for (const statement of [
+  ...bookingOccupancyAlterations.flatMap((part) => [
+    part.replace('"staff_occupancy"', '"public"."staff_occupancy"'),
+    part.replace('"staff_occupancy"', '"other"'),
+    part.replaceAll('"appointment_id"', '"escape"'),
+    part.replace(" ADD ", " /* hidden */ ADD "),
+    `${part} DROP TABLE "staff";`,
+    `${part}--> statement-breakpoint ALTER TABLE "staff" DROP COLUMN "name";`,
+  ]),
+  bookingOccupancyAlterations[0].replace("uuid;", "text;"),
+  bookingOccupancyAlterations[0].replace("uuid;", "uuid DEFAULT evil();"),
+  bookingOccupancyAlterations[1].replace(
+    'UNIQUE("appointment_id")',
+    'UNIQUE("appointment_id", "staff_id")',
+  ),
+  bookingOccupancyAlterations[2].replace("IS NOT NULL", "IS NULL"),
+  bookingOccupancyAlterations[2].replace("'appointment'", "'block'"),
+  bookingOccupancyAlterations[2].replace("'appointment'", "'APPOINTMENT'"),
   ...["CASCADE", "NO ACTION", "SET NULL", "SET DEFAULT"].flatMap((action) => [
     generatorFk.replace("DELETE RESTRICT", `DELETE ${action}`),
     generatorFk.replace("UPDATE RESTRICT", `UPDATE ${action}`),
