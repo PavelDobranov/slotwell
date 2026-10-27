@@ -200,6 +200,78 @@ verify using an inherited deliberately unusable credential:
 DATABASE_URL=postgresql://slotwell_app:unusable@127.0.0.1:55432/slotwell_dev npm run build
 ```
 
+### Static fictional catalog seed
+
+```sh
+npm run db:migrate
+npm run db:seed
+# A second seed validates the complete canonical graph and makes no changes.
+npm run db:seed
+```
+
+This is deliberate development initialization, not a reset or a verification
+shortcut. Inspect the exact local database identity and existing catalog first;
+stop on fixture drift, never repair it by resetting or overwriting operator data.
+`db:seed` is app-only: root `.env.local` is loaded quietly, inherited values win
+(including empty/invalid ones), and validated `DATABASE_URL` must name
+**slotwell_app / slotwell_dev at 127.0.0.1:55432**. No test URL fallback,
+redirect/target/reset/date flags or implicit migrations are supported. It awaits
+its owned pool's close in finally. Success is `Catalog seed passed`; failures exit
+nonzero with `Catalog seed failed`. The unchanged factory may additionally emit
+its fixed `database_pool_idle_error` diagnostic on idle-pool errors. No credentials,
+SQL or driver causes are printed.
+
+`seedCatalog(db): Promise<void>` in `src/db/seed.ts` accepts an explicit
+transaction-capable script/test Drizzle handle. It owns no environment, connection,
+migration or process lifecycle. Static server constants have no runtime frontend
+fixture dependency and no rolling date/occupancy. A transaction-scoped advisory
+lock serializes seed calls. First insert requires the ENTIRE reserved graph absent;
+a complete exact graph is a read-only no-op. Partial data, mismatched fields,
+deactivation, missing/extra hour windows or missing/extra competencies for fixture
+staff fail atomically, without repair, overwrite or reactivation. Seed executes no
+UPDATE/DELETE/TRUNCATE/DROP. Operator drift repair requires separate review.
+
+Reserved graph: business id1 **Студио за красота Нюанс**, **ул. „Шипка“ 18, София**,
+**Europe/Sofia**, **EUR**, default phone country **BG**, **60-minute lead** and
+**60-calendar-day horizon**. Named IANA validation rejects numeric-offset-only
+identifiers; Sofia is seed data, not a global zone restriction. Mon–Fri09–18,
+Sat10–16, Sunday no windows (6 rows, index0); no overnight/24:00 policy implied.
+All 12 services are active, with zero-based order as below (prices in EUR cents):
+
+| ID | Name | Category | Price | Duration | Cleanup |
+|---|---|---|---:|---:|---:|
+| cut_w | Дамско подстригване | Коса | 2800 | 45 | 10 |
+| cut_m | Мъжко подстригване | Коса | 1800 | 30 | 10 |
+| massage_relax | Релаксиращ масаж | Масажи | 4200 | 75 | 15 |
+| blowdry | Изсушаване и оформяне | Коса | 1500 | 30 | 5 |
+| keratin | Кератинова терапия | Коса | NULL | 90 | 15 |
+| massage_deep | Дълбокотъканен масаж | Масажи | 4500 | 60 | 10 |
+| cut_child | Детско подстригване до 12 г. | Коса | 1400 | 30 | 10 |
+| beard | Оформяне на брада | Коса | 1200 | 20 | 10 |
+| scalp | Терапия за скалп и коса | Коса | 3200 | 45 | 10 |
+| massage_back | Масаж на гръб, врат и рамене | Масажи | 2800 | 30 | 10 |
+| massage_sport | Спортен масаж | Масажи | 4800 | 60 | 15 |
+| massage_aroma | Ароматерапевтичен масаж | Масажи | 5200 | 90 | 15 |
+
+Staff order: mimi=0 **Мими Ибрамова**, pavel=1 **Павел Добранов**, emil=2
+**Емил Стойков**, all active. Portrait paths are `/staff/mimi-ibramova.jpg`,
+`/staff/pavel-dobranov.jpg`, `/staff/emil-stoykov.jpg`. First two descriptions:
+**Подстригване, оформяне на коса и брада, грижа и терапии за коса**; Emil:
+**Релаксиращи и дълбокотъканни масажи за възстановяване и отмора**.
+Each hair specialist has all 7 hair competencies; Emil has all 5 massage
+competencies (19 pairs). Qualification requires active staff and EVERY selected
+service active and qualified, not any-service matching; mixed hair/massage has
+no jointly qualified staff. NULL keratin price is variable, never zero/free.
+
+Counts apply only to reserved rows, not whole tables: nonfixture services/staff
+and all links FROM nonfixture staff (including to fixture services) are unrelated
+and preserved. Any additional link FROM fixture staff, even to a nonfixture
+service, is drift. Unrelated scaffold/future history data is untouched. Permanent
+`seed.db-test.ts` tests use the disposable harness, including concurrent held
+sessions, exact projection, no-op, drift/rollback and synthetic booking-linked
+sentinel preservation. A synthetic sentinel does NOT prove actual appointment
+or snapshot protection; that remains later booking-schema acceptance.
+
 ### Disposable PostgreSQL integration tests
 
 ```sh
@@ -244,7 +316,7 @@ full-matched rc.5 PostgreSQL generator form:
 ALTER TABLE "business_hours" ADD CONSTRAINT "business_hours_business_id_business_settings_id_fk" FOREIGN KEY ("business_id") REFERENCES "business_settings"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 ```
 
-This is a source-shaped example, not an actual #81 migration. FK table/constraint/
+This illustrates the supported generator form (actual constraint names may differ). FK table/constraint/
 column identifiers must be quoted, safe and unqualified (column lists may be
 composite); both actions must be exactly `ON DELETE RESTRICT ON UPDATE RESTRICT`.
 The same RESTRICT reference clause is supported inline in CREATE. For minute
@@ -253,8 +325,8 @@ simple unqualified column, not arbitrary EXTRACT expressions/functions.
 General ALTER (including ADD COLUMN, DROP, RENAME, VALIDATE), other FK actions or
 extra ALTER clauses, schema qualification, secondary statements, procedural/
 session SQL, comments/escapes and unsupported calls/constructs fail closed.
-Only the scaffold migration is currently committed; fixtures do not prove future
-catalog SQL. This is trusted repository test code, **not an arbitrary-SQL sandbox**:
+The committed scaffold and catalog migrations use these reviewed forms; test
+fixtures alone do not authorize future migration SQL. This is trusted repository test code, **not an arbitrary-SQL sandbox**:
 the coordinator must inspect every actual new generated migration (including
 #81) before execution; unsupported forms require a separate reviewed extension
 to the guard.
