@@ -91,7 +91,18 @@ for (const note of [null, 12, {}, []]) {
   });
 }
 
-for (const phoneCountry of ["", "bg", "XX", "USA", "__proto__", "constructor", null, 12, [], {}]) {
+for (const phoneCountry of [
+  "",
+  "bg",
+  "XX",
+  "USA",
+  "__proto__",
+  "constructor",
+  null,
+  12,
+  [],
+  {},
+]) {
   test(`rejects unsupported country ${JSON.stringify(phoneCountry)} without silent fallback`, () => {
     const result = parseGuestContact({ ...valid, phoneCountry });
     assert.deepEqual(result, {

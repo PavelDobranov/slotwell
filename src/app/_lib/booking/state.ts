@@ -5,15 +5,11 @@ import {
 import { serviceTotals } from "@/app/_lib/booking/fixtures";
 import { addCalendarDays, businessDateAt } from "@/app/_lib/booking/time";
 import type { DemoSalon, OccupiedInterval } from "@/app/_lib/booking/types";
+import type { GuestContactDraft } from "@/lib/guest-contact";
 
 export type BookingPath = "staff-first" | "time-first";
 export type BookingStep = "services" | "staff" | "time" | "details";
-export type ContactDraft = {
-  name: string;
-  phone: string;
-  email: string;
-  note: string;
-};
+export type ContactDraft = GuestContactDraft;
 export type BookingState = {
   serviceIds: readonly string[];
   path: BookingPath;
