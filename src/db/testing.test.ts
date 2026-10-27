@@ -314,8 +314,21 @@ const minuteCheck =
   'CREATE TABLE "business_hours" ("opens_at" time(0) NOT NULL, "closes_at" time(0) NOT NULL, CONSTRAINT "opens_at_minute" CHECK (EXTRACT(SECOND FROM "opens_at") = 0), CONSTRAINT "closes_at_minute" CHECK (extract(second from "closes_at") = 0));';
 const inlineFk =
   'CREATE TABLE "staff_services" ("staff_id" text NOT NULL, "service_id" text NOT NULL, FOREIGN KEY ("staff_id") REFERENCES "staff"("id") ON DELETE RESTRICT ON UPDATE RESTRICT);';
+// Staff occupancy half-open overlap exclusion (#63): the only non-catalog form
+// the gate accepts. The scalar `=` / range `&&` exclusion and the canonical
+// half-open CHECK (pure range builtins) are the entire added surface; no
+// CREATE EXTENSION (btree_gist is preinstalled).
+const occupancy =
+  'CREATE TABLE "staff_occupancy" ("id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY, "staff_id" text NOT NULL, "period" tstzrange NOT NULL, "kind" text NOT NULL, CONSTRAINT "staff_occupancy_kind_valid" CHECK ("kind" = \'appointment\' OR "kind" = \'block\'), CONSTRAINT "staff_occupancy_period_canonical" CHECK (NOT isempty("period") AND lower_inc("period") AND NOT upper_inc("period") AND lower("period") IS NOT NULL AND upper("period") IS NOT NULL), CONSTRAINT "staff_occupancy_no_overlap" EXCLUDE USING gist ("staff_id" WITH =, "period" WITH &&));';
+// The generator emits the full identity sequence clause; both forms are accepted.
+const occupancySeq = occupancy.replace(
+  "GENERATED ALWAYS AS IDENTITY,",
+  'GENERATED ALWAYS AS IDENTITY (sequence name "staff_occupancy_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),',
+);
 
 for (const statement of [
+  occupancy,
+  occupancySeq,
   generatorFk,
   generatorFk
     .replaceAll('"business_id"', '"business_id","weekday"')
@@ -389,6 +402,23 @@ for (const statement of [
   // A valid first statement must not execute if a later one is unsupported.
   `${generatorFk}--> statement-breakpoint ALTER TABLE "staff" DROP COLUMN "name";`,
   `${minuteCheck}--> statement-breakpoint ${generatorFk.replace("DELETE RESTRICT", "DELETE CASCADE")}`,
+  // Occupancy exclusion near-misses: any deviation from the exact scalar `=` /
+  // range `&&` gist form, or any other access method/opclass/function, must be
+  // refused fail-closed; btree_gist is never installed through a migration.
+  occupancy.replace("USING gist", "USING btree"),
+  occupancy.replace('"period" WITH &&', '"period" WITH ='),
+  occupancy.replace('"staff_id" WITH =,', '"staff_id" WITH <>,'),
+  occupancy.replace('"period" WITH &&)', '"period" WITH &&, "kind" WITH =)'),
+  occupancy.replace("USING gist", "USING public.gist"),
+  occupancy.replace('isempty("period")', 'evil("period")'),
+  occupancy.replace('lower("period")', 'pg_catalog.lower("period")'),
+  occupancy.replace(
+    "\"kind\" = 'appointment' OR \"kind\" = 'block'",
+    "\"kind\" in ('appointment', 'block')",
+  ),
+  occupancy.replace("EXCLUDE USING gist", "EXCLUDE USING gist /* hidden */"),
+  `${occupancy} CREATE EXTENSION btree_gist;`,
+  "CREATE EXTENSION btree_gist;",
 ]) {
   test(`refuses unsupported catalog fixture before any resources: ${statement}`, async () => {
     migrationSql(statement);

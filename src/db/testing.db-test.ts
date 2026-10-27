@@ -287,6 +287,52 @@ test("real initial migration failure deletes only fresh schema and closes all cl
   });
 });
 
+// Verifies the environment the occupancy guard (#83) gates for: inside the
+// private schema, as the non-superuser test role, the preinstalled btree_gist
+// exclusion resolves and enforces a half-open [) overlap invariant. No
+// CREATE EXTENSION and no migration are needed here — this proves support, not
+// #63's table.
+test("private test schema and role enforce the half-open occupancy overlap exclusion", async () => {
+  await withTestDatabase({}, async ({ db }) => {
+    await db.execute(
+      sql`CREATE TABLE "occupancy_probe" (
+        "staff_id" text NOT NULL,
+        "period" tstzrange NOT NULL,
+        CONSTRAINT "occupancy_probe_no_overlap"
+          EXCLUDE USING gist ("staff_id" WITH =, "period" WITH &&)
+      )`,
+    );
+    const insert = (staff: string, from: string, to: string) =>
+      db.execute(
+        sql`INSERT INTO "occupancy_probe" VALUES (${staff}, tstzrange(${from}::timestamptz, ${to}::timestamptz, '[)'))`,
+      );
+    await insert("mimi", "2026-11-01 10:00+02", "2026-11-01 11:00+02");
+    // Boundary-touching adjacency is allowed (half-open ends before it opens).
+    await insert("mimi", "2026-11-01 11:00+02", "2026-11-01 12:00+02");
+    // A true overlap for the same staff member is rejected by the constraint.
+    // Drizzle wraps the driver error, so the exclusion violation is on `cause`.
+    await assert.rejects(
+      insert("mimi", "2026-11-01 11:30+02", "2026-11-01 12:30+02"),
+      (error) =>
+        error instanceof Error &&
+        /exclusion constraint/i.test(
+          String((error.cause as Error | undefined)?.message ?? error.message),
+        ),
+    );
+    // The same interval for a different staff member is independent.
+    await insert("pavel", "2026-11-01 11:30+02", "2026-11-01 12:30+02");
+    assert.equal(
+      (
+        await rows(
+          db,
+          sql`SELECT count(*)::int AS count FROM "occupancy_probe"`,
+        )
+      )[0].count,
+      3,
+    );
+  });
+});
+
 test("real partial CREATE/COMMENT setup failures roll back without acquiring DROP authority", async () => {
   await withTestDatabase({}, async ({ db: observer }) => {
     const before = await sharedObjects(observer);

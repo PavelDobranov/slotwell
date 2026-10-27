@@ -30,6 +30,9 @@ type TestContext = {
 // arbitrary-SQL sandbox. rc.5's PostgreSQL createForeignKeyConvertor emits the
 // separate ALTER form below; no other ALTER/seed SQL is supported. These are
 // source-shaped fixtures, not approval of #81's still-unreviewed actual DDL.
+// The only non-catalog construct accepted is the staff occupancy half-open
+// overlap exclusion (#63), recognized by its exact `EXCLUDE USING gist` shape
+// in `inspectMigrationStatement`; it adds no CREATE EXTENSION authority.
 const identifier = '"[a-z_][a-z0-9_]*"';
 const columns = `${identifier}(?:\\s*,\\s*${identifier})*`;
 const restrictReference = `REFERENCES\\s+${identifier}\\s*\\(\\s*${columns}\\s*\\)\\s+ON\\s+DELETE\\s+RESTRICT\\s+ON\\s+UPDATE\\s+RESTRICT`;
@@ -79,12 +82,23 @@ function inspectMigrationStatement(statement: string) {
     // Only the builtin SECOND extraction on a simple unqualified column;
     // other EXTRACT expressions still fail the function allowlist below.
     .replace(/\bEXTRACT\s*\(\s*SECOND\s+FROM\s+"[a-z_][a-z0-9_]*"\s*\)/gi, "0")
+    // Exactly the half-open staff occupancy exclusion: a scalar `=` column and
+    // a range `&&` column over simple unqualified identifiers. Any other access
+    // method, operator, column count or qualification leaves `gist(` in place
+    // and fails the function allowlist below; btree_gist is preinstalled, so no
+    // CREATE EXTENSION is ever accepted here.
+    .replace(
+      /\bEXCLUDE\s+USING\s+gist\s*\(\s*"[a-z_][a-z0-9_]*"\s+WITH\s+=\s*,\s*"[a-z_][a-z0-9_]*"\s+WITH\s+&&\s*\)/gi,
+      "CHECK ()",
+    )
     .replace(/^CREATE TABLE "[a-z_][a-z0-9_]*"\s*\(/i, "(")
     .replace(/\bREFERENCES\s+"[a-z_][a-z0-9_]*"\s*\(/gi, "REFERENCES (");
   if (/"\s*\(/.test(body)) throw new Error("Unsupported test migration");
   for (const call of body.matchAll(/\b([a-z_][a-z0-9_]*)\s*\(/gi)) {
+    // BTRIM/LENGTH and the pure range builtins below are side-effect-free; the
+    // range predicates let an occupancy CHECK pin a canonical half-open [) span.
     if (
-      !/^(?:IDENTITY|CHECK|KEY|UNIQUE|REFERENCES|CHAR|VARCHAR|NUMERIC|TIME|TIMESTAMP|BTRIM|LENGTH)$/i.test(
+      !/^(?:IDENTITY|CHECK|KEY|UNIQUE|REFERENCES|CHAR|VARCHAR|NUMERIC|TIME|TIMESTAMP|BTRIM|LENGTH|ISEMPTY|LOWER_INC|UPPER_INC|LOWER|UPPER)$/i.test(
         call[1],
       )
     ) {
