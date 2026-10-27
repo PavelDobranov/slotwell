@@ -306,6 +306,103 @@ test("preflights the whole migration set before executing any migration statemen
   assert.ok(!commands.some((text) => text.includes('CREATE TABLE "ok"')));
 });
 
+// Source-shaped fixtures, NOT generated #81 artifacts. rc.5's PostgreSQL
+// createForeignKeyConvertor$1 emits this separate statement (bin.cjs:90335).
+const generatorFk =
+  'ALTER TABLE "business_hours" ADD CONSTRAINT "business_hours_business_id_business_settings_id_fk" FOREIGN KEY ("business_id") REFERENCES "business_settings"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;';
+const minuteCheck =
+  'CREATE TABLE "business_hours" ("opens_at" time(0) NOT NULL, "closes_at" time(0) NOT NULL, CONSTRAINT "opens_at_minute" CHECK (EXTRACT(SECOND FROM "opens_at") = 0), CONSTRAINT "closes_at_minute" CHECK (extract(second from "closes_at") = 0));';
+const inlineFk =
+  'CREATE TABLE "staff_services" ("staff_id" text NOT NULL, "service_id" text NOT NULL, FOREIGN KEY ("staff_id") REFERENCES "staff"("id") ON DELETE RESTRICT ON UPDATE RESTRICT);';
+
+for (const statement of [
+  generatorFk,
+  generatorFk
+    .replaceAll('"business_id"', '"business_id","weekday"')
+    .replace('("id")', '("id","weekday")'),
+  inlineFk,
+  'CREATE TABLE "hours" ("business_id" smallint REFERENCES "business_settings"("id") ON DELETE RESTRICT ON UPDATE RESTRICT);',
+  minuteCheck,
+  `${minuteCheck}--> statement-breakpoint ${generatorFk}`,
+]) {
+  test(`accepts bounded catalog fixture unchanged: ${statement}`, async () => {
+    migrationSql(statement);
+    let called = false;
+    await withTestDatabase({}, async () => {
+      called = true;
+    });
+    assert.equal(called, true);
+    for (const part of statement.split("--> statement-breakpoint"))
+      assert.ok(commands.some((command) => command.trim() === part.trim()));
+    closed();
+  });
+}
+
+for (const statement of [
+  ...["CASCADE", "NO ACTION", "SET NULL", "SET DEFAULT"].flatMap((action) => [
+    generatorFk.replace("DELETE RESTRICT", `DELETE ${action}`),
+    generatorFk.replace("UPDATE RESTRICT", `UPDATE ${action}`),
+    inlineFk.replace("DELETE RESTRICT", `DELETE ${action}`),
+    inlineFk.replace("UPDATE RESTRICT", `UPDATE ${action}`),
+  ]),
+  generatorFk.replace('"business_hours"', '"public"."business_hours"'),
+  generatorFk.replace('"business_settings"', '"public"."business_settings"'),
+  generatorFk.replace('"business_id"', '"business_id"."other"'),
+  generatorFk.replace('"business_hours"', "business_hours"),
+  inlineFk.replace("RESTRICT);", "RESTRICT DEFERRABLE INITIALLY DEFERRED);"),
+  inlineFk.replace('FOREIGN KEY ("staff_id")', "FOREIGN KEY (staff_id)"),
+  inlineFk.replace("RESTRICT);", "RESTRICT NOT VALID);"),
+  inlineFk.replace("RESTRICT);", "RESTRICT MATCH FULL);"),
+  generatorFk.replace(" ON UPDATE RESTRICT", ""),
+  generatorFk.replace(" ON DELETE RESTRICT", ""),
+  generatorFk.replace(";", " DEFERRABLE;"),
+  generatorFk.replace(";", " NOT VALID;"),
+  generatorFk.replace(";", " MATCH FULL;"),
+  generatorFk.replace(";", ', ADD COLUMN "escape" text;'),
+  generatorFk.replace("FOREIGN KEY", "FOREIGN KEY /* hidden */"),
+  generatorFk.replace('"business_id"', '"business\\id"'),
+  generatorFk.replace('"business_id"', '"business""id"'),
+  `${generatorFk} DELETE FROM "staff";`,
+  `${generatorFk} UPDATE "staff" SET "name" = 'unsafe';`,
+  `${generatorFk} ALTER TABLE "staff" DROP COLUMN "name";`,
+  'ALTER TABLE "staff" ADD COLUMN "escape" text;',
+  'ALTER TABLE "staff" DROP CONSTRAINT "fk";',
+  'ALTER TABLE "staff" RENAME TO "escape";',
+  'ALTER TABLE "staff" VALIDATE CONSTRAINT "fk";',
+  'UPDATE "staff" SET "name" = \'unsafe\';',
+  'DELETE FROM "staff";',
+  minuteCheck.replace('SECOND FROM "opens_at"', "SECOND FROM public.opens_at"),
+  minuteCheck.replace('SECOND FROM "opens_at"', "SECOND FROM evil()"),
+  minuteCheck.replace("EXTRACT(", "pg_catalog.EXTRACT("),
+  minuteCheck.replace("EXTRACT(", '"EXTRACT"('),
+  minuteCheck.replace('SECOND FROM "opens_at"', 'EPOCH FROM "opens_at"'),
+  minuteCheck.replace(
+    'SECOND FROM "opens_at"',
+    'SECOND /* hidden */ FROM "opens_at"',
+  ),
+  minuteCheck.replace(
+    'SECOND FROM "opens_at"',
+    'SECOND FROM "opens_at" + evil()',
+  ),
+  `${minuteCheck} DELETE FROM "staff";`,
+  `${inlineFk} UPDATE "staff" SET "name" = 'unsafe';`,
+  // A valid first statement must not execute if a later one is unsupported.
+  `${generatorFk}--> statement-breakpoint ALTER TABLE "staff" DROP COLUMN "name";`,
+  `${minuteCheck}--> statement-breakpoint ${generatorFk.replace("DELETE RESTRICT", "DELETE CASCADE")}`,
+]) {
+  test(`refuses unsupported catalog fixture before any resources: ${statement}`, async () => {
+    migrationSql(statement);
+    await assert.rejects(
+      withTestDatabase({}, async () => assert.fail()),
+      {
+        message: "Test database setup failed",
+      },
+    );
+    assert.equal(pools.length, 0);
+    assert.deepEqual(commands, []);
+  });
+}
+
 for (const statement of [
   'CREATE TABLE "public"."escape" (id integer);',
   'CREATE TABLE "escape" (id integer REFERENCES "public"."shared"(id));',

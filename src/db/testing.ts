@@ -27,27 +27,56 @@ type TestContext = {
 };
 
 // This is a deliberately bounded review gate for trusted repository SQL, NOT an
-// arbitrary-SQL sandbox. The committed scaffold was reviewed with rc.5's actual
-// migrator: its table and identity sequence names are unqualified. New migration
-// constructs (including ALTER/seed SQL) need separate review before support here.
+// arbitrary-SQL sandbox. rc.5's PostgreSQL createForeignKeyConvertor emits the
+// separate ALTER form below; no other ALTER/seed SQL is supported. These are
+// source-shaped fixtures, not approval of #81's still-unreviewed actual DDL.
+const identifier = '"[a-z_][a-z0-9_]*"';
+const columns = `${identifier}(?:\\s*,\\s*${identifier})*`;
+const restrictReference = `REFERENCES\\s+${identifier}\\s*\\(\\s*${columns}\\s*\\)\\s+ON\\s+DELETE\\s+RESTRICT\\s+ON\\s+UPDATE\\s+RESTRICT`;
+const addForeignKey = new RegExp(
+  `^ALTER\\s+TABLE\\s+${identifier}\\s+ADD\\s+CONSTRAINT\\s+${identifier}\\s+FOREIGN\\s+KEY\\s*\\(\\s*${columns}\\s*\\)\\s+${restrictReference};$`,
+  "i",
+);
+
 function inspectMigrations() {
   const migrations = readMigrationFiles({ migrationsFolder });
   if (!migrations.length) throw new Error("Unsupported test migration");
   for (const migration of migrations) {
     for (const statement of migration.sql) {
+      // Match the original FULL statement, before any inspection-only masking.
+      // A successful match cannot contain literals, comments or extra clauses.
+      if (addForeignKey.test(statement.trim())) continue;
       const code = statement.replace(/'(?:''|[^'\\])*'/g, "''").trim();
+      const inspected = code
+        .replace(
+          new RegExp(
+            `\\bFOREIGN\\s+KEY\\s*\\(\\s*${columns}\\s*\\)\\s+${restrictReference}(?=\\s*[,\\)])`,
+            "gi",
+          ),
+          "KEY ()",
+        )
+        .replace(
+          new RegExp(`${restrictReference}(?=\\s*[,\\)])`, "gi"),
+          "REFERENCES ()",
+        );
       // No comments, escapes, schema qualification, procedural SQL, secondary
       // statements or session/role changes. Never rewrite the executed SQL.
       if (
         !/^CREATE TABLE "[a-z_][a-z0-9_]*"\s*\(/i.test(code) ||
         /[.$\\]|--|\/\*|\*\//.test(code) ||
         /;[\s\S]*\S/.test(code) ||
-        /\b(?:SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|SET|RESET|DO|CALL|COPY|GRANT|REVOKE|SCHEMA|TABLESPACE|INHERITS|PARTITION|LIKE|FUNCTION|PROCEDURE|TRIGGER|RULE)\b/i.test(
-          code,
+        /\b(?:SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|SET|RESET|DO|CALL|COPY|GRANT|REVOKE|SCHEMA|TABLESPACE|INHERITS|PARTITION|LIKE|FUNCTION|PROCEDURE|TRIGGER|RULE|FOREIGN)\b/i.test(
+          inspected,
         )
       )
         throw new Error("Unsupported test migration");
-      const body = code
+      const body = inspected
+        // Only the builtin SECOND extraction on a simple unqualified column;
+        // other EXTRACT expressions still fail the function allowlist below.
+        .replace(
+          /\bEXTRACT\s*\(\s*SECOND\s+FROM\s+"[a-z_][a-z0-9_]*"\s*\)/gi,
+          "0",
+        )
         .replace(/^CREATE TABLE "[a-z_][a-z0-9_]*"\s*\(/i, "(")
         .replace(/\bREFERENCES\s+"[a-z_][a-z0-9_]*"\s*\(/gi, "REFERENCES (");
       if (/"\s*\(/.test(body)) throw new Error("Unsupported test migration");

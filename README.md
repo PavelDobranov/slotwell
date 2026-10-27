@@ -236,12 +236,28 @@ pool. Logging is off and query parameters are excluded from Drizzle errors.
 The installed migrator uses this same schema for its ledger and the fixed
 committed `drizzle/` folder; no caller-selected schema/path/reset is accepted.
 The entire SQL set is inspected before execution, without rewriting SQL. The
-bounded supported form is unqualified `CREATE TABLE` with ordinary constraints,
-identity sequences and a small builtin/type allowlist. Schema qualification,
-secondary statements, procedural/session SQL, comments/escapes and unsupported
-calls/constructs fail closed. This is trusted repository test code, **not an
-arbitrary-SQL sandbox**: inspect every new generated migration (including #81)
-again; unsupported forms require a separate reviewed extension to the guard.
+bounded supported forms are unqualified `CREATE TABLE` with ordinary constraints,
+identity sequences and a small builtin/type allowlist, plus the separately
+full-matched rc.5 PostgreSQL generator form:
+
+```sql
+ALTER TABLE "business_hours" ADD CONSTRAINT "business_hours_business_id_business_settings_id_fk" FOREIGN KEY ("business_id") REFERENCES "business_settings"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+```
+
+This is a source-shaped example, not an actual #81 migration. FK table/constraint/
+column identifiers must be quoted, safe and unqualified (column lists may be
+composite); both actions must be exactly `ON DELETE RESTRICT ON UPDATE RESTRICT`.
+The same RESTRICT reference clause is supported inline in CREATE. For minute
+precision, CREATE checks may use builtin `EXTRACT(SECOND FROM "column")` on a
+simple unqualified column, not arbitrary EXTRACT expressions/functions.
+General ALTER (including ADD COLUMN, DROP, RENAME, VALIDATE), other FK actions or
+extra ALTER clauses, schema qualification, secondary statements, procedural/
+session SQL, comments/escapes and unsupported calls/constructs fail closed.
+Only the scaffold migration is currently committed; fixtures do not prove future
+catalog SQL. This is trusted repository test code, **not an arbitrary-SQL sandbox**:
+the coordinator must inspect every actual new generated migration (including
+#81) before execution; unsupported forms require a separate reviewed extension
+to the guard.
 
 Finally both sessions are rolled back, all held clients are released/destroyed,
 and every owned pool gets an awaited close attempt even after failures. The sole
