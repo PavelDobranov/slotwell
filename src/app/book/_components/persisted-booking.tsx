@@ -63,12 +63,19 @@ export function PersistedBooking() {
   // Reconcile the chosen staff against the server's qualified set once it loads;
   // the reducer drops an invalid choice without inventing a replacement.
   useEffect(() => {
-    if (staff.data)
+    if (staff.isSuccess && !staff.isFetching && staff.isFetchedAfterMount)
       dispatch({
         type: "qualified-staff",
+        serviceIds: state.serviceIds,
         staffIds: staff.data.map((member) => member.id),
       });
-  }, [staff.data]);
+  }, [
+    staff.data,
+    staff.isSuccess,
+    staff.isFetching,
+    staff.isFetchedAfterMount,
+    state.serviceIds,
+  ]);
 
   const business = catalog.data?.business;
   const selectedServices =
