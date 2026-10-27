@@ -120,6 +120,11 @@ for (const path of ["staff-first", "time-first"] as const) {
       name: "Име и фамилия",
       exact: true,
     });
+    const country = page.getByRole("combobox", {
+      name: "Държава за телефона",
+      exact: true,
+    });
+    await expect(country).toHaveValue("BG");
     const phone = page.getByRole("textbox", { name: "Телефон", exact: true });
     const email = page.getByRole("textbox", { name: "Имейл", exact: true });
     const check = page.getByRole("button", { name: "Към преглед" });
@@ -142,7 +147,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       ).toBe(52);
     }
     await expect(note).toBeVisible();
-    await expect(page.getByText("0 / 300", { exact: true })).toBeVisible();
+    await expect(page.getByText("0 / 1000", { exact: true })).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Вашите данни", exact: true }),
     ).toBeVisible();
@@ -175,7 +180,7 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(phone).toBeFocused();
     await errorSummary.getByRole("link", { name: /^Име:/ }).click();
     await expect(name).toBeFocused();
-    await expect(name).toHaveAccessibleDescription("Въведете име и фамилия.");
+    await expect(name).toHaveAccessibleDescription("Въведете име.");
     await expect(phone).toHaveAccessibleDescription(/Напр. 088 123 4567/);
     await page.screenshot({
       path: `coverage/playwright/details-errors-${path}-mobile.png`,
@@ -191,6 +196,8 @@ for (const path of ["staff-first", "time-first"] as const) {
     await page.setViewportSize({ width: 360, height: 800 });
     await page.keyboard.type("  Демо Посетител  ");
     await page.keyboard.press("Tab");
+    await expect(country).toBeFocused();
+    await page.keyboard.press("Tab");
     await expect(phone).toBeFocused();
     await page.keyboard.type("invalid-phone");
     await page.keyboard.press("Tab");
@@ -200,17 +207,30 @@ for (const path of ["staff-first", "time-first"] as const) {
     await expect(phone).toBeFocused();
     await expect(phone).toHaveAttribute("aria-invalid", "true");
     await expect(phone).toHaveValue("invalid-phone");
-    await phone.fill("+44 20 7946 0958");
+    await phone.fill("020 7946 0958");
+    await country.selectOption("GB");
     await check.click();
     await expect(email).toBeFocused();
+    await expect(country).toHaveValue("GB");
+    await expect(phone).toHaveValue("020 7946 0958");
+    // An explicit international prefix wins over the selected national country.
+    await country.selectOption("BG");
+    await phone.fill("+44 20 7946 0958");
     await email.fill("fictional-visitor@example.com");
-    await note.fill("н".repeat(301));
+    await note.fill("н".repeat(1001));
     await check.click();
     await expect(note).toBeFocused();
-    await expect(note).toHaveValue("н".repeat(301));
-    await expect(note).toHaveAccessibleDescription(/300/);
+    await expect(note).toHaveValue("н".repeat(1001));
+    await expect(note).toHaveAccessibleDescription(/1000/);
+    await note.fill("н".repeat(1000));
+    await check.click();
+    await page
+      .getByRole("button", { name: "Редактирай данните за контакт" })
+      .click();
+    await expect(note).toHaveValue("н".repeat(1000));
+    await country.selectOption("GB");
     await note.fill("Само демонстрационна бележка.");
-    await expect(page.getByText("29 / 300", { exact: true })).toBeVisible();
+    await expect(page.getByText("29 / 1000", { exact: true })).toBeVisible();
     await check.click();
     await expect(
       page.getByRole("status").filter({ hasText: "Данните са валидни" }),
@@ -309,6 +329,7 @@ for (const path of ["staff-first", "time-first"] as const) {
         await page.getByRole("button", { name: /^(Продължи|Напред:)/ }).click();
       }
       await expect(name).toHaveValue("  Демо Посетител  ");
+      await expect(country).toHaveValue("GB");
       await expect(note).toHaveValue("Само демонстрационна бележка.");
       await check.click();
     }
@@ -352,6 +373,7 @@ for (const path of ["staff-first", "time-first"] as const) {
       }
       await expect(name).toHaveValue("  Демо Посетител  ");
       await expect(phone).toHaveValue("+44 20 7946 0958");
+      await expect(country).toHaveValue("GB");
       await expect(email).toHaveValue("fictional-visitor@example.com");
       await expect(note).toHaveValue("Само демонстрационна бележка.");
     }

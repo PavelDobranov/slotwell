@@ -19,7 +19,7 @@ test("requires trimmed name, phone and email with Bulgarian errors", () => {
     note: "",
   });
   assert.deepEqual(errors, {
-    name: "Въведете име и фамилия.",
+    name: "Въведете име.",
     phone: "Въведете телефонен номер.",
     email: "Въведете имейл адрес.",
   });
@@ -39,6 +39,7 @@ test("checks trimmed required values without modifying the original draft", () =
 
 for (const phone of [
   "0888123456",
+  "888123456",
   "02 123 4567",
   "+359 888 123 456",
   "00359 (888) 123-456",
@@ -52,7 +53,6 @@ for (const phone of [
 
 for (const phone of [
   "123",
-  "888123456",
   "0000000000",
   "+0123456789",
   "0888callme",
@@ -62,7 +62,7 @@ for (const phone of [
   test(`rejects implausible phone: ${phone}`, () => {
     assert.equal(
       validateContact({ ...valid, phone }).phone,
-      "Въведи телефон с код на държавата или български номер с начална 0.",
+      "Въведете валиден телефонен номер за избраната държава или с международен код (+ или 00), без вътрешен номер.",
     );
   });
 }
@@ -83,6 +83,15 @@ for (const email of [
   });
 }
 
+test("uses the selected country without mutating the draft or requiring it for international input", () => {
+  const draft = { ...valid, phone: "020 7946 0958", phoneCountry: "GB" };
+  assert.deepEqual(validateContact(draft), {});
+  assert.deepEqual(validateContact({ ...draft, phone: "+359888123456" }), {});
+  assert.ok(validateContact({ ...draft, phoneCountry: "BG" }).phone);
+  assert.ok(validateContact({ ...draft, phoneCountry: "XX" }).phoneCountry);
+  assert.equal(draft.phone, "020 7946 0958");
+});
+
 test("accepts plus-addressed email and names without a restrictive alphabet", () => {
   assert.deepEqual(
     validateContact({
@@ -102,7 +111,7 @@ for (const [field, limit, boundary] of [
     254,
     `${"a".repeat(64)}@${"b".repeat(63)}.${"c".repeat(63)}.${"d".repeat(61)}`,
   ],
-  ["note", 300, "н".repeat(300)],
+  ["note", 1000, "н".repeat(1000)],
 ] as const) {
   test(`enforces ${field} limit ${limit} without truncating`, () => {
     assert.equal(boundary.length, limit);

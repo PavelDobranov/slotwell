@@ -211,12 +211,15 @@ for (const { width, zoom } of reviewViewports) {
       }
       await verifyStep("Данни и преглед");
       await activate(page, button("Към преглед"));
-      const name = page.getByRole("textbox", { name: "Име и фамилия", exact: true });
+      const name = page.getByRole("textbox", {
+        name: "Име и фамилия",
+        exact: true,
+      });
       await expect(name).toBeFocused();
       await expect(name).toHaveAttribute("aria-invalid", "true");
       await expect(name).toHaveAccessibleDescription(/име/);
       await expect(
-        page.getByRole("alert").filter({ hasText: /^Въведете име и фамилия\.$/ }),
+        page.getByRole("alert").filter({ hasText: /^Въведете име\.$/ }),
       ).toBeVisible();
       await verifyRendered("Грешки в данните");
       await page.keyboard.type("Demo Keyboard");

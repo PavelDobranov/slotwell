@@ -1,5 +1,6 @@
+import { getCountries, getCountryCallingCode } from "libphonenumber-js/max";
 import { ChevronLeft } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 import { Review } from "@/app/_components/booking/review";
@@ -20,6 +21,11 @@ import {
   validateContact,
 } from "@/app/_lib/booking/validation";
 
+const countryNames = new Intl.DisplayNames(["bg"], { type: "region" });
+const countries = getCountries()
+  .map((code) => ({ code, name: countryNames.of(code) ?? code }))
+  .sort((a, b) => a.name.localeCompare(b.name, "bg"));
+
 const fields = [
   {
     key: "name",
@@ -34,7 +40,7 @@ const fields = [
     key: "phone",
     label: "Телефон",
     summaryLabel: "Телефон",
-    hint: "Напр. 088 123 4567. Обаждаме се само ако се наложи промяна.",
+    hint: "Напр. 088 123 4567 за България или +44 20 7946 0958. Международният код (+ или 00) е с предимство пред държавата. Без вътрешен номер.",
     type: "tel",
     autoComplete: "tel",
     inputMode: "tel",
@@ -91,9 +97,9 @@ export function DetailsStep({
   const [errors, setErrors] = useState<ContactErrors>({});
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
-    const first = (["name", "phone", "email", "note"] as const).find(
-      (key) => errors[key],
-    );
+    const first = (
+      ["name", "phoneCountry", "phone", "email", "note"] as const
+    ).find((key) => errors[key]);
     if (first) {
       const control = form.current?.elements.namedItem(first);
       if (control instanceof HTMLElement) control.focus();
@@ -154,6 +160,10 @@ export function DetailsStep({
                 <ul className="list-disc pl-4">
                   {[
                     ...fields,
+                    {
+                      key: "phoneCountry",
+                      summaryLabel: "Държава за телефона",
+                    } as const,
                     { key: "note", summaryLabel: "Бележка" } as const,
                   ].map(({ key, summaryLabel }) =>
                     errors[key] ? (
@@ -183,34 +193,69 @@ export function DetailsStep({
           <FieldGroup className="gap-6">
             {fields.map(
               ({ key, label, summaryLabel: _summaryLabel, hint, ...input }) => (
-                <Field key={key} data-invalid={Boolean(errors[key])}>
-                  <FieldLabel htmlFor={`contact-${key}`}>{label}</FieldLabel>
-                  {hint && (
-                    <FieldDescription id={`contact-${key}-hint`}>
-                      {hint}
-                    </FieldDescription>
+                <Fragment key={key}>
+                  {key === "phone" && (
+                    <Field data-invalid={Boolean(errors.phoneCountry)}>
+                      <FieldLabel htmlFor="contact-phoneCountry">
+                        Държава за телефона
+                      </FieldLabel>
+                      <select
+                        id="contact-phoneCountry"
+                        name="phoneCountry"
+                        autoComplete="off"
+                        required
+                        value={draft.phoneCountry ?? "BG"}
+                        onChange={(event) =>
+                          change("phoneCountry", event.target.value)
+                        }
+                        aria-invalid={Boolean(errors.phoneCountry)}
+                        aria-describedby={
+                          errors.phoneCountry
+                            ? "contact-phoneCountry-error"
+                            : undefined
+                        }
+                        className="h-13 w-full min-w-0 rounded-lg border border-input bg-background px-3.5 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive"
+                      >
+                        {countries.map(({ code, name }) => (
+                          <option key={code} value={code}>
+                            {name} (+{getCountryCallingCode(code)})
+                          </option>
+                        ))}
+                      </select>
+                      <FieldError id="contact-phoneCountry-error">
+                        {errors.phoneCountry}
+                      </FieldError>
+                    </Field>
                   )}
-                  <Input
-                    {...input}
-                    id={`contact-${key}`}
-                    name={key}
-                    required
-                    value={draft[key]}
-                    onChange={(event) => change(key, event.target.value)}
-                    aria-invalid={Boolean(errors[key])}
-                    aria-describedby={
-                      [
-                        errors[key] && `contact-${key}-error`,
-                        hint && `contact-${key}-hint`,
-                      ]
-                        .filter(Boolean)
-                        .join(" ") || undefined
-                    }
-                  />
-                  <FieldError id={`contact-${key}-error`}>
-                    {errors[key]}
-                  </FieldError>
-                </Field>
+                  <Field data-invalid={Boolean(errors[key])}>
+                    <FieldLabel htmlFor={`contact-${key}`}>{label}</FieldLabel>
+                    {hint && (
+                      <FieldDescription id={`contact-${key}-hint`}>
+                        {hint}
+                      </FieldDescription>
+                    )}
+                    <Input
+                      {...input}
+                      id={`contact-${key}`}
+                      name={key}
+                      required
+                      value={draft[key]}
+                      onChange={(event) => change(key, event.target.value)}
+                      aria-invalid={Boolean(errors[key])}
+                      aria-describedby={
+                        [
+                          errors[key] && `contact-${key}-error`,
+                          hint && `contact-${key}-hint`,
+                        ]
+                          .filter(Boolean)
+                          .join(" ") || undefined
+                      }
+                    />
+                    <FieldError id={`contact-${key}-error`}>
+                      {errors[key]}
+                    </FieldError>
+                  </Field>
+                </Fragment>
               ),
             )}
             <Field data-invalid={Boolean(errors.note)}>
