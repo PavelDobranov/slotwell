@@ -1,15 +1,23 @@
-import "dotenv/config";
+import { resolve } from "node:path";
+import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-const filename = process.env.DB_FILE_NAME;
+import { validateDatabaseUrl } from "@/db/open";
 
-if (!filename) {
-  throw new Error("DB_FILE_NAME is required");
+config({
+  path: resolve(__dirname, ".env.local"),
+  quiet: true,
+  override: false,
+  debug: false,
+});
+const url = validateDatabaseUrl(process.env.DATABASE_URL);
+if (new URL(url).username !== "slotwell_app") {
+  throw new Error("Application database required");
 }
 
 export default defineConfig({
-  dialect: "sqlite",
+  dialect: "postgresql",
   schema: "./src/db/schema.ts",
   out: "./drizzle",
-  dbCredentials: { url: filename },
+  dbCredentials: { url },
 });
