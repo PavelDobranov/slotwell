@@ -114,16 +114,17 @@ export function availableSlots(input: AvailabilityInput): AvailableSlot[] {
     }
 
     const staffIds = staff
-      .filter(
-        ({ id, windows }) =>
-          windows.some(fits) &&
-          !occupied.some(
-            (interval) =>
-              interval.staffId === id &&
-              start < interval.end &&
-              occupiedEnd > interval.start,
-          ),
-      )
+      .filter(({ id, windows }) => {
+        if (!windows.some(fits)) return false;
+
+        const hasConflict = occupied.some(
+          (interval) =>
+            interval.staffId === id &&
+            start < interval.end &&
+            occupiedEnd > interval.start,
+        );
+        return !hasConflict;
+      })
       .map(({ id }) => id);
 
     if (staffIds.length > 0) {

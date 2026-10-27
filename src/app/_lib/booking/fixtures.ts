@@ -128,7 +128,9 @@ const hours: WeeklyHours = {
 /** Explicit clock injection keeps walkthrough dates live without import/build-time dates. */
 export function createDemoSalon(clock: Clock): DemoSalon {
   const today = businessDateAt(clock());
-  const monday = addCalendarDays(today, (8 - businessWeekday(today)) % 7 || 7);
+  const daysUntilNextMonday = (8 - businessWeekday(today)) % 7 || 7;
+  const monday = addCalendarDays(today, daysUntilNextMonday);
+  const closureDate = addCalendarDays(monday, 1);
   // Monday working hours avoid DST transitions. Still fail closed at the timezone boundary.
   const start = localStart(monday, 600);
   const end = localStart(monday, 660);
@@ -142,15 +144,15 @@ export function createDemoSalon(clock: Clock): DemoSalon {
     { staffId: "pavel", start: start + 90 * 60_000, end: end + 90 * 60_000 },
   ];
   // A rolling fortnight of visits, including cleanup; never expose client identities.
+  const visits = [
+    { staffId: "mimi", from: 600, to: 655 },
+    { staffId: "pavel", from: 690, to: 730 },
+    { staffId: "emil", from: 780, to: 870 },
+  ];
   for (let offset = 0; offset < 14; offset += 1) {
     const date = addCalendarDays(today, offset);
     const weekday = businessWeekday(date);
-    if (weekday === 0 || date === addCalendarDays(monday, 1)) continue;
-    const visits = [
-      { staffId: "mimi", from: 600, to: 655 },
-      { staffId: "pavel", from: 690, to: 730 },
-      { staffId: "emil", from: 780, to: 870 },
-    ];
+    if (weekday === 0 || date === closureDate) continue;
     for (const visit of visits) {
       if (visit.staffId === "pavel" && (weekday === 3 || weekday === 6))
         continue;
@@ -210,7 +212,7 @@ export function createDemoSalon(clock: Clock): DemoSalon {
       },
     ],
     occupied,
-    exceptions: [{ date: addCalendarDays(monday, 1), hours: [] }],
+    exceptions: [{ date: closureDate, hours: [] }],
   };
 }
 

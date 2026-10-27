@@ -187,15 +187,35 @@ export function BookingWizard() {
   };
   const firstSelectionStep = state.step === order[2] ? order[1] : null;
   const selectedStaff = salon?.staff.find(({ id }) => id === state.staffId);
-  const firstSelection =
-    firstSelectionStep === "staff" && selectedStaff
-      ? { label: "Избран специалист", value: selectedStaff.name }
-      : firstSelectionStep === "time" && state.start !== null && salon
-        ? {
-            label: "Избран час",
-            value: `${formatBusinessShortDate(businessDateAt(state.start))} · ${formatBusinessTime(state.start)}–${formatBusinessTime(state.start + selectedTotals(state, salon).durationMinutes * 60_000)}`,
-          }
-        : null;
+  let firstSelection: { label: string; value: string } | null = null;
+  if (firstSelectionStep === "staff" && selectedStaff) {
+    firstSelection = { label: "Избран специалист", value: selectedStaff.name };
+  } else if (firstSelectionStep === "time" && state.start !== null && salon) {
+    const { durationMinutes } = selectedTotals(state, salon);
+    const end = state.start + durationMinutes * 60_000;
+    firstSelection = {
+      label: "Избран час",
+      value: `${formatBusinessShortDate(businessDateAt(state.start))} · ${formatBusinessTime(state.start)}–${formatBusinessTime(end)}`,
+    };
+  }
+
+  let availableStaffIds: readonly string[] | undefined;
+  if (
+    state.step === "staff" &&
+    state.path === "time-first" &&
+    salon !== null &&
+    availabilityTime !== null
+  ) {
+    const date = businessDateAt(state.start ?? availabilityTime);
+    const selectedSlot = availableSlots({
+      salon,
+      now: availabilityTime,
+      sessionOccupied: session.current?.occupied,
+      serviceIds: state.serviceIds,
+      date,
+    }).find(({ start }) => start === state.start);
+    availableStaffIds = selectedSlot?.staffIds ?? [];
+  }
   const actionForm =
     state.step === "services"
       ? "booking-services"
@@ -339,9 +359,7 @@ export function BookingWizard() {
               <RecoveryNotice
                 state={state}
                 pathSwitched={pathSwitched}
-                staffName={
-                  salon?.staff.find(({ id }) => id === state.staffId)?.name
-                }
+                staffName={selectedStaff?.name}
               />
             )}
             {confirmationError && !confirmed && (
@@ -476,21 +494,7 @@ export function BookingWizard() {
                     serviceIds={state.serviceIds}
                     staffId={state.staffId}
                     start={state.start ?? undefined}
-                    availableStaffIds={
-                      state.path === "time-first"
-                        ? (availableSlots({
-                            salon,
-                            now: availabilityTime,
-                            sessionOccupied: session.current?.occupied,
-                            serviceIds: state.serviceIds,
-                            date:
-                              state.start === null
-                                ? businessDateAt(availabilityTime)
-                                : businessDateAt(state.start),
-                          }).find(({ start }) => start === state.start)
-                            ?.staffIds ?? [])
-                        : undefined
-                    }
+                    availableStaffIds={availableStaffIds}
                     onServices={(ids) => dispatch({ type: "services", ids })}
                     onEditTime={() => dispatch({ type: "edit", step: "time" })}
                     onSelect={(id) => dispatch({ type: "staff", id })}
@@ -550,9 +554,7 @@ export function BookingWizard() {
                       salonName: salon.name,
                       address: salon.address,
                       start: state.start,
-                      staffName:
-                        salon.staff.find(({ id }) => id === state.staffId)
-                          ?.name ?? "",
+                      staffName: selectedStaff?.name ?? "",
                       ...selectedTotals(state, salon),
                     }}
                     onBack={() => dispatch({ type: "back" })}
