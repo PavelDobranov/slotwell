@@ -99,8 +99,11 @@ test("committed catalog migrations repeat privately; sibling data survives and o
           "business_hours",
           "business_settings",
           "scaffold_checks",
+          "schedule_exceptions",
           "services",
           "staff",
+          "staff_occupancy",
+          "staff_schedules",
           "staff_services",
         ],
       );
@@ -119,7 +122,8 @@ test("committed catalog migrations repeat privately; sibling data survives and o
         db,
         sql`SELECT * FROM __drizzle_migrations ORDER BY id`,
       );
-      assert.equal(ledger.length, 2);
+      // scaffold + catalog + scheduling/occupancy (#63) migrations.
+      assert.equal(ledger.length, 3);
       await insertCatalog(db);
       await migrate();
       assert.deepEqual(
@@ -433,7 +437,7 @@ test("named catalog checks reject invalid configuration, blank text, negative va
   });
 });
 
-test("singleton/composite keys, orphan refusal and all three RESTRICT FKs protect parents on delete and update", async () => {
+test("singleton/composite keys, orphan refusal and all seven RESTRICT FKs protect parents on delete and update", async () => {
   await withTestDatabase({}, async ({ db }) => {
     await insertCatalog(db);
     await assert.rejects(
@@ -500,7 +504,8 @@ test("singleton/composite keys, orphan refusal and all three RESTRICT FKs protec
       sql`SELECT c.confdeltype, c.confupdtype
       FROM pg_catalog.pg_constraint c WHERE c.connamespace = pg_catalog.to_regnamespace(current_schema()) AND c.contype = 'f'`,
     );
-    assert.equal(fks.length, 3);
+    // Three catalog FKs plus the four scheduling/occupancy FKs (#63), all RESTRICT.
+    assert.equal(fks.length, 7);
     assert.ok(
       fks.every((fk) => fk.confdeltype === "r" && fk.confupdtype === "r"),
     );

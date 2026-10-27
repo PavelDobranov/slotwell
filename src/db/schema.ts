@@ -1,8 +1,11 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   char,
   check,
+  customType,
+  date,
   integer,
   pgTable,
   primaryKey,
@@ -10,6 +13,15 @@ import {
   text,
   time,
 } from "drizzle-orm/pg-core";
+
+// PostgreSQL range type drizzle has no first-class builder for. Occupancy spans
+// are always stored as canonical half-open `[)` intervals, constructed with
+// `tstzrange(lower, upper, '[)')`; the database CHECK below pins that shape.
+const tstzrange = customType<{ data: string }>({
+  dataType() {
+    return "tstzrange";
+  },
+});
 
 export const scaffoldChecks = pgTable("scaffold_checks", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -156,4 +168,126 @@ export const staffServices = pgTable(
       }),
   },
   (table) => [primaryKey({ columns: [table.staffId, table.serviceId] })],
+);
+
+// Weekly local working hours per staff member. Mirrors business_hours: local
+// clock only (Sunday = 0 … Saturday = 6), no overnight/24:00 or merge policy.
+export const staffSchedules = pgTable(
+  "staff_schedules",
+  {
+    staffId: text("staff_id")
+      .notNull()
+      .references(() => staff.id, {
+        onDelete: "restrict",
+        onUpdate: "restrict",
+      }),
+    weekday: smallint("weekday").notNull(),
+    windowIndex: integer("window_index").notNull(),
+    opensAt: time("opens_at", { precision: 0, withTimezone: false }).notNull(),
+    closesAt: time("closes_at", {
+      precision: 0,
+      withTimezone: false,
+    }).notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.staffId, table.weekday, table.windowIndex],
+    }),
+    check("staff_schedules_weekday_range", sql`"weekday" BETWEEN 0 AND 6`),
+    check("staff_schedules_window_index_nonnegative", sql`"window_index" >= 0`),
+    check(
+      "staff_schedules_opens_at_minute",
+      sql`EXTRACT(SECOND FROM "opens_at") = 0`,
+    ),
+    check(
+      "staff_schedules_closes_at_minute",
+      sql`EXTRACT(SECOND FROM "closes_at") = 0`,
+    ),
+  ],
+);
+
+// Dated overrides/closures for the business OR a staff member. A subject's rows
+// for a date replace that subject's weekly schedule for that date: a single
+// is_closed row means fully closed; is_closed=false rows carry the replacement
+// windows. The surrogate id is a stable handle; the seed keeps one coherent set
+// per subject/date (a nullable two-subject UNIQUE could not enforce that, since
+// PostgreSQL treats NULL subjects as distinct).
+export const scheduleExceptions = pgTable(
+  "schedule_exceptions",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    businessId: smallint("business_id").references(() => businessSettings.id, {
+      onDelete: "restrict",
+      onUpdate: "restrict",
+    }),
+    staffId: text("staff_id").references(() => staff.id, {
+      onDelete: "restrict",
+      onUpdate: "restrict",
+    }),
+    onDate: date("on_date").notNull(),
+    windowIndex: integer("window_index").notNull(),
+    isClosed: boolean("is_closed").notNull(),
+    opensAt: time("opens_at", { precision: 0, withTimezone: false }),
+    closesAt: time("closes_at", { precision: 0, withTimezone: false }),
+  },
+  () => [
+    check(
+      "schedule_exceptions_window_index_nonnegative",
+      sql`"window_index" >= 0`,
+    ),
+    // Exactly one subject: a business-wide exception or a staff-specific one.
+    check(
+      "schedule_exceptions_one_subject",
+      sql`("business_id" IS NOT NULL) <> ("staff_id" IS NOT NULL)`,
+    ),
+    // A closed row carries no hours; an open override carries both. Expressed
+    // as "is_closed matches each hour's nullness" so no keyword precedes a
+    // parenthesis (the migration preflight reads `OR (`/`AND (` as a call).
+    check(
+      "schedule_exceptions_hours_match_closed",
+      sql`"is_closed" = ("opens_at" IS NULL) AND "is_closed" = ("closes_at" IS NULL)`,
+    ),
+    check(
+      "schedule_exceptions_opens_at_minute",
+      sql`"opens_at" IS NULL OR EXTRACT(SECOND FROM "opens_at") = 0`,
+    ),
+    check(
+      "schedule_exceptions_closes_at_minute",
+      sql`"closes_at" IS NULL OR EXTRACT(SECOND FROM "closes_at") = 0`,
+    ),
+  ],
+);
+
+// Single occupancy table for booked appointment intervals and seeded non-client
+// blocks, as half-open `[)` instant ranges. The database overlap invariant is a
+// btree_gist EXCLUDE constraint added in the migration (drizzle cannot express
+// it): no two rows for the same staff member may have overlapping periods, while
+// boundary-touching adjacency is allowed. The appointment foreign key arrives
+// with the appointments table (#68); #63 seeds only kind='block' rows.
+export const staffOccupancy = pgTable(
+  "staff_occupancy",
+  {
+    id: bigint("id", { mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    staffId: text("staff_id")
+      .notNull()
+      .references(() => staff.id, {
+        onDelete: "restrict",
+        onUpdate: "restrict",
+      }),
+    period: tstzrange("period").notNull(),
+    kind: text("kind").notNull(),
+  },
+  () => [
+    check(
+      "staff_occupancy_kind_valid",
+      sql`"kind" = 'appointment' OR "kind" = 'block'`,
+    ),
+    // Canonical, bounded, half-open [) span; adjacency depends on this shape.
+    check(
+      "staff_occupancy_period_canonical",
+      sql`NOT isempty("period") AND lower_inc("period") AND NOT upper_inc("period") AND lower("period") IS NOT NULL AND upper("period") IS NOT NULL`,
+    ),
+  ],
 );

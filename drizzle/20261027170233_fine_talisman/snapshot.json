@@ -1,0 +1,710 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "c3d21214-e9c5-47d1-aeae-7a4102fce769",
+  "prevIds": [
+    "b4e04d45-9a5f-4c09-afa7-4f3e7366d961"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "schedule_exceptions"
+      ],
+      "writes": [
+        "s|tbl|public.schedule_exceptions",
+        "n|tbl|public.schedule_exceptions",
+        "e|tbl|public.schedule_exceptions",
+        "n|rel|public.schedule_exceptions",
+        "n|type|public.schedule_exceptions",
+        "n|rel|public.schedule_exceptions_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "staff_occupancy"
+      ],
+      "writes": [
+        "s|tbl|public.staff_occupancy",
+        "n|tbl|public.staff_occupancy",
+        "e|tbl|public.staff_occupancy",
+        "n|rel|public.staff_occupancy",
+        "n|type|public.staff_occupancy",
+        "n|rel|public.staff_occupancy_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "staff_schedules"
+      ],
+      "writes": [
+        "s|tbl|public.staff_schedules",
+        "n|tbl|public.staff_schedules",
+        "e|tbl|public.staff_schedules",
+        "n|rel|public.staff_schedules",
+        "n|type|public.staff_schedules",
+        "n|rel|public.staff_schedules_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "schedule_exceptions"
+      ],
+      "writes": [
+        "s|fk|public.schedule_exceptions.schedule_exceptions_business_id_business_settings_id_fkey",
+        "n|fk|public.schedule_exceptions.schedule_exceptions_business_id_business_settings_id_fkey",
+        "e|fk|public.schedule_exceptions.schedule_exceptions_business_id_business_settings_id_fkey",
+        "n|con|public.schedule_exceptions.schedule_exceptions_business_id_business_settings_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.schedule_exceptions",
+        "n|sch|public",
+        "n|tbl|public.business_settings",
+        "n|sch|public",
+        "n|col|public.schedule_exceptions.business_id",
+        "n|col|public.business_settings.id",
+        "e|uniqueness|public.business_settings.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "schedule_exceptions"
+      ],
+      "writes": [
+        "s|fk|public.schedule_exceptions.schedule_exceptions_staff_id_staff_id_fkey",
+        "n|fk|public.schedule_exceptions.schedule_exceptions_staff_id_staff_id_fkey",
+        "e|fk|public.schedule_exceptions.schedule_exceptions_staff_id_staff_id_fkey",
+        "n|con|public.schedule_exceptions.schedule_exceptions_staff_id_staff_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.schedule_exceptions",
+        "n|sch|public",
+        "n|tbl|public.staff",
+        "n|sch|public",
+        "n|col|public.schedule_exceptions.staff_id",
+        "n|col|public.staff.id",
+        "e|uniqueness|public.staff.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "staff_occupancy"
+      ],
+      "writes": [
+        "s|fk|public.staff_occupancy.staff_occupancy_staff_id_staff_id_fkey",
+        "n|fk|public.staff_occupancy.staff_occupancy_staff_id_staff_id_fkey",
+        "e|fk|public.staff_occupancy.staff_occupancy_staff_id_staff_id_fkey",
+        "n|con|public.staff_occupancy.staff_occupancy_staff_id_staff_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.staff_occupancy",
+        "n|sch|public",
+        "n|tbl|public.staff",
+        "n|sch|public",
+        "n|col|public.staff_occupancy.staff_id",
+        "n|col|public.staff.id",
+        "e|uniqueness|public.staff.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "staff_schedules"
+      ],
+      "writes": [
+        "s|fk|public.staff_schedules.staff_schedules_staff_id_staff_id_fkey",
+        "n|fk|public.staff_schedules.staff_schedules_staff_id_staff_id_fkey",
+        "e|fk|public.staff_schedules.staff_schedules_staff_id_staff_id_fkey",
+        "n|con|public.staff_schedules.staff_schedules_staff_id_staff_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.staff_schedules",
+        "n|sch|public",
+        "n|tbl|public.staff",
+        "n|sch|public",
+        "n|col|public.staff_schedules.staff_id",
+        "n|col|public.staff.id",
+        "e|uniqueness|public.staff.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "schedule_exceptions",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "staff_occupancy",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "staff_schedules",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "id",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": {
+          "type": "always",
+          "name": "schedule_exceptions_id_seq",
+          "increment": "1",
+          "startWith": "1",
+          "minValue": "1",
+          "maxValue": "2147483647",
+          "cache": 1,
+          "cycle": false
+        },
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "business_id",
+        "type": "smallint",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "staff_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "on_date",
+        "type": "date",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "window_index",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "is_closed",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "opens_at",
+        "type": "time(0)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "closes_at",
+        "type": "time(0)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_occupancy",
+        "name": "id",
+        "type": "bigint",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": {
+          "type": "always",
+          "name": "staff_occupancy_id_seq",
+          "increment": "1",
+          "startWith": "1",
+          "minValue": "1",
+          "maxValue": "9223372036854775807",
+          "cache": 1,
+          "cycle": false
+        },
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_occupancy",
+        "name": "staff_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_occupancy",
+        "name": "period",
+        "type": "tstzrange",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_occupancy",
+        "name": "kind",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_schedules",
+        "name": "staff_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_schedules",
+        "name": "weekday",
+        "type": "smallint",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_schedules",
+        "name": "window_index",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_schedules",
+        "name": "opens_at",
+        "type": "time(0)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_schedules",
+        "name": "closes_at",
+        "type": "time(0)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "schedule_exceptions_business_id_business_settings_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "business_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "business_settings",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "RESTRICT",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "schedule_exceptions_staff_id_staff_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "staff_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "staff",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "RESTRICT",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_occupancy",
+        "name": "staff_occupancy_staff_id_staff_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "staff_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "staff",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "RESTRICT",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_schedules",
+        "name": "staff_schedules_staff_id_staff_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "staff_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "staff",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "RESTRICT",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_schedules",
+        "name": "staff_schedules_pkey",
+        "columns": [
+          "staff_id",
+          "weekday",
+          "window_index"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "schedule_exceptions_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_occupancy",
+        "name": "staff_occupancy_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "schedule_exceptions_window_index_nonnegative",
+        "value": "\"window_index\" >= 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "schedule_exceptions_one_subject",
+        "value": "(\"business_id\" IS NOT NULL) <> (\"staff_id\" IS NOT NULL)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "schedule_exceptions_hours_match_closed",
+        "value": "\"is_closed\" = (\"opens_at\" IS NULL) AND \"is_closed\" = (\"closes_at\" IS NULL)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "schedule_exceptions_opens_at_minute",
+        "value": "\"opens_at\" IS NULL OR EXTRACT(SECOND FROM \"opens_at\") = 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "schedule_exceptions",
+        "name": "schedule_exceptions_closes_at_minute",
+        "value": "\"closes_at\" IS NULL OR EXTRACT(SECOND FROM \"closes_at\") = 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_occupancy",
+        "name": "staff_occupancy_kind_valid",
+        "value": "\"kind\" = 'appointment' OR \"kind\" = 'block'",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_occupancy",
+        "name": "staff_occupancy_period_canonical",
+        "value": "NOT isempty(\"period\") AND lower_inc(\"period\") AND NOT upper_inc(\"period\") AND lower(\"period\") IS NOT NULL AND upper(\"period\") IS NOT NULL",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_schedules",
+        "name": "staff_schedules_weekday_range",
+        "value": "\"weekday\" BETWEEN 0 AND 6",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_schedules",
+        "name": "staff_schedules_window_index_nonnegative",
+        "value": "\"window_index\" >= 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_schedules",
+        "name": "staff_schedules_opens_at_minute",
+        "value": "EXTRACT(SECOND FROM \"opens_at\") = 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_schedules",
+        "name": "staff_schedules_closes_at_minute",
+        "value": "EXTRACT(SECOND FROM \"closes_at\") = 0",
+        "entityType": "checks"
+      }
+    }
+  ]
+}
