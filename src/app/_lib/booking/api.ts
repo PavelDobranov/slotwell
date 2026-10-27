@@ -26,6 +26,21 @@ export type CatalogView = {
   services: ServiceView[];
 };
 
+export type SlotView = { start: string; end: string };
+export type AvailabilityView = {
+  timeZone: string;
+  serverNow: string;
+  from: string;
+  to: string;
+  days: { date: string; slots: SlotView[] }[];
+};
+export type AvailabilityQuery = {
+  staffId: string;
+  serviceIds: readonly string[];
+  from: string;
+  to: string;
+};
+
 /** Stable machine-readable failure. `code` is the server's error code, or
  * "network" when the request never reached a response. */
 export class CatalogApiError extends Error {
@@ -73,6 +88,20 @@ async function requestJson<T>(path: string, signal?: AbortSignal): Promise<T> {
     });
   }
   return (await response.json()) as T;
+}
+
+/** Advisory server slots, passed through without client eligibility rules. */
+export function fetchAvailability(
+  query: AvailabilityQuery,
+  signal?: AbortSignal,
+): Promise<AvailabilityView> {
+  const params = new URLSearchParams({
+    staff: query.staffId,
+    from: query.from,
+    to: query.to,
+  });
+  for (const id of query.serviceIds) params.append("service", id);
+  return requestJson<AvailabilityView>(`/api/availability?${params}`, signal);
 }
 
 /** Business identity plus active services, ordered for the picker. */
