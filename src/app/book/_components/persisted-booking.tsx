@@ -21,6 +21,7 @@ import {
   initialPersistedState,
   persistedReducer,
 } from "@/app/_lib/booking/persisted-state";
+import { PersistedTime } from "@/app/book/_components/persisted-time";
 
 function loadErrorMessage(error: unknown): string {
   if (error instanceof CatalogApiError && error.code === "network")
@@ -105,6 +106,11 @@ export function PersistedBooking() {
         )}
       </header>
 
+      {state.notice && (
+        <output className="text-sm text-muted-foreground">
+          {state.notice}
+        </output>
+      )}
       {catalog.isError ? (
         <Alert variant="error" aria-atomic="true">
           <TriangleAlertIcon aria-hidden="true" />
@@ -191,6 +197,12 @@ export function PersistedBooking() {
             Продължи към избор на специалист
           </Button>
         </section>
+      ) : state.step === "time" && business ? (
+        <PersistedTime
+          state={state}
+          timeZone={business.timeZone}
+          dispatch={dispatch}
+        />
       ) : (
         <section
           aria-labelledby="staff-heading"
@@ -304,14 +316,19 @@ export function PersistedBooking() {
           )}
 
           {selectedStaff && (
-            <Alert variant="info" aria-atomic="true">
-              <Check aria-hidden="true" />
-              <AlertTitle>Избрахте {selectedStaff.name}</AlertTitle>
-              <AlertDescription>
-                Избирането на дата, час и въвеждането на данни за контакт
-                предстои. Засега тази страница не прави реална резервация.
-              </AlertDescription>
-            </Alert>
+            <>
+              <Alert variant="info" aria-atomic="true">
+                <Check aria-hidden="true" />
+                <AlertTitle>Избрахте {selectedStaff.name}</AlertTitle>
+              </Alert>
+              <Button
+                className="self-end"
+                disabled={staff.isFetching || staff.isError}
+                onClick={() => dispatch({ type: "next" })}
+              >
+                Продължи към дата и час
+              </Button>
+            </>
           )}
         </section>
       )}
