@@ -30,6 +30,17 @@ export function validateDatabaseUrl(value: string | undefined): string {
   }
 }
 
+/** Apply the app-only target policy without reading env or creating a pool. */
+export function validateApplicationDatabaseUrl(
+  value: string | undefined,
+): string {
+  const url = validateDatabaseUrl(value);
+  if (new URL(url).username !== "slotwell_app") {
+    throw new Error("Application database required");
+  }
+  return url;
+}
+
 export function openPostgresDatabase(url: string) {
   const connectionString = validateDatabaseUrl(url);
   const pool = new pg.Pool({

@@ -1,7 +1,10 @@
 import { resolve } from "node:path";
 import { config } from "dotenv";
 
-import { openPostgresDatabase, validateDatabaseUrl } from "@/db/open";
+import {
+  openPostgresDatabase,
+  validateApplicationDatabaseUrl,
+} from "@/db/open";
 import { seedCatalog } from "@/db/seed";
 
 async function main() {
@@ -12,10 +15,7 @@ async function main() {
     debug: false,
   });
   if (process.argv.length !== 2) throw new Error("No seed arguments allowed");
-  const url = validateDatabaseUrl(process.env.DATABASE_URL);
-  if (new URL(url).username !== "slotwell_app") {
-    throw new Error("Application database required");
-  }
+  const url = validateApplicationDatabaseUrl(process.env.DATABASE_URL);
   const database = openPostgresDatabase(url);
   try {
     await seedCatalog(database.db);

@@ -3,7 +3,10 @@ import { resolve } from "node:path";
 import { config } from "dotenv";
 import { eq } from "drizzle-orm";
 
-import { openPostgresDatabase, validateDatabaseUrl } from "@/db/open";
+import {
+  openPostgresDatabase,
+  validateApplicationDatabaseUrl,
+} from "@/db/open";
 import { scaffoldChecks } from "@/db/schema";
 
 async function main() {
@@ -13,10 +16,7 @@ async function main() {
     override: false,
     debug: false,
   });
-  const url = validateDatabaseUrl(process.env.DATABASE_URL);
-  if (new URL(url).username !== "slotwell_app") {
-    throw new Error("Application database required");
-  }
+  const url = validateApplicationDatabaseUrl(process.env.DATABASE_URL);
 
   const writer = openPostgresDatabase(url);
   let reader: ReturnType<typeof openPostgresDatabase> | undefined;

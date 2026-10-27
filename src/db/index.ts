@@ -1,6 +1,9 @@
 import "server-only";
 
-import { openPostgresDatabase, validateDatabaseUrl } from "@/db/open";
+import {
+  openPostgresDatabase,
+  validateApplicationDatabaseUrl,
+} from "@/db/open";
 
 let handle: ReturnType<typeof openPostgresDatabase> | undefined;
 let closing: Promise<void> | undefined;
@@ -10,10 +13,7 @@ export function getDatabase() {
     throw new Error("Database is closed");
   }
   if (!handle) {
-    const url = validateDatabaseUrl(process.env.DATABASE_URL);
-    if (new URL(url).username !== "slotwell_app") {
-      throw new Error("Application database required");
-    }
+    const url = validateApplicationDatabaseUrl(process.env.DATABASE_URL);
     handle = openPostgresDatabase(url);
   }
   return handle.db;

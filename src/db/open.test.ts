@@ -4,7 +4,11 @@ import { test } from "node:test";
 import { sql } from "drizzle-orm";
 import pg from "pg";
 
-import { openPostgresDatabase, validateDatabaseUrl } from "@/db/open";
+import {
+  openPostgresDatabase,
+  validateApplicationDatabaseUrl,
+  validateDatabaseUrl,
+} from "@/db/open";
 
 const appUrl =
   "postgresql://slotwell_app:fictional-secret@127.0.0.1:55432/slotwell_dev";
@@ -57,6 +61,18 @@ const invalidUrls = [
   `${appUrl}#`,
   `${appUrl}#fictional-secret`,
 ];
+
+test("application URL validation accepts only the application database", () => {
+  assert.equal(validateApplicationDatabaseUrl(appUrl), appUrl);
+  assert.throws(() => validateApplicationDatabaseUrl(testUrl), {
+    message: "Application database required",
+  });
+  for (const value of invalidUrls) {
+    assert.throws(() => validateApplicationDatabaseUrl(value), {
+      message: "Invalid database URL",
+    });
+  }
+});
 
 // Fresh process per case: exercise the real server-only export condition, not a marker stub.
 function checkApplicationEntry(body: string) {
