@@ -96,6 +96,191 @@ test("independent durable intents store only credential hashes and a 24-hour dea
   });
 });
 
+test("pre-persisted browser credentials register once and duplicates cannot extend their deadline", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const service = createBookingOperations(keys());
+    const intent = {
+      operationId: "11111111-1111-4111-8111-111111111111",
+      credential: "a".repeat(64),
+    };
+    assert.equal(
+      await service.registerIntent(db, intent, () => NOW),
+      undefined,
+    );
+    const [original] = await db.select().from(bookingOperations);
+    assert.equal(original.id, intent.operationId);
+    assert.equal(original.credentialHash, hash(intent.credential));
+    assert.equal(original.state, "pending");
+    assert.equal(Date.parse(original.createdAt), NOW);
+    assert.equal(Date.parse(original.submitBefore), NOW + 86_400_000);
+    assert.ok(!JSON.stringify(original).includes(intent.credential));
+    await service.registerIntent(independentDb, intent, () => NOW + 1000);
+    await service.registerIntent(independentDb, intent, () => NOW + 86_400_000);
+    assert.deepEqual(await db.select().from(bookingOperations), [original]);
+    for (const other of [
+      { ...intent, credential: "b".repeat(64) },
+      { ...intent, operationId: "22222222-2222-4222-8222-222222222222" },
+    ]) {
+      await assert.rejects(
+        service.registerIntent(db, other, () => NOW),
+        code("operation_unavailable"),
+      );
+      assert.deepEqual(await db.select().from(bookingOperations), [original]);
+    }
+  });
+});
+
+test("registration preserves committed, expired, abandoned and tombstone operations", async () => {
+  await withTestDatabase({}, async ({ db }) => {
+    const input = await fixture(db);
+    const service = createBookingOperations(keys());
+    const committed = await service.createIntent(db, () => NOW);
+    const receipt = await service.submit(db, committed, input, () => NOW);
+    const intents = [committed];
+    for (const state of ["abandoned", "tombstone"]) {
+      const intent = await service.createIntent(db, () => NOW);
+      await db
+        .update(bookingOperations)
+        .set({ state })
+        .where(eq(bookingOperations.id, intent.operationId));
+      intents.push(intent);
+    }
+    const original = await db.select().from(bookingOperations);
+    for (const intent of intents)
+      await service.registerIntent(db, intent, () =>
+        Date.parse(receipt.confirmationExpiresAt),
+      );
+    assert.deepEqual(await db.select().from(bookingOperations), original);
+    assert.deepEqual(await service.recover(db, committed, () => NOW), receipt);
+    for (const intent of intents.slice(1))
+      await assert.rejects(
+        service.submit(db, intent, input, () => NOW),
+        code("operation_unavailable"),
+      );
+    assert.equal((await db.select().from(appointments)).length, 1);
+  });
+});
+
+test("concurrent registration serializes both uniqueness constraints and snapshots credentials", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const service = createBookingOperations(keys());
+    const [session] = await independentDb.execute(
+      sql`SELECT pg_backend_pid() AS pid`,
+      "objects",
+    );
+    for (const [index, variant] of [
+      "same",
+      "different_credential",
+      "different_id",
+    ].entries()) {
+      const first = {
+        operationId: `11111111-1111-4111-8111-11111111111${index}`,
+        credential: String(index + 1).repeat(64),
+      };
+      const duplicate = {
+        ...first,
+        ...(variant === "different_credential"
+          ? { credential: "f".repeat(64) }
+          : {}),
+        ...(variant === "different_id"
+          ? { operationId: `22222222-2222-4222-8222-22222222222${index}` }
+          : {}),
+      };
+      let pending: Promise<void> | undefined;
+      await db.transaction(async (tx) => {
+        await service.registerIntent(tx, first, () => NOW);
+        pending = service.registerIntent(
+          independentDb,
+          duplicate,
+          () => NOW + 1000,
+        );
+        void pending.catch(() => {});
+        await waitForBlocked(tx, Number(session.pid));
+        duplicate.operationId = "33333333-3333-4333-8333-333333333333";
+        duplicate.credential = "e".repeat(64);
+      });
+      assert.ok(pending);
+      if (variant === "same") await pending;
+      else await assert.rejects(pending, code("operation_unavailable"));
+      const [stored] = await db
+        .select()
+        .from(bookingOperations)
+        .where(eq(bookingOperations.id, first.operationId));
+      assert.equal(stored.credentialHash, hash(first.credential));
+      assert.equal(Date.parse(stored.submitBefore), NOW + 86_400_000);
+      assert.equal(
+        (await db.select().from(bookingOperations)).length,
+        index + 1,
+      );
+    }
+  });
+});
+
+test("lost registration acknowledgements and rolled-back claims retry the saved credentials", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const service = createBookingOperations(keys());
+    const intent = {
+      operationId: "11111111-1111-4111-8111-111111111111",
+      credential: "a".repeat(64),
+    };
+    const losesAcknowledgement: Pick<NodePgDatabase, "transaction"> = {
+      transaction: async (action, options) => {
+        await db.transaction(action, options);
+        throw new Error(`private transport failure ${intent.credential}`);
+      },
+    };
+    await assert.rejects(
+      service.registerIntent(losesAcknowledgement, intent, () => NOW),
+      code("recovery_unavailable"),
+    );
+    await service.registerIntent(independentDb, intent, () => NOW + 1000);
+    assert.equal((await db.select().from(bookingOperations)).length, 1);
+    assert.equal(
+      Date.parse((await db.select().from(bookingOperations))[0].createdAt),
+      NOW,
+    );
+    const rollback = {
+      ...intent,
+      operationId: "22222222-2222-4222-8222-222222222222",
+      credential: "b".repeat(64),
+    };
+    await assert.rejects(
+      db.transaction(async (tx) => {
+        await service.registerIntent(tx, rollback, () => NOW);
+        throw new Error("deliberate rollback");
+      }),
+      /deliberate rollback/,
+    );
+    assert.equal((await db.select().from(bookingOperations)).length, 1);
+    await service.registerIntent(independentDb, rollback, () => NOW + 2000);
+    assert.equal((await db.select().from(bookingOperations)).length, 2);
+  });
+});
+
+test("registration lock timeout is an unknown outcome and cannot replace the existing row", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const service = createBookingOperations(keys());
+    const intent = await service.createIntent(db, () => NOW);
+    const original = await db.select().from(bookingOperations);
+    await db.transaction(async (tx) => {
+      await tx.select().from(bookingOperations).for("update");
+      await assert.rejects(
+        service.registerIntent(independentDb, intent, () => NOW + 1000),
+        (error: unknown) => {
+          assert.ok(error instanceof Error);
+          assert.equal(error.message, "recovery_unavailable");
+          assert.ok(!Object.hasOwn(error, "cause"));
+          assert.ok(!error.stack?.includes(intent.credential));
+          return true;
+        },
+      );
+      assert.deepEqual(await tx.select().from(bookingOperations), original);
+    });
+    await service.registerIntent(independentDb, intent, () => NOW + 2000);
+    assert.deepEqual(await db.select().from(bookingOperations), original);
+  });
+});
+
 test("a discarded commit response is recoverable across instances and identical retries", async () => {
   await withTestDatabase({}, async ({ db, independentDb }) => {
     const input = await fixture(db);

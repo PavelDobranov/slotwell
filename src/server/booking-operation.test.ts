@@ -178,6 +178,50 @@ test("canonical identifiers must be primitive strings, never mutable or coercibl
     );
 });
 
+test("registration rejects nonprimitive/malformed credentials before database access", async () => {
+  const service = createBookingOperations({
+    fingerprint: { currentId: "h1", keys: { h1: Buffer.alloc(32, 1) } },
+    replay: { currentId: "e1", keys: { e1: Buffer.alloc(32, 2) } },
+  });
+  const valid = {
+    operationId: "11111111-1111-4111-8111-111111111111",
+    credential: "a".repeat(64),
+  };
+  const db = {
+    transaction: async () => {
+      assert.fail("malformed credentials must not access the database");
+    },
+  };
+  for (const patch of [
+    { operationId: "invalid" },
+    { operationId: Object(valid.operationId) },
+    { operationId: 1 },
+    { credential: Object(valid.credential) },
+    { credential: "A".repeat(64) },
+    { credential: "a".repeat(63) },
+    { credential: null },
+  ]) {
+    await assert.rejects(
+      service.registerIntent(db, { ...valid, ...patch } as typeof valid),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.equal(error.message, "operation_unavailable");
+        assert.ok(!Object.hasOwn(error, "cause"));
+        return true;
+      },
+    );
+  }
+  await assert.rejects(
+    service.registerIntent(db, valid, () => NaN),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.message, "recovery_unavailable");
+      assert.ok(!Object.hasOwn(error, "cause"));
+      return true;
+    },
+  );
+});
+
 test("key configuration requires independent durable 32-byte keys and existing current IDs", () => {
   const good = {
     fingerprint: { currentId: "h1", keys: { h1: Buffer.alloc(32, 1) } },

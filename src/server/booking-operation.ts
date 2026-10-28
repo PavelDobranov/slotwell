@@ -140,6 +140,8 @@ const hash = (bytes: Buffer) =>
 
 function credentialHash(credential: OperationCredential): string {
   if (
+    typeof credential.operationId !== "string" ||
+    typeof credential.credential !== "string" ||
     !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(
       credential.operationId,
     ) ||
@@ -421,6 +423,30 @@ export function createBookingOperations(configuration: BookingKeys) {
       return guarded(db, async (tx) =>
         receipt(tx, await lockOperation(tx, authorization), clock),
       );
+    },
+    /** Register a credential durably retained by the browser before networking. */
+    async registerIntent(
+      db: Database,
+      credential: OperationCredential,
+      clock: () => number = Date.now,
+    ): Promise<void> {
+      const authorization = { ...credential };
+      const digest = credentialHash(authorization);
+      const created = now(clock);
+      await guarded(db, async (tx) => {
+        await tx
+          .insert(bookingOperations)
+          .values({
+            id: authorization.operationId,
+            credentialHash: digest,
+            state: "pending",
+            createdAt: new Date(created).toISOString(),
+            submitBefore: new Date(created + 86_400_000).toISOString(),
+          })
+          .onConflictDoNothing();
+        // Neither uniqueness conflict may replace credentials or lifecycle data.
+        await lockOperation(tx, authorization);
+      });
     },
     async createIntent(
       db: Database,
