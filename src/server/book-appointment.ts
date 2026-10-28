@@ -73,7 +73,7 @@ export class BookingError extends Error {
   }
 }
 
-function startInstant(input: BookingInput): number {
+export function bookingStartInstant(input: BookingInput): number {
   try {
     validateServiceSelection(input.serviceIds);
     if (!input.staffId.trim() || input.staffId.length > 64) throw new Error();
@@ -127,7 +127,7 @@ export async function bookAppointment(
           return { kind: "already_committed" as const, operation };
         if (operation.state !== "pending")
           throw new BookingError("operation_unavailable");
-        const start = startInstant(input);
+        const start = bookingStartInstant(input);
         const [business] = await tx
           .select()
           .from(businessSettings)
