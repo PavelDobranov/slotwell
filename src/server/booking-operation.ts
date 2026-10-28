@@ -8,7 +8,7 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import {
   appointmentAccess,
@@ -34,6 +34,7 @@ export type BookingReceipt = {
 export type IntentResolution =
   | { state: "pending"; submitBefore: string }
   | { state: "committed"; receipt: BookingReceipt };
+export type IntentFence = { state: "fenced" } | { state: "committed" };
 type KeyRing = { currentId: string; keys: Record<string, Buffer> };
 export type BookingKeys = { fingerprint: KeyRing; replay: KeyRing };
 export type OperationCredential = { operationId: string; credential: string };
@@ -415,6 +416,52 @@ export function createBookingOperations(configuration: BookingKeys) {
             ? result.operation
             : await lockOperation(tx, authorization);
         return receipt(tx, operation, clock, payload);
+      });
+    },
+    /** Explicit noncommitted clear only. Must own the top-level transaction. */
+    async fenceIntent(
+      db: Database,
+      credential: OperationCredential,
+      clock: () => number = Date.now,
+    ): Promise<IntentFence> {
+      const authorization = {
+        operationId: credential.operationId,
+        credential: credential.credential,
+      };
+      const digest = credentialHash(authorization);
+      // A savepoint acknowledgement could be undone by an outer rollback.
+      if (!(db instanceof NodePgDatabase))
+        throw new OperationError("recovery_unavailable");
+      let createdAt: string;
+      let submitBefore: string;
+      try {
+        const created = now(clock);
+        createdAt = new Date(created).toISOString();
+        submitBefore = new Date(created + 86_400_000).toISOString();
+      } catch {
+        throw new OperationError("recovery_unavailable");
+      }
+      return guarded(db, async (tx) => {
+        // Even an unregistered pair needs a permanent fence against late registration.
+        await tx
+          .insert(bookingOperations)
+          .values({
+            id: authorization.operationId,
+            credentialHash: digest,
+            state: "abandoned",
+            createdAt,
+            submitBefore,
+          })
+          .onConflictDoNothing();
+        const operation = await lockOperation(tx, authorization);
+        now(clock);
+        if (operation.state === "committed") return { state: "committed" };
+        if (operation.state === "pending")
+          await tx
+            .update(bookingOperations)
+            .set({ state: "abandoned" })
+            .where(eq(bookingOperations.id, operation.id));
+        return { state: "fenced" };
       });
     },
     /** A locked snapshot only; never permission to clear or replace an intent. */

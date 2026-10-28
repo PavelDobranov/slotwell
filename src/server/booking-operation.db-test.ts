@@ -99,6 +99,154 @@ test("independent durable intents store only credential hashes and a 24-hour dea
   });
 });
 
+test("explicit fencing seals absent and pending pairs against delayed registration and submission", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const input = await fixture(db);
+    const service = createBookingOperations(keys());
+    const absent = {
+      operationId: "11111111-1111-4111-8111-111111111111",
+      credential: "a".repeat(64),
+    };
+    const pending = await service.createIntent(db, () => NOW);
+    const [original] = await db.select().from(bookingOperations);
+    for (const intent of [absent, pending]) {
+      assert.deepEqual(await service.fenceIntent(db, intent, () => NOW), {
+        state: "fenced",
+      });
+      const [sealed] = await db
+        .select()
+        .from(bookingOperations)
+        .where(eq(bookingOperations.id, intent.operationId));
+      assert.equal(sealed.state, "abandoned");
+      assert.equal(sealed.credentialHash, hash(intent.credential));
+      assert.ok(!JSON.stringify(sealed).includes(intent.credential));
+      if (intent === pending)
+        assert.deepEqual(sealed, { ...original, state: "abandoned" });
+      for (const other of [
+        { ...intent, credential: "f".repeat(64) },
+        { ...intent, operationId: "22222222-2222-4222-8222-222222222222" },
+      ])
+        await assert.rejects(
+          service.fenceIntent(db, other, () => NOW),
+          code("operation_unavailable"),
+        );
+      await service.registerIntent(
+        independentDb,
+        intent,
+        () => NOW + 86_400_000,
+      );
+      assert.deepEqual(
+        await service.fenceIntent(db, intent, () => NOW + 86_400_000),
+        { state: "fenced" },
+      );
+      await assert.rejects(
+        service.submit(db, intent, input, () => NOW),
+        code("operation_unavailable"),
+      );
+      assert.deepEqual(
+        await db
+          .select()
+          .from(bookingOperations)
+          .where(eq(bookingOperations.id, intent.operationId)),
+        [sealed],
+      );
+    }
+    assert.equal((await db.select().from(appointments)).length, 0);
+    assert.equal((await db.select().from(bookingOperations)).length, 2);
+  });
+});
+
+test("fencing preserves committed bookings independent of expiry or replay keys, and accepts terminal fences", async () => {
+  await withTestDatabase({}, async ({ db }) => {
+    const input = await fixture(db);
+    const service = createBookingOperations(keys());
+    const committed = await service.createIntent(db, () => NOW);
+    const receipt = await service.submit(db, committed, input, () => NOW);
+    const original = await db.select().from(bookingOperations);
+    const access = await db.select().from(appointmentAccess);
+    const bookings = await db.select().from(appointments);
+    const withoutOldKeys = createBookingOperations({
+      fingerprint: { currentId: "h2", keys: { h2: Buffer.alloc(32, 3) } },
+      replay: { currentId: "e2", keys: { e2: Buffer.alloc(32, 4) } },
+    });
+    for (const instant of [NOW, Date.parse(receipt.confirmationExpiresAt)])
+      assert.deepEqual(
+        await withoutOldKeys.fenceIntent(db, committed, () => instant),
+        { state: "committed" },
+      );
+    let calls = 0;
+    await assert.rejects(
+      service.fenceIntent(db, committed, () => (++calls === 1 ? NOW : NaN)),
+      code("recovery_unavailable"),
+    );
+    assert.deepEqual(await db.select().from(bookingOperations), original);
+    assert.deepEqual(await db.select().from(appointmentAccess), access);
+    assert.deepEqual(await db.select().from(appointments), bookings);
+    for (const state of ["pending", "abandoned", "tombstone"]) {
+      const intent = await service.createIntent(db, () => NOW);
+      await db
+        .update(bookingOperations)
+        .set({ state })
+        .where(eq(bookingOperations.id, intent.operationId));
+      const [before] = await db
+        .select()
+        .from(bookingOperations)
+        .where(eq(bookingOperations.id, intent.operationId));
+      assert.deepEqual(
+        await service.fenceIntent(db, intent, () => NOW + 86_400_000),
+        { state: "fenced" },
+      );
+      assert.deepEqual(
+        await db
+          .select()
+          .from(bookingOperations)
+          .where(eq(bookingOperations.id, intent.operationId)),
+        [{ ...before, state: state === "pending" ? "abandoned" : state }],
+      );
+    }
+  });
+});
+
+test("fencing rejects savepoint handles and invalid clocks without persisting a fence", async () => {
+  await withTestDatabase({}, async ({ db }) => {
+    const service = createBookingOperations(keys());
+    const intent = {
+      operationId: "11111111-1111-4111-8111-111111111111",
+      credential: "a".repeat(64),
+    };
+    await db.transaction(async (tx) => {
+      await assert.rejects(
+        service.fenceIntent(tx, intent, () => NOW),
+        code("recovery_unavailable"),
+      );
+      assert.equal((await tx.select().from(bookingOperations)).length, 0);
+    });
+    for (const instant of [NaN, Infinity, 8_640_000_000_000_000])
+      await assert.rejects(
+        service.fenceIntent(db, intent, () => instant),
+        code("recovery_unavailable"),
+      );
+    let calls = 0;
+    await assert.rejects(
+      service.fenceIntent(db, intent, () => (++calls === 1 ? NOW : NaN)),
+      code("recovery_unavailable"),
+    );
+    assert.equal(calls, 2);
+    assert.equal((await db.select().from(bookingOperations)).length, 0);
+    for (const state of ["pending", "abandoned", "tombstone"]) {
+      await service.registerIntent(db, intent, () => NOW);
+      await db.update(bookingOperations).set({ state });
+      const original = await db.select().from(bookingOperations);
+      calls = 0;
+      await assert.rejects(
+        service.fenceIntent(db, intent, () => (++calls === 1 ? NOW : NaN)),
+        code("recovery_unavailable"),
+      );
+      assert.deepEqual(await db.select().from(bookingOperations), original);
+    }
+  });
+});
+
 test("pre-persisted browser credentials register once and duplicates cannot extend their deadline", async () => {
   await withTestDatabase({}, async ({ db, independentDb }) => {
     const service = createBookingOperations(keys());
@@ -566,6 +714,201 @@ async function waitForBlocked(
   }
   assert.fail("retry did not wait on the operation lock");
 }
+
+test("fencing waits for submission commit or rollback and snapshots credentials", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const input = await fixture(db);
+    const service = createBookingOperations(keys());
+    const [session] = await independentDb.execute(
+      sql`SELECT pg_backend_pid() AS pid`,
+      "objects",
+    );
+    for (const rollback of [true, false]) {
+      const intent = await service.createIntent(db, () => NOW);
+      const mutable = { ...intent };
+      let pending: ReturnType<typeof service.fenceIntent> | undefined;
+      const transaction = db.transaction(async (tx) => {
+        await service.submit(tx, intent, input, () => NOW);
+        pending = service.fenceIntent(independentDb, mutable, () => NOW);
+        void pending.catch(() => {});
+        await waitForBlocked(tx, Number(session.pid));
+        mutable.operationId = "22222222-2222-4222-8222-222222222222";
+        mutable.credential = "f".repeat(64);
+        if (rollback) throw new Error("deliberate rollback");
+      });
+      if (rollback) await assert.rejects(transaction, /deliberate rollback/);
+      else await transaction;
+      assert.deepEqual(await pending, {
+        state: rollback ? "fenced" : "committed",
+      });
+      if (rollback)
+        await assert.rejects(
+          service.submit(db, intent, input, () => NOW),
+          code("operation_unavailable"),
+        );
+      else assert.ok(await service.recover(db, intent, () => NOW));
+    }
+    assert.equal((await db.select().from(appointments)).length, 1);
+  });
+});
+
+// Keep the real top-level transaction owner but pause before its commit/rollback.
+function afterTransactionAction(
+  db: NodePgDatabase,
+  after: (
+    tx: Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0],
+  ) => Promise<void>,
+): NodePgDatabase {
+  const owner: NodePgDatabase = Object.create(db);
+  owner.transaction = (action, options) =>
+    db.transaction(async (tx) => {
+      const result = await action(tx);
+      await after(tx);
+      return result;
+    }, options);
+  return owner;
+}
+
+test("submission waits for explicit fencing commit or rollback, never a savepoint acknowledgement", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const input = await fixture(db);
+    const service = createBookingOperations(keys());
+    const [session] = await independentDb.execute(
+      sql`SELECT pg_backend_pid() AS pid`,
+      "objects",
+    );
+    for (const rollback of [true, false]) {
+      const intent = await service.createIntent(db, () => NOW);
+      let pending: ReturnType<typeof service.submit> | undefined;
+      const owner = afterTransactionAction(db, async (tx) => {
+        pending = service.submit(independentDb, intent, input, () => NOW);
+        void pending.catch(() => {});
+        await waitForBlocked(tx, Number(session.pid));
+        if (rollback) throw new Error("private rollback");
+      });
+      const fence = service.fenceIntent(owner, intent, () => NOW);
+      if (rollback) await assert.rejects(fence, code("recovery_unavailable"));
+      else assert.deepEqual(await fence, { state: "fenced" });
+      assert.ok(pending);
+      if (rollback) assert.ok(await pending);
+      else await assert.rejects(pending, code("operation_unavailable"));
+    }
+    assert.equal((await db.select().from(appointments)).length, 1);
+  });
+});
+
+test("absent-row registration and fencing serialize in either order including rollback", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const service = createBookingOperations(keys());
+    const [session] = await independentDb.execute(
+      sql`SELECT pg_backend_pid() AS pid`,
+      "objects",
+    );
+    for (const first of ["register", "fence"]) {
+      for (const rollback of [true, false]) {
+        const intent = {
+          operationId: `11111111-1111-4111-8111-1111111111${first === "register" ? "1" : "2"}${rollback ? "1" : "2"}`,
+          credential:
+            `${first === "register" ? "a" : "b"}${rollback ? "c" : "d"}`.repeat(
+              32,
+            ),
+        };
+        let pending: Promise<unknown> | undefined;
+        const owner = afterTransactionAction(db, async (tx) => {
+          pending =
+            first === "register"
+              ? service.fenceIntent(independentDb, intent, () => NOW + 1000)
+              : service.registerIntent(independentDb, intent, () => NOW + 1000);
+          void pending.catch(() => {});
+          await waitForBlocked(tx, Number(session.pid));
+          if (rollback) throw new Error("private rollback");
+        });
+        const initial =
+          first === "register"
+            ? service.registerIntent(owner, intent, () => NOW)
+            : service.fenceIntent(owner, intent, () => NOW);
+        if (rollback)
+          await assert.rejects(initial, code("recovery_unavailable"));
+        else await initial;
+        assert.ok(pending);
+        if (first === "register")
+          assert.deepEqual(await pending, { state: "fenced" });
+        else assert.equal(await pending, undefined);
+        const [row] = await db
+          .select()
+          .from(bookingOperations)
+          .where(eq(bookingOperations.id, intent.operationId));
+        assert.equal(
+          row.state,
+          first === "fence" && rollback ? "pending" : "abandoned",
+        );
+        assert.equal(row.credentialHash, hash(intent.credential));
+        assert.equal(Date.parse(row.createdAt), NOW + (rollback ? 1000 : 0));
+      }
+    }
+  });
+});
+
+test("fencing lost acknowledgements remain unknown and retry the same permanent fence", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const service = createBookingOperations(keys());
+    const intent = await service.createIntent(db, () => NOW);
+    const owner: NodePgDatabase = Object.create(db);
+    owner.transaction = async (action, options) => {
+      await db.transaction(action, options);
+      throw new Error(`private failure ${intent.credential}`);
+    };
+    await assert.rejects(
+      service.fenceIntent(owner, intent, () => NOW),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.equal(error.message, "recovery_unavailable");
+        assert.ok(!Object.hasOwn(error, "cause"));
+        assert.ok(!error.stack?.includes(intent.credential));
+        return true;
+      },
+    );
+    const original = await db.select().from(bookingOperations);
+    assert.equal(original[0].state, "abandoned");
+    assert.deepEqual(
+      await service.fenceIntent(independentDb, intent, () => NOW),
+      { state: "fenced" },
+    );
+    assert.deepEqual(await db.select().from(bookingOperations), original);
+  });
+});
+
+test("fencing lock timeout is unknown and trusted time is sampled after waiting", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const service = createBookingOperations(keys());
+    const intent = await service.createIntent(db, () => NOW);
+    const original = await db.select().from(bookingOperations);
+    await db.transaction(async (tx) => {
+      await tx.select().from(bookingOperations).for("update");
+      await assert.rejects(
+        service.fenceIntent(independentDb, intent, () => NOW),
+        code("recovery_unavailable"),
+      );
+    });
+    assert.deepEqual(await db.select().from(bookingOperations), original);
+    const [session] = await independentDb.execute(
+      sql`SELECT pg_backend_pid() AS pid`,
+      "objects",
+    );
+    let instant = NOW;
+    let pending: ReturnType<typeof service.fenceIntent> | undefined;
+    await db.transaction(async (tx) => {
+      await tx.select().from(bookingOperations).for("update");
+      pending = service.fenceIntent(independentDb, intent, () => instant);
+      void pending.catch(() => {});
+      await waitForBlocked(tx, Number(session.pid));
+      instant = NaN;
+    });
+    assert.ok(pending);
+    await assert.rejects(pending, code("recovery_unavailable"));
+    assert.deepEqual(await db.select().from(bookingOperations), original);
+  });
+});
 
 test("resolution waits for submission commit or rollback and snapshots caller credentials", async () => {
   await withTestDatabase({}, async ({ db, independentDb }) => {

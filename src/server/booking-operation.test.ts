@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import type { BookingInput } from "@/server/book-appointment";
 import {
@@ -261,6 +262,62 @@ test("resolution validates primitive credentials before I/O and redacts database
       return true;
     },
   );
+});
+
+test("fencing validates credentials and clock before I/O and redacts unexpected failures", async () => {
+  const service = createBookingOperations({
+    fingerprint: { currentId: "h1", keys: { h1: Buffer.alloc(32, 1) } },
+    replay: { currentId: "e1", keys: { e1: Buffer.alloc(32, 2) } },
+  });
+  const valid = {
+    operationId: "11111111-1111-4111-8111-111111111111",
+    credential: "a".repeat(64),
+  };
+  const noDatabase = {
+    transaction: async () =>
+      assert.fail("invalid input must not access database"),
+  };
+  for (const patch of [
+    { operationId: Object(valid.operationId) },
+    { operationId: "invalid" },
+    { credential: Object(valid.credential) },
+    { credential: "A".repeat(64) },
+    { credential: "a".repeat(63) },
+    { credential: null },
+  ])
+    await assert.rejects(
+      service.fenceIntent(noDatabase, { ...valid, ...patch } as typeof valid),
+      /operation_unavailable/,
+    );
+  await assert.rejects(
+    service.fenceIntent(noDatabase, valid),
+    /recovery_unavailable/,
+  );
+  // A unit double with the required owner prototype, but no connection or I/O.
+  const failingDatabase: NodePgDatabase = Object.create(
+    NodePgDatabase.prototype,
+  );
+  let transactions = 0;
+  failingDatabase.transaction = async () => {
+    transactions++;
+    throw new Error(`private failure ${valid.credential}`);
+  };
+  await assert.rejects(
+    service.fenceIntent(failingDatabase, valid, () => NaN),
+    /recovery_unavailable/,
+  );
+  assert.equal(transactions, 0);
+  await assert.rejects(
+    service.fenceIntent(failingDatabase, valid),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.message, "recovery_unavailable");
+      assert.ok(!Object.hasOwn(error, "cause"));
+      assert.ok(!error.stack?.includes(valid.credential));
+      return true;
+    },
+  );
+  assert.equal(transactions, 1);
 });
 
 test("key configuration requires independent durable 32-byte keys and existing current IDs", () => {
