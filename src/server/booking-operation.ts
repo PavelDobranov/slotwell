@@ -1,14 +1,36 @@
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+  randomUUID,
+  timingSafeEqual,
+} from "node:crypto";
+import { and, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
-import { bookingOperations } from "@/db/schema";
+import {
+  appointmentAccess,
+  appointments,
+  bookingOperations,
+} from "@/db/schema";
 import { contactLimits } from "@/lib/guest-contact";
 import {
+  BookingError,
   type BookingInput,
+  bookAppointment,
   bookingStartInstant,
 } from "@/server/book-appointment";
 
 type Database = Pick<NodePgDatabase, "transaction">;
+type Transaction = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
+type Operation = typeof bookingOperations.$inferSelect;
+export type BookingReceipt = {
+  appointmentId: string;
+  confirmationExpiresAt: string;
+  viewToken: string;
+};
 type KeyRing = { currentId: string; keys: Record<string, Buffer> };
 export type BookingKeys = { fingerprint: KeyRing; replay: KeyRing };
 export type OperationCredential = { operationId: string; credential: string };
@@ -58,8 +80,8 @@ function snapshot(input: BookingInput): BookingInput {
     )
       throw new Error();
     const reviewedServices = input.reviewedServices.map((service) => ({
-      id: text(service.id, 64, true),
-      name: text(service.name, 1000, true),
+      id: text(service.id, 64),
+      name: text(service.name, 1000),
       priceCents:
         service.priceCents === null ? null : integer(service.priceCents, 0),
       currency: text(service.currency, 3),
@@ -110,6 +132,57 @@ function now(clock: () => number): number {
 const hash = (bytes: Buffer) =>
   createHash("sha256").update(bytes).digest("hex");
 
+function credentialHash(credential: OperationCredential): string {
+  if (
+    !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(
+      credential.operationId,
+    ) ||
+    !/^[a-f0-9]{64}$/.test(credential.credential)
+  )
+    throw new OperationError("operation_unavailable");
+  return hash(Buffer.from(credential.credential, "hex"));
+}
+async function guarded<T>(
+  db: Database,
+  action: (tx: Transaction) => Promise<T>,
+): Promise<T> {
+  try {
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL lock_timeout = '5s'`);
+      return action(tx);
+    });
+  } catch (error) {
+    if (error instanceof OperationError || error instanceof BookingError)
+      throw error;
+    // Drizzle errors can contain SQL bind values. Do not attach their cause.
+    throw new OperationError("recovery_unavailable");
+  }
+}
+async function lockOperation(tx: Transaction, credential: OperationCredential) {
+  const digest = credentialHash(credential);
+  const [operation] = await tx
+    .select()
+    .from(bookingOperations)
+    .where(
+      and(
+        eq(bookingOperations.id, credential.operationId),
+        eq(bookingOperations.credentialHash, digest),
+      ),
+    )
+    .for("update");
+  if (!operation) throw new OperationError("operation_unavailable");
+  return operation;
+}
+const aad = (operationId: string, appointmentId: string, expiry: string) =>
+  Buffer.from(
+    JSON.stringify([
+      1,
+      operationId,
+      appointmentId,
+      new Date(expiry).toISOString(),
+    ]),
+  );
+
 /** Keys are supplied by trusted server configuration, never request data. */
 export function createBookingOperations(configuration: BookingKeys) {
   const copyRing = (ring: KeyRing): KeyRing => {
@@ -133,7 +206,155 @@ export function createBookingOperations(configuration: BookingKeys) {
     if (Object.values(replay.keys).some((key) => key.equals(hmacKey)))
       throw new OperationError("recovery_unavailable");
   }
+  const fingerprintFor = (payload: string, id: string) => {
+    const key = fingerprint.keys[id];
+    if (!key) throw new OperationError("recovery_unavailable");
+    return createHmac("sha256", key).update(payload).digest("hex");
+  };
+  async function receipt(
+    tx: Transaction,
+    operation: Operation,
+    clock: () => number,
+    payload?: string,
+  ): Promise<BookingReceipt> {
+    if (
+      operation.state !== "committed" ||
+      !operation.appointmentId ||
+      !operation.replayExpiresAt ||
+      !operation.encryptedReplay ||
+      !operation.replayKeyId ||
+      !operation.fingerprintKeyId ||
+      !operation.payloadFingerprint ||
+      operation.fingerprintVersion !== 1
+    )
+      throw new OperationError("operation_unavailable");
+    const [booking] = await tx
+      .select({
+        expiry: appointments.confirmationExpiresAt,
+        tokenHash: appointmentAccess.tokenHash,
+      })
+      .from(appointments)
+      .innerJoin(
+        appointmentAccess,
+        eq(appointments.id, appointmentAccess.appointmentId),
+      )
+      .where(eq(appointments.id, operation.appointmentId));
+    if (
+      !booking ||
+      Date.parse(booking.expiry) !== Date.parse(operation.replayExpiresAt)
+    )
+      throw new OperationError("recovery_unavailable");
+    if (now(clock) >= Date.parse(booking.expiry))
+      throw new OperationError("operation_unavailable");
+    // Recovery also requires the stored fingerprint key to remain available.
+    const expected = fingerprintFor(payload ?? "", operation.fingerprintKeyId);
+    if (
+      payload !== undefined &&
+      !timingSafeEqual(
+        Buffer.from(expected, "hex"),
+        Buffer.from(operation.payloadFingerprint, "hex"),
+      )
+    )
+      throw new OperationError("payload_conflict");
+    const key = replay.keys[operation.replayKeyId];
+    if (!key) throw new OperationError("recovery_unavailable");
+    const envelope = Buffer.from(operation.encryptedReplay, "hex");
+    if (envelope.length !== 60)
+      throw new OperationError("recovery_unavailable");
+    const decipher = createDecipheriv(
+      "aes-256-gcm",
+      key,
+      envelope.subarray(0, 12),
+    );
+    decipher.setAAD(aad(operation.id, operation.appointmentId, booking.expiry));
+    decipher.setAuthTag(envelope.subarray(44));
+    const token = Buffer.concat([
+      decipher.update(envelope.subarray(12, 44)),
+      decipher.final(),
+    ]);
+    if (hash(token) !== booking.tokenHash)
+      throw new OperationError("recovery_unavailable");
+    if (now(clock) >= Date.parse(booking.expiry))
+      throw new OperationError("operation_unavailable");
+    return {
+      appointmentId: operation.appointmentId,
+      confirmationExpiresAt: new Date(booking.expiry).toISOString(),
+      viewToken: token.toString("hex"),
+    };
+  }
   return {
+    async submit(
+      db: Database,
+      credential: OperationCredential,
+      input: BookingInput,
+      clock: () => number = Date.now,
+    ): Promise<BookingReceipt> {
+      const agreement = snapshot(input);
+      const payload = canonical(agreement);
+      const authorization = { ...credential };
+      return guarded(db, async (tx) => {
+        await lockOperation(tx, authorization);
+        const result = await bookAppointment(
+          tx,
+          agreement,
+          {
+            operationId: authorization.operationId,
+            credentialHash: credentialHash(authorization),
+            prepare: ({ appointmentId, confirmationExpiresAt }) => {
+              const token = randomBytes(32);
+              const nonce = randomBytes(12);
+              const cipher = createCipheriv(
+                "aes-256-gcm",
+                replay.keys[replay.currentId],
+                nonce,
+              );
+              cipher.setAAD(
+                aad(
+                  authorization.operationId,
+                  appointmentId,
+                  confirmationExpiresAt,
+                ),
+              );
+              const ciphertext = Buffer.concat([
+                cipher.update(token),
+                cipher.final(),
+              ]);
+              return {
+                tokenHash: hash(token),
+                payloadFingerprint: fingerprintFor(
+                  payload,
+                  fingerprint.currentId,
+                ),
+                fingerprintVersion: 1,
+                fingerprintKeyId: fingerprint.currentId,
+                encryptedReplay: Buffer.concat([
+                  nonce,
+                  ciphertext,
+                  cipher.getAuthTag(),
+                ]).toString("hex"),
+                replayKeyId: replay.currentId,
+              };
+            },
+          },
+          clock,
+        );
+        const operation =
+          result.kind === "already_committed"
+            ? result.operation
+            : await lockOperation(tx, authorization);
+        return receipt(tx, operation, clock, payload);
+      });
+    },
+    async recover(
+      db: Database,
+      credential: OperationCredential,
+      clock: () => number = Date.now,
+    ): Promise<BookingReceipt> {
+      const authorization = { ...credential };
+      return guarded(db, async (tx) =>
+        receipt(tx, await lockOperation(tx, authorization), clock),
+      );
+    },
     async createIntent(
       db: Database,
       clock: () => number = Date.now,

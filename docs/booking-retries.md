@@ -8,4 +8,16 @@
 
 `createIntent(db, clock)` creates an independent public UUID locator and random 32-byte hex credential. Only its SHA-256 hash is persisted. Pending submission expires exactly 24 elapsed hours after creation. Establish and confirm durable possession of the credential before attempting submission; a lost bootstrap response must not execute a booking.
 
+## Submit and recover
+
+`submit(db, credential, input, clock)` and `recover(db, credential, clock)` return only `{ appointmentId, confirmationExpiresAt, viewToken }`. The token is sensitive: transport must enforce private, no-store responses and the reviewed private-link mechanism. This module does not build confirmation URLs.
+
+Submission keeps the operation lock through booking, keyed fingerprint comparison and authenticated token recovery. Identical committed submissions return the same receipt without consulting the current catalog or default phone country; changed submitted agreements fail with `payload_conflict`. A failed transaction leaves the existing pending intent reusable until its deadline. `recover` cannot execute a pending booking.
+
+Replay is valid only before the appointment's original service-end + 168 elapsed-hour expiry, even when the submission deadline has passed. AES-256-GCM stores a 12-byte nonce, 32-byte token ciphertext and 16-byte authentication tag; authenticated data binds version, operation, appointment and expiry. Recovered tokens must match the stored access hash. Old key IDs remain readable after rotation. Missing keys or corrupt/inconsistent replay data fail closed.
+
+`booking_busy` and `recovery_unavailable` are **unknown**, not evidence that nothing committed. Keep the same intent and resolve/retry it; never mint a replacement automatically. Error codes contain no query values or causes. Log neither function arguments/results nor database error objects. `operation_unavailable` covers wrong credentials, noncommitted recovery and expired/terminal operations. Booking validation/conflict codes remain those of `bookAppointment`.
+
+## Canonical agreement
+
 Canonical agreement v1 uses ordered JSON fields: version, staff ID, ordered service IDs, UTC start instant, ordered reviewed-service snapshot values, trimmed required contact fields, verbatim note (omitted means empty), submitted phone country (omitted means null). Object property order and equivalent timestamp offsets are irrelevant; service order, phone formatting, email case and note whitespace remain meaningful. Canonicalization does not consult changing catalog or country defaults. It copies validated fields before asynchronous work. Never persist the plaintext canonical agreement.

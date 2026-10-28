@@ -125,6 +125,25 @@ test("all submitted agreement fields and service ordering affect the fingerprint
   );
 });
 
+test("snapshot values retain exact catalog whitespace and missing price cannot collide with null", () => {
+  assert.notEqual(
+    canonicalBookingPayload(input),
+    canonicalBookingPayload({
+      ...input,
+      reviewedServices: [{ ...input.reviewedServices[0], name: " Cut " }],
+    }),
+  );
+  const { priceCents: _price, ...missingPrice } = input.reviewedServices[0];
+  assert.throws(
+    () =>
+      canonicalBookingPayload({
+        ...input,
+        reviewedServices: [missingPrice],
+      } as BookingInput),
+    /invalid_booking/,
+  );
+});
+
 test("canonical input rejects invalid instants and malformed contact/snapshot values", () => {
   for (const variant of [
     { ...input, startsAt: "2026-06-01T09:00" },
