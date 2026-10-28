@@ -155,6 +155,114 @@ test("a discarded commit response is recoverable across instances and identical 
   });
 });
 
+test("exclusive expiry forbids replay and pruning retains history plus permanent tombstones", async () => {
+  await withTestDatabase({}, async ({ db }) => {
+    const input = await fixture(db);
+    const service = createBookingOperations(keys());
+    const intent = await service.createIntent(db, () => NOW);
+    const pending = await service.createIntent(db, () => NOW);
+    assert.equal(
+      await service.pruneExpired(
+        db,
+        pending.operationId,
+        () => NOW + 86_399_999,
+      ),
+      false,
+    );
+    await assert.rejects(
+      service.submit(db, pending, input, () => NOW + 86_400_000),
+      code("operation_unavailable"),
+    );
+    assert.equal(
+      await service.pruneExpired(
+        db,
+        pending.operationId,
+        () => NOW + 86_400_000,
+      ),
+      true,
+    );
+    await assert.rejects(
+      service.submit(db, pending, input, () => NOW),
+      code("operation_unavailable"),
+    );
+    const result = await service.submit(db, intent, input, () => NOW);
+    const expiry = Date.parse(result.confirmationExpiresAt);
+    assert.equal(
+      await service.pruneExpired(db, intent.operationId, () => expiry - 1),
+      false,
+    );
+    assert.deepEqual(
+      await service.submit(db, intent, input, () => expiry - 1),
+      result,
+    );
+    await assert.rejects(
+      service.recover(db, intent, () => expiry),
+      code("operation_unavailable"),
+    );
+    await assert.rejects(
+      service.submit(db, intent, input, () => expiry),
+      code("operation_unavailable"),
+    );
+    assert.equal((await db.select().from(appointmentAccess)).length, 1); // expiry independent of physical pruning
+    assert.equal(
+      await service.pruneExpired(db, intent.operationId, () => expiry),
+      true,
+    );
+    assert.equal(
+      await service.pruneExpired(db, intent.operationId, () => expiry),
+      false,
+    );
+    const [stored] = await db
+      .select()
+      .from(bookingOperations)
+      .where(eq(bookingOperations.id, intent.operationId));
+    assert.equal(stored.state, "tombstone");
+    assert.equal(stored.credentialHash, hash(intent.credential));
+    for (const field of [
+      "appointmentId",
+      "payloadFingerprint",
+      "fingerprintVersion",
+      "fingerprintKeyId",
+      "encryptedReplay",
+      "replayKeyId",
+      "replayExpiresAt",
+    ] as const)
+      assert.equal(stored[field], null);
+    assert.equal((await db.select().from(appointmentAccess)).length, 0);
+    assert.equal((await db.select().from(appointments)).length, 1);
+    assert.equal((await db.select().from(staffOccupancy)).length, 1);
+    await assert.rejects(
+      service.submit(db, intent, input, () => NOW),
+      code("operation_unavailable"),
+    );
+  });
+});
+
+test("inconsistent replay expiry cannot authorize early pruning or recovery", async () => {
+  await withTestDatabase({}, async ({ db }) => {
+    const input = await fixture(db);
+    const service = createBookingOperations(keys());
+    const intent = await service.createIntent(db, () => NOW);
+    await service.submit(db, intent, input, () => NOW);
+    await db
+      .update(bookingOperations)
+      .set({ replayExpiresAt: new Date(NOW + 1000).toISOString() });
+    await assert.rejects(
+      service.pruneExpired(db, intent.operationId, () => NOW + 1000),
+      code("recovery_unavailable"),
+    );
+    await assert.rejects(
+      service.recover(db, intent, () => NOW),
+      code("recovery_unavailable"),
+    );
+    assert.equal((await db.select().from(appointmentAccess)).length, 1);
+    assert.equal(
+      (await db.select().from(bookingOperations))[0].state,
+      "committed",
+    );
+  });
+});
+
 async function waitForBlocked(
   observer: Pick<NodePgDatabase, "execute">,
   pid: number,
@@ -225,6 +333,123 @@ test("submission snapshots mutable input before waiting on the operation lock", 
   });
 });
 
+test("a replay waiting across expiry fails; maintenance serializes with a pending-to-committed transition", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const input = await fixture(db);
+    const service = createBookingOperations(keys());
+    const intent = await service.createIntent(db, () => NOW);
+    const [session] = await independentDb.execute(
+      sql`SELECT pg_backend_pid() AS pid`,
+      "objects",
+    );
+    let maintenance: ReturnType<typeof service.pruneExpired> | undefined;
+    const result = await db.transaction(async (tx) => {
+      const receipt = await service.submit(tx, intent, input, () => NOW);
+      maintenance = service.pruneExpired(
+        independentDb,
+        intent.operationId,
+        () => NOW + 86_400_000,
+      );
+      void maintenance.catch(() => {});
+      await waitForBlocked(tx, Number(session.pid));
+      return receipt;
+    });
+    assert.equal(await maintenance, false); // Must reread committed state, not expire stale pending state.
+    const expiry = Date.parse(result.confirmationExpiresAt);
+    let clock = expiry - 1;
+    let replay: ReturnType<typeof service.recover> | undefined;
+    await db.transaction(async (tx) => {
+      await tx.select().from(bookingOperations).for("update");
+      replay = service.recover(independentDb, intent, () => clock);
+      void replay.catch(() => {});
+      await waitForBlocked(tx, Number(session.pid));
+      clock = expiry;
+      assert.equal(
+        await service.pruneExpired(tx, intent.operationId, () => expiry),
+        true,
+      );
+    });
+    assert.ok(replay);
+    await assert.rejects(replay, code("operation_unavailable"));
+    assert.equal((await db.select().from(appointmentAccess)).length, 0);
+  });
+});
+
+test("expiry is sampled after lock wait even when physical pruning has not happened", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const input = await fixture(db);
+    const service = createBookingOperations(keys());
+    const intent = await service.createIntent(db, () => NOW);
+    const result = await service.submit(db, intent, input, () => NOW);
+    const [session] = await independentDb.execute(
+      sql`SELECT pg_backend_pid() AS pid`,
+      "objects",
+    );
+    let clock = Date.parse(result.confirmationExpiresAt) - 1;
+    let replay: ReturnType<typeof service.submit> | undefined;
+    await db.transaction(async (tx) => {
+      await tx.select().from(bookingOperations).for("update");
+      replay = service.submit(independentDb, intent, input, () => clock);
+      void replay.catch(() => {});
+      await waitForBlocked(tx, Number(session.pid));
+      clock++;
+    });
+    assert.ok(replay);
+    await assert.rejects(replay, code("operation_unavailable"));
+    assert.equal((await db.select().from(appointmentAccess)).length, 1);
+  });
+});
+
+test("an in-flight lock timeout stays unknown and retries only the same intent", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const input = await fixture(db);
+    const service = createBookingOperations(keys());
+    const intent = await service.createIntent(db, () => NOW);
+    await db.transaction(async (tx) => {
+      await tx.select().from(bookingOperations).for("update");
+      await assert.rejects(
+        service.submit(independentDb, intent, input, () => NOW),
+        code("recovery_unavailable"),
+      );
+      assert.equal(
+        (await tx.select().from(bookingOperations))[0].state,
+        "pending",
+      );
+      assert.equal((await tx.select().from(appointments)).length, 0);
+    });
+    await service.submit(db, intent, input, () => NOW);
+    assert.equal((await db.select().from(appointments)).length, 1);
+    assert.equal((await db.select().from(bookingOperations)).length, 1);
+  });
+});
+
+test("a transaction whose committed acknowledgement is lost resolves without a replacement", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const input = await fixture(db);
+    const service = createBookingOperations(keys());
+    const intent = await service.createIntent(db, () => NOW);
+    const losesAcknowledgement: Pick<NodePgDatabase, "transaction"> = {
+      transaction: async (action, options) => {
+        await db.transaction(action, options);
+        throw new Error(
+          `private transport failure ${intent.credential} guest@example.test`,
+        );
+      },
+    };
+    await assert.rejects(
+      service.submit(losesAcknowledgement, intent, input, () => NOW),
+      code("recovery_unavailable"),
+    );
+    const result = await service.recover(independentDb, intent, () => NOW);
+    assert.deepEqual(
+      await service.submit(db, intent, input, () => NOW),
+      result,
+    );
+    assert.equal((await db.select().from(appointments)).length, 1);
+    assert.equal((await db.select().from(bookingOperations)).length, 1);
+  });
+});
+
 test("old key IDs survive rotation; missing keys and tampered/swapped replay fail closed", async () => {
   await withTestDatabase({}, async ({ db }) => {
     const input = await fixture(db);
@@ -275,6 +500,53 @@ test("old key IDs survive rotation; missing keys and tampered/swapped replay fai
       code("recovery_unavailable"),
     );
     assert.equal((await db.select().from(appointments)).length, 1);
+  });
+});
+
+test("encrypted replay is bound to its operation and appointment, not interchangeable ciphertext", async () => {
+  await withTestDatabase({}, async ({ db }) => {
+    const input = await fixture(db);
+    const configuration = keys();
+    const service = createBookingOperations(configuration);
+    // Mutating the caller-owned key buffers cannot change an existing instance.
+    configuration.fingerprint.keys.h1.fill(9);
+    configuration.replay.keys.e1.fill(9);
+    const first = await service.createIntent(db, () => NOW);
+    const second = await service.createIntent(db, () => NOW);
+    const a = await service.submit(db, first, input, () => NOW);
+    const b = await service.submit(
+      db,
+      second,
+      { ...input, startsAt: "2026-06-01T00:45:00Z" },
+      () => NOW,
+    );
+    assert.notEqual(a.viewToken, b.viewToken);
+    assert.deepEqual(
+      await createBookingOperations(keys()).recover(db, first, () => NOW),
+      a,
+    );
+    const [storedA] = await db
+      .select()
+      .from(bookingOperations)
+      .where(eq(bookingOperations.id, first.operationId));
+    const [storedB] = await db
+      .select()
+      .from(bookingOperations)
+      .where(eq(bookingOperations.id, second.operationId));
+    assert.notEqual(
+      storedA.encryptedReplay?.slice(0, 24),
+      storedB.encryptedReplay?.slice(0, 24),
+    );
+    await db
+      .update(bookingOperations)
+      .set({ encryptedReplay: storedA.encryptedReplay })
+      .where(eq(bookingOperations.id, second.operationId));
+    await assert.rejects(
+      service.recover(db, second, () => NOW),
+      code("recovery_unavailable"),
+    );
+    assert.deepEqual(await service.recover(db, first, () => NOW), a);
+    assert.equal((await db.select().from(appointments)).length, 2);
   });
 });
 

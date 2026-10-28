@@ -163,6 +163,21 @@ test("canonical input rejects invalid instants and malformed contact/snapshot va
     assert.throws(() => canonicalBookingPayload(variant), /invalid_booking/);
 });
 
+test("canonical identifiers must be primitive strings, never mutable or coercible objects", () => {
+  for (const patch of [
+    { staffId: Object("mimi") },
+    { staffId: 7 },
+    { serviceIds: [7] },
+    { serviceIds: [{ length: 4, toJSON: () => "cut_w" }] },
+    { serviceIds: [Object("cut_w")] },
+    { startsAt: Object(input.startsAt) },
+  ])
+    assert.throws(
+      () => canonicalBookingPayload({ ...input, ...patch } as BookingInput),
+      /invalid_booking/,
+    );
+});
+
 test("key configuration requires independent durable 32-byte keys and existing current IDs", () => {
   const good = {
     fingerprint: { currentId: "h1", keys: { h1: Buffer.alloc(32, 1) } },

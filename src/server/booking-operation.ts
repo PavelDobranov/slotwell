@@ -61,7 +61,13 @@ function integer(value: unknown, minimum: number): number {
 /** Copy only fields that execute; never retain caller-owned objects across awaits. */
 function snapshot(input: BookingInput): BookingInput {
   try {
-    const startsAt = new Date(bookingStartInstant(input)).toISOString();
+    const staffId = text(input.staffId, 64);
+    if (!Array.isArray(input.serviceIds) || typeof input.startsAt !== "string")
+      throw new Error();
+    const serviceIds = input.serviceIds.map((id) => text(id, 64));
+    const startsAt = new Date(
+      bookingStartInstant({ ...input, staffId, serviceIds }),
+    ).toISOString();
     const raw = input.contact as Record<string, unknown>;
     if (!raw || typeof raw !== "object" || Array.isArray(raw))
       throw new Error();
@@ -89,8 +95,8 @@ function snapshot(input: BookingInput): BookingInput {
       cleanupMinutes: integer(service.cleanupMinutes, 0),
     }));
     return {
-      staffId: input.staffId,
-      serviceIds: [...input.serviceIds],
+      staffId,
+      serviceIds,
       startsAt,
       reviewedServices,
       contact,
@@ -283,6 +289,62 @@ export function createBookingOperations(configuration: BookingKeys) {
     };
   }
   return {
+    /** Trusted maintenance only; never a guest reset/delete endpoint. */
+    async pruneExpired(
+      db: Database,
+      operationId: string,
+      clock: () => number = Date.now,
+    ): Promise<boolean> {
+      return guarded(db, async (tx) => {
+        const [operation] = await tx
+          .select()
+          .from(bookingOperations)
+          .where(eq(bookingOperations.id, operationId))
+          .for("update");
+        if (
+          !operation ||
+          (operation.state !== "pending" && operation.state !== "committed")
+        )
+          return false;
+        let expiry = Date.parse(operation.submitBefore);
+        if (operation.state === "committed") {
+          if (!operation.appointmentId || !operation.replayExpiresAt)
+            throw new OperationError("recovery_unavailable");
+          const [appointment] = await tx
+            .select({ expiry: appointments.confirmationExpiresAt })
+            .from(appointments)
+            .where(eq(appointments.id, operation.appointmentId));
+          if (
+            !appointment ||
+            Date.parse(appointment.expiry) !==
+              Date.parse(operation.replayExpiresAt)
+          )
+            throw new OperationError("recovery_unavailable");
+          expiry = Date.parse(appointment.expiry);
+        }
+        if (now(clock) < expiry) return false;
+        if (operation.appointmentId)
+          await tx
+            .delete(appointmentAccess)
+            .where(
+              eq(appointmentAccess.appointmentId, operation.appointmentId),
+            );
+        await tx
+          .update(bookingOperations)
+          .set({
+            state: "tombstone",
+            appointmentId: null,
+            payloadFingerprint: null,
+            fingerprintVersion: null,
+            fingerprintKeyId: null,
+            encryptedReplay: null,
+            replayKeyId: null,
+            replayExpiresAt: null,
+          })
+          .where(eq(bookingOperations.id, operation.id));
+        return true;
+      });
+    },
     async submit(
       db: Database,
       credential: OperationCredential,
@@ -293,7 +355,12 @@ export function createBookingOperations(configuration: BookingKeys) {
       const payload = canonical(agreement);
       const authorization = { ...credential };
       return guarded(db, async (tx) => {
-        await lockOperation(tx, authorization);
+        const before = await lockOperation(tx, authorization);
+        if (
+          before.state === "pending" &&
+          now(clock) >= Date.parse(before.submitBefore)
+        )
+          throw new OperationError("operation_unavailable");
         const result = await bookAppointment(
           tx,
           agreement,

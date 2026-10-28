@@ -18,6 +18,12 @@ Replay is valid only before the appointment's original service-end + 168 elapsed
 
 `booking_busy` and `recovery_unavailable` are **unknown**, not evidence that nothing committed. Keep the same intent and resolve/retry it; never mint a replacement automatically. Error codes contain no query values or causes. Log neither function arguments/results nor database error objects. `operation_unavailable` covers wrong credentials, noncommitted recovery and expired/terminal operations. Booking validation/conflict codes remain those of `bookAppointment`.
 
+## Retention
+
+`pruneExpired(db, operationId, clock)` is a trusted maintenance function, not a guest reset endpoint or scheduled job. It locks and rereads the operation. Pending intents become tombstones at their submission deadline; committed operations become tombstones only at the exact original confirmation expiry, after checking the authoritative appointment expiry. Inconsistent metadata fails without deletion. Cleanup atomically deletes access material and clears the operation's appointment association, fingerprint, ciphertext and key IDs. Appointment/contact/service/occupancy history remains intact. Terminal rows retain locator/hash/state and original lifecycle timestamps indefinitely; only an independently authorized explicit local reset may remove them. Cleanup never creates new intents. Expired replay fails even when cleanup has not run.
+
+To roll back runtime integration, stop invoking this module; do not delete tombstones, reset data, retire live keys or fall back to the raw booking transaction. The underlying schema is unchanged. Cookie/bootstrap/directory/abandon fencing and retrieval/page privacy controls require their own reviewed transport integration; this module alone does not establish reload/tab-closure recovery in a browser.
+
 ## Canonical agreement
 
 Canonical agreement v1 uses ordered JSON fields: version, staff ID, ordered service IDs, UTC start instant, ordered reviewed-service snapshot values, trimmed required contact fields, verbatim note (omitted means empty), submitted phone country (omitted means null). Object property order and equivalent timestamp offsets are irrelevant; service order, phone formatting, email case and note whitespace remain meaningful. Canonicalization does not consult changing catalog or country defaults. It copies validated fields before asynchronous work. Never persist the plaintext canonical agreement.
