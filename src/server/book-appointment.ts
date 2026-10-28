@@ -13,13 +13,13 @@ import {
   staff,
   staffOccupancy,
 } from "@/db/schema";
-import { parseGuestContact } from "@/lib/guest-contact";
 import {
   type AvailabilityView,
   readAvailability,
 } from "@/server/availability-query";
 import { addCalendarDays, businessDate } from "@/server/booking-time";
 import { CatalogError, validateServiceSelection } from "@/server/catalog";
+import { parseGuestContact } from "@/shared/guest-contact";
 
 export type ReviewedService = Pick<
   typeof services.$inferSelect,

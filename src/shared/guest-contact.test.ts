@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { parseGuestContact } from "@/lib/guest-contact";
+import { parseGuestContact } from "@/shared/guest-contact";
 
 const valid = {
   name: "Демо",

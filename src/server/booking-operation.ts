@@ -15,13 +15,13 @@ import {
   appointments,
   bookingOperations,
 } from "@/db/schema";
-import { contactLimits } from "@/lib/guest-contact";
 import {
   BookingError,
   type BookingInput,
   bookAppointment,
   bookingStartInstant,
 } from "@/server/book-appointment";
+import { contactLimits } from "@/shared/guest-contact";
 
 type Database = Pick<NodePgDatabase, "transaction">;
 type Transaction = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
