@@ -26,7 +26,7 @@ import {
   type BookingInput,
   type BookingRecovery,
   bookAppointment,
-} from "@/server/book-appointment";
+} from "@/server/booking/book-appointment";
 
 const isCode = (code: string) => (error: unknown) =>
   error instanceof BookingError && error.code === code;

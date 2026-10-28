@@ -14,8 +14,8 @@ import {
   computeAvailability,
   type ScheduleException,
 } from "@/server/availability/compute";
-import { addCalendarDays } from "@/server/booking-time";
 import { type CatalogDatabase, CatalogError } from "@/server/catalog";
+import { addCalendarDays } from "@/shared/booking-time";
 
 export type AvailabilityQuery = {
   staffId: string;
@@ -71,7 +71,7 @@ export async function readAvailability(
     .select()
     .from(businessSettings)
     .where(eq(businessSettings.id, 1));
-  if (!business) throw new CatalogError("availability_unavailable", 500);
+  if (!business) throw new CatalogError("availability_unavailable");
   const selected = await db
     .select({
       id: services.id,
@@ -83,12 +83,12 @@ export async function readAvailability(
   const known = new Set(selected.map((row) => row.id));
   const unknown = serviceIds.filter((id) => !known.has(id));
   if (unknown.length)
-    throw new CatalogError("unknown_services", 400, { serviceIds: unknown });
+    throw new CatalogError("unknown_services", { serviceIds: unknown });
   const [member] = await db
     .select({ id: staff.id })
     .from(staff)
     .where(and(eq(staff.id, staffId), eq(staff.isActive, true)));
-  if (!member) throw new CatalogError("unknown_staff", 400);
+  if (!member) throw new CatalogError("unknown_staff");
   const qualifications = await db
     .select({ id: staffServices.serviceId })
     .from(staffServices)

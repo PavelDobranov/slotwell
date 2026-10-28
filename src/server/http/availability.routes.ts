@@ -3,13 +3,11 @@ import type { Hono } from "hono";
 import {
   type AvailabilityQuery,
   readAvailability,
-} from "@/server/availability-query";
-import { addCalendarDays } from "@/server/booking-time";
-import {
-  type CatalogDatabase,
-  CatalogError,
-  validateServiceSelection,
-} from "@/server/catalog";
+} from "@/server/availability";
+import { type CatalogDatabase, CatalogError } from "@/server/catalog";
+import { catalogErrorResponse } from "@/server/http/catalog-error";
+import { addCalendarDays } from "@/shared/booking-time";
+import { validateServiceSelection } from "@/shared/service-selection";
 
 // Endpoint request bound: the widest public availability window. It guards the
 // HTTP query, not the application read, so it lives with the adapter.
@@ -21,11 +19,11 @@ export function validateAvailabilityQuery(
 ): AvailabilityQuery {
   for (const key of params.keys()) {
     if (!["staff", "service", "from", "to"].includes(key))
-      throw new CatalogError("invalid_query", 400);
+      throw new CatalogError("invalid_query");
   }
   const staffIds = params.getAll("staff");
   if (staffIds.length !== 1 || !staffIds[0].trim() || staffIds[0].length > 64)
-    throw new CatalogError("invalid_staff_id", 400);
+    throw new CatalogError("invalid_staff_id");
   const serviceIds = validateServiceSelection(params.getAll("service"));
   const from = params.get("from") ?? "";
   const to = params.get("to") ?? "";
@@ -38,14 +36,14 @@ export function validateAvailabilityQuery(
     if (from.startsWith("0000") || to.startsWith("0000") || from > to)
       throw new RangeError();
   } catch {
-    throw new CatalogError("invalid_date_range", 400);
+    throw new CatalogError("invalid_date_range");
   }
   if (
     (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) /
       86_400_000 >=
     MAX_AVAILABILITY_DAYS
   ) {
-    throw new CatalogError("date_range_too_large", 400, {
+    throw new CatalogError("date_range_too_large", {
       max: MAX_AVAILABILITY_DAYS,
     });
   }
@@ -60,12 +58,11 @@ export function registerAvailabilityRoutes(
     const now = Date.now();
     try {
       const query = validateAvailabilityQuery(new URL(c.req.url).searchParams);
-      if (!c.env?.db) throw new CatalogError("availability_unavailable", 500);
+      if (!c.env?.db) throw new CatalogError("availability_unavailable");
       return c.json(await readAvailability(c.env.db, query, now));
     } catch (error) {
-      if (error instanceof CatalogError)
-        return c.json(error.body(), error.status as 400 | 500);
-      return c.json({ error: { code: "internal" } }, 500);
+      const { status, body } = catalogErrorResponse(error);
+      return c.json(body, status);
     }
   });
 }

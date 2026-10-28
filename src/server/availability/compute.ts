@@ -15,7 +15,7 @@ import {
   businessDate,
   businessWeekday,
   resolveLocalStart,
-} from "@/server/booking-time";
+} from "@/shared/booking-time";
 
 const MINUTE_MS = 60_000;
 

@@ -17,11 +17,11 @@ import {
 } from "@/db/schema";
 import { seedCatalog } from "@/db/seed";
 import { withTestDatabase } from "@/db/testing";
-import type { BookingInput } from "@/server/book-appointment";
+import type { BookingInput } from "@/server/booking/book-appointment";
 import {
   type BookingKeys,
   createBookingOperations,
-} from "@/server/booking-operation";
+} from "@/server/booking/operations";
 
 const NOW = Date.parse("2026-05-31T22:00:00Z");
 const keys = () => ({

@@ -9,8 +9,8 @@ import {
   readBookingKeys,
   submitBooking,
 } from "@/server/booking";
-import { MAX_SELECTED_SERVICES } from "@/server/catalog";
 import { readBookingTransport } from "@/server/http/booking-configuration";
+import { MAX_SELECTED_SERVICES } from "@/shared/service-selection";
 
 export type BookingDatabase = Pick<NodePgDatabase, "transaction">;
 class InputError extends Error {

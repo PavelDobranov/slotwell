@@ -19,7 +19,7 @@ import {
 import { seedCatalog } from "@/db/seed";
 import { withTestDatabase } from "@/db/testing";
 import app from "@/server/app";
-import { readAvailability } from "@/server/availability-query";
+import { readAvailability } from "@/server/availability";
 import { validateAvailabilityQuery } from "@/server/http/availability.routes";
 
 const NOW = Date.parse("2026-05-31T22:00:00Z"); // Tokyo Monday 07:00

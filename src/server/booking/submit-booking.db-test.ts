@@ -13,8 +13,8 @@ import {
 } from "@/db/schema";
 import { seedCatalog } from "@/db/seed";
 import { withTestDatabase } from "@/db/testing";
-import type { BookingInput } from "@/server/book-appointment";
 import { submitBooking } from "@/server/booking";
+import type { BookingInput } from "@/server/booking/book-appointment";
 
 // Direct use-case tests: submitBooking is exercised without the HTTP adapter to
 // prove it owns registration-plus-submit orchestration and the business

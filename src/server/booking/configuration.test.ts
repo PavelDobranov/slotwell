@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 
-import { readBookingConfiguration } from "@/server/booking-configuration";
+import { readBookingKeys } from "@/server/booking/configuration";
 
 const key = (byte: number) => Buffer.alloc(32, byte).toString("hex");
 const rings = () => ({
@@ -18,7 +18,7 @@ const environment = (
 });
 function refuses(env: Record<string, string | undefined>) {
   assert.throws(
-    () => readBookingConfiguration(env),
+    () => readBookingKeys(env),
     (error: unknown) => {
       assert.ok(error instanceof Error);
       assert.equal(error.message, "booking_configuration_unavailable");
@@ -29,54 +29,15 @@ function refuses(env: Record<string, string | undefined>) {
   );
 }
 
-test("reads explicitly configured loopback and HTTPS origins with owned durable key rings", () => {
-  for (const origin of [
-    "http://localhost:3000",
-    "http://127.0.0.1:8080",
-    "http://[::1]:3000",
-    "https://booking.example",
-    "https://booking.example:8443",
-  ]) {
-    const config = readBookingConfiguration(environment(origin));
-    assert.equal(config.origin, origin);
-    assert.equal(config.secureCookies, origin.startsWith("https:"));
-    assert.equal(config.keys.fingerprint.currentId, "h2");
-    assert.deepEqual(config.keys.fingerprint.keys.h1, Buffer.alloc(32, 1));
-    assert.deepEqual(config.keys.replay.keys.e2, Buffer.alloc(32, 4));
-  }
+test("reads owned durable key rings that survive mutation of a returned copy", () => {
+  const config = readBookingKeys(environment());
+  assert.equal(config.fingerprint.currentId, "h2");
+  assert.deepEqual(config.fingerprint.keys.h1, Buffer.alloc(32, 1));
+  assert.deepEqual(config.replay.keys.e2, Buffer.alloc(32, 4));
   const env = environment();
-  const first = readBookingConfiguration(env);
-  first.keys.replay.keys.e2.fill(0);
-  assert.deepEqual(
-    readBookingConfiguration(env).keys.replay.keys.e2,
-    Buffer.alloc(32, 4),
-  );
-});
-
-test("refuses missing and noncanonical origins and non-loopback plaintext HTTP", () => {
-  for (const origin of [
-    "",
-    "http://example.com",
-    "http://localhost.evil",
-    "http://127.0.0.2",
-    "http://2130706433",
-    "http://127.1",
-    "http://localhost/",
-    "http://localhost/path",
-    "https://booking.example?secret=private",
-    "https://booking.example#private",
-    "https://booking.example?",
-    "https://booking.example#",
-    "https://BOOKING.EXAMPLE",
-    "https://guest:private@booking.example",
-    "HTTPS://booking.example",
-    "https://booking.example:443",
-    " https://booking.example",
-    "ftp://localhost",
-    "null",
-  ])
-    refuses(environment(origin));
-  refuses({ SLOTWELL_BOOKING_KEYS: JSON.stringify(rings()) });
+  const first = readBookingKeys(env);
+  first.replay.keys.e2.fill(0);
+  assert.deepEqual(readBookingKeys(env).replay.keys.e2, Buffer.alloc(32, 4));
 });
 
 test("refuses malformed, missing, oversized and nonobject key configuration without disclosure", () => {
@@ -146,19 +107,16 @@ test("supports 16 retained keys and prototype-named IDs without inherited-key ac
     ...Array.from({ length: 13 }, (_, i) => [`h${i}`, key(1)]),
     ...["__proto__", "constructor", "toString"].map((id) => [id, key(1)]),
   ]);
-  const config = readBookingConfiguration(
+  const config = readBookingKeys(
     environment(undefined, {
       ...configured,
       fingerprint: { currentId: "__proto__", keys: encoded },
     }),
   );
-  assert.equal(Object.keys(config.keys.fingerprint.keys).length, 16);
-  assert.equal(Object.getPrototypeOf(config.keys.fingerprint.keys), null);
-  assert.deepEqual(config.keys.fingerprint.keys.__proto__, Buffer.alloc(32, 1));
-  assert.deepEqual(
-    config.keys.fingerprint.keys.constructor,
-    Buffer.alloc(32, 1),
-  );
+  assert.equal(Object.keys(config.fingerprint.keys).length, 16);
+  assert.equal(Object.getPrototypeOf(config.fingerprint.keys), null);
+  assert.deepEqual(config.fingerprint.keys.__proto__, Buffer.alloc(32, 1));
+  assert.deepEqual(config.fingerprint.keys.constructor, Buffer.alloc(32, 1));
 });
 
 test("uses JSON.parse last-member-wins semantics in the single-parser trusted environment", () => {
@@ -167,7 +125,7 @@ test("uses JSON.parse last-member-wins semantics in the single-parser trusted en
     '"currentId":"h2"',
     '"currentId":"missing","currentId":"h2"',
   );
-  assert.equal(readBookingConfiguration(env).keys.fingerprint.currentId, "h2");
+  assert.equal(readBookingKeys(env).fingerprint.currentId, "h2");
 });
 
 test("import is independent of booking/database environment and opens no database", () => {
@@ -185,7 +143,7 @@ test("import is independent of booking/database environment and opens no databas
         return target[name];
       }
     });
-    require("./src/server/booking-configuration.ts");
+    require("./src/server/booking/configuration.ts");
   `,
     ],
     { encoding: "utf8", timeout: 10_000 },

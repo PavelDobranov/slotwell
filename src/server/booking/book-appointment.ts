@@ -13,13 +13,11 @@ import {
   staff,
   staffOccupancy,
 } from "@/db/schema";
-import {
-  type AvailabilityView,
-  readAvailability,
-} from "@/server/availability-query";
-import { addCalendarDays, businessDate } from "@/server/booking-time";
-import { CatalogError, validateServiceSelection } from "@/server/catalog";
+import { type AvailabilityView, readAvailability } from "@/server/availability";
+import { CatalogError } from "@/server/catalog";
+import { addCalendarDays, businessDate } from "@/shared/booking-time";
 import { parseGuestContact } from "@/shared/guest-contact";
+import { validateServiceSelection } from "@/shared/service-selection";
 
 export type ReviewedService = Pick<
   typeof services.$inferSelect,
@@ -227,7 +225,14 @@ export async function bookAppointment(
             clock(),
           );
         } catch (error) {
-          if (error instanceof CatalogError && error.status === 400)
+          // A selection the catalog cannot satisfy (unknown service or staff) is
+          // a client problem; infrastructure failures (availability_unavailable)
+          // propagate. The application keys off the code, not an HTTP status.
+          if (
+            error instanceof CatalogError &&
+            (error.code === "unknown_services" ||
+              error.code === "unknown_staff")
+          )
             throw new BookingError("selection_unavailable");
           throw error;
         }

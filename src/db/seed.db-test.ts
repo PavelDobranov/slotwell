@@ -21,7 +21,7 @@ import {
   businessDate,
   resolveLocalStart,
   toUtcIso,
-} from "@/server/booking-time";
+} from "@/shared/booking-time";
 
 const demo = createDemoSalon(() => Date.UTC(2026, 9, 26, 12));
 const serviceIds = demo.services.map(({ id }) => id);

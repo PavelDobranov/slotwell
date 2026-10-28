@@ -10,8 +10,8 @@ import {
   type ScheduleException,
   type SelectedService,
   type WeeklyWindow,
-} from "@/server/availability";
-import { toOffsetIso } from "@/server/booking-time";
+} from "@/server/availability/compute";
+import { toOffsetIso } from "@/shared/booking-time";
 
 const SOFIA = "Europe/Sofia";
 const TOKYO = "Asia/Tokyo";

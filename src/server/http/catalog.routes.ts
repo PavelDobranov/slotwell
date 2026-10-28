@@ -5,8 +5,9 @@ import {
   CatalogError,
   readCatalog,
   readQualifiedStaff,
-  validateServiceSelection,
 } from "@/server/catalog";
+import { catalogErrorResponse } from "@/server/http/catalog-error";
+import { validateServiceSelection } from "@/shared/service-selection";
 
 type CatalogBindings = { Bindings: { db?: CatalogDatabase } };
 
@@ -17,21 +18,15 @@ type CatalogBindings = { Bindings: { db?: CatalogDatabase } };
  */
 export function registerCatalogRoutes(app: Hono<CatalogBindings>) {
   const resolve = (c: { env?: { db?: CatalogDatabase } }): CatalogDatabase => {
-    if (!c.env?.db) throw new CatalogError("catalog_unavailable", 500);
+    if (!c.env?.db) throw new CatalogError("catalog_unavailable");
     return c.env.db;
-  };
-  const fail = (error: unknown) => {
-    if (error instanceof CatalogError) {
-      return { status: error.status as 400 | 500, body: error.body() };
-    }
-    return { status: 500 as const, body: { error: { code: "internal" } } };
   };
 
   app.get("/catalog", async (c) => {
     try {
       return c.json(await readCatalog(resolve(c)));
     } catch (error) {
-      const { status, body } = fail(error);
+      const { status, body } = catalogErrorResponse(error);
       return c.json(body, status);
     }
   });
@@ -43,7 +38,7 @@ export function registerCatalogRoutes(app: Hono<CatalogBindings>) {
       const staffView = await readQualifiedStaff(resolve(c), serviceIds);
       return c.json({ staff: staffView });
     } catch (error) {
-      const { status, body } = fail(error);
+      const { status, body } = catalogErrorResponse(error);
       return c.json(body, status);
     }
   });

@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 
-import type { BookingInput } from "@/server/book-appointment";
+import type { BookingInput } from "@/server/booking/book-appointment";
 import {
   canonicalBookingPayload,
   createBookingOperations,
-} from "@/server/booking-operation";
+} from "@/server/booking/operations";
 
 const input: BookingInput = {
   staffId: "mimi",

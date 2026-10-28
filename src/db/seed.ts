@@ -20,7 +20,7 @@ import {
   businessDate,
   resolveLocalStart,
   toUtcIso,
-} from "@/server/booking-time";
+} from "@/shared/booking-time";
 
 // Frozen fictional catalog, owned by the server. No dated frontend fixture import.
 const catalogServices: (typeof services.$inferInsert)[] = [

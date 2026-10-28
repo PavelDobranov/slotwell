@@ -17,11 +17,11 @@ import {
 } from "@/db/schema";
 import { seedCatalog } from "@/db/seed";
 import { withTestDatabase } from "@/db/testing";
-import { BookingError } from "@/server/book-appointment";
+import { BookingError } from "@/server/booking";
 import {
   type BookingDatabase,
   registerBookingRoutes,
-} from "@/server/booking-routes";
+} from "@/server/http/booking.routes";
 
 const NOW = Date.parse("2026-05-31T22:00:00Z");
 const origin = "http://localhost:3000";

@@ -2,15 +2,6 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import { businessSettings, services, staff, staffServices } from "@/db/schema";
-import {
-  ServiceSelectionError,
-  validateServiceSelection as validateSelectionRule,
-} from "@/shared/service-selection";
-
-// The count bound is part of the shared selection policy, not a catalog
-// internal. Re-exported here so existing catalog consumers keep one import site
-// while the rule itself is owned by the shared selection module.
-export { MAX_SELECTED_SERVICES } from "@/shared/service-selection";
 
 // Reads only; a structural handle accepts the app pool and the test harness's
 // held private-schema connection alike.
@@ -41,28 +32,17 @@ export type CatalogView = {
 };
 
 // Stable machine-readable failure; never leaks whether an identifier is unknown
-// versus deactivated, nor any non-allowlisted record field.
+// versus deactivated, nor any non-allowlisted record field. The error carries no
+// HTTP status or response body: the HTTP adapter maps the code to a status.
 export class CatalogError extends Error {
   readonly code: string;
-  readonly status: number;
   readonly serviceIds?: string[];
   readonly max?: number;
-  constructor(
-    code: string,
-    status: number,
-    extra?: { serviceIds?: string[]; max?: number },
-  ) {
+  constructor(code: string, extra?: { serviceIds?: string[]; max?: number }) {
     super(code);
     this.code = code;
-    this.status = status;
     this.serviceIds = extra?.serviceIds;
     this.max = extra?.max;
-  }
-  body() {
-    const error: Record<string, unknown> = { code: this.code };
-    if (this.serviceIds) error.serviceIds = this.serviceIds;
-    if (this.max !== undefined) error.max = this.max;
-    return { error };
   }
 }
 
@@ -78,7 +58,7 @@ export async function readCatalog(db: CatalogDatabase): Promise<CatalogView> {
     .from(businessSettings)
     .where(eq(businessSettings.id, 1));
   if (!business) {
-    throw new CatalogError("catalog_unavailable", 500);
+    throw new CatalogError("catalog_unavailable");
   }
   const serviceRows = await db
     .select({
@@ -95,29 +75,9 @@ export async function readCatalog(db: CatalogDatabase): Promise<CatalogView> {
 }
 
 /**
- * Validate the raw `service` query array against the approved bounds. Pure, so
- * the handler can reject malformed requests before resolving a database. The
- * bounds/de-duplication policy lives in the shared selection rule; this wrapper
- * only translates its transport-independent failure into the catalog's HTTP
- * error, keeping existing response bodies unchanged.
- */
-export function validateServiceSelection(raw: string[] | undefined): string[] {
-  try {
-    return validateSelectionRule(raw);
-  } catch (error) {
-    if (error instanceof ServiceSelectionError) {
-      throw new CatalogError(error.code, 400, {
-        serviceIds: error.serviceIds,
-        max: error.max,
-      });
-    }
-    throw error;
-  }
-}
-
-/**
  * Active staff qualified for EVERY distinct selected active service. Expects an
- * already-validated, distinct `serviceIds` (see `validateServiceSelection`).
+ * already-validated, distinct `serviceIds` (see the shared
+ * `validateServiceSelection` rule in `@/shared/service-selection`).
  */
 export async function readQualifiedStaff(
   db: CatalogDatabase,
@@ -130,7 +90,7 @@ export async function readQualifiedStaff(
   const known = new Set(active.map((row) => row.id));
   const unknown = serviceIds.filter((id) => !known.has(id));
   if (unknown.length > 0) {
-    throw new CatalogError("unknown_services", 400, { serviceIds: unknown });
+    throw new CatalogError("unknown_services", { serviceIds: unknown });
   }
   // GROUP BY the PK lets Postgres project the functionally dependent columns;
   // HAVING the full count keeps only staff covering every selected service.
