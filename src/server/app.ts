@@ -5,7 +5,8 @@ import {
   type BookingDatabase,
   registerBookingRoutes,
 } from "@/server/booking-routes";
-import { type CatalogDatabase, registerCatalogRoutes } from "@/server/catalog";
+import type { CatalogDatabase } from "@/server/catalog";
+import { registerCatalogRoutes } from "@/server/http/catalog.routes";
 
 // Bindings are injected by the Next adapter or tests; importing the app opens no database.
 const app = new Hono<{
