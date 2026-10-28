@@ -19,10 +19,8 @@ import {
 import { seedCatalog } from "@/db/seed";
 import { withTestDatabase } from "@/db/testing";
 import app from "@/server/app";
-import {
-  readAvailability,
-  validateAvailabilityQuery,
-} from "@/server/availability-query";
+import { readAvailability } from "@/server/availability-query";
+import { validateAvailabilityQuery } from "@/server/http/availability.routes";
 
 const NOW = Date.parse("2026-05-31T22:00:00Z"); // Tokyo Monday 07:00
 const read = (db: NodePgDatabase, query = QUERY, now = NOW) =>

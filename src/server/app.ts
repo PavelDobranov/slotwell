@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 
-import { registerAvailabilityRoutes } from "@/server/availability-query";
 import {
   type BookingDatabase,
   registerBookingRoutes,
 } from "@/server/booking-routes";
 import type { CatalogDatabase } from "@/server/catalog";
+import { registerAvailabilityRoutes } from "@/server/http/availability.routes";
 import { registerCatalogRoutes } from "@/server/http/catalog.routes";
 
 // Bindings are injected by the Next adapter or tests; importing the app opens no database.
