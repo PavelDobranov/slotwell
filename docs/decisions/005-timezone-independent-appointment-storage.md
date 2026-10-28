@@ -7,52 +7,21 @@ Accepted
 2026-10-27
 
 ## Context
-M1 serves one business location, but future locations may operate in different
-time zones. The user confirmed that storage and scheduling must not assume a
-particular country or European time zone. PostgreSQL is the agreed database.
+One-location M1 must not hard-code a country/European zone; future locations may use other zones. Business-local recurring hours and confirmed appointment instants have different semantics.
 
 ## Decision
-Store appointment start/end instants as PostgreSQL `timestamptz`, and preserve
-the booking's IANA time-zone identifier separately. PostgreSQL normalizes these
-instants but does not retain the original zone name.
+Store appointment start/end as PostgreSQL `timestamptz` and separately preserve the booking's IANA zone; PostgreSQL does not retain the zone name. Represent weekly hours as weekdays/local clock times and exceptions as local dates/optional hours. Resolve these rules in the configured business zone for the requested date.
 
-Represent recurring schedules using weekdays and local clock times, and dated
-exceptions using local calendar dates and optional local hours. Resolve those
-rules in the configured business time zone for the requested date.
-
-Use ISO 8601 timestamps with explicit offsets in APIs, preferably UTC. Keep
-interface formatting separate from storage and scheduling. Europe/Sofia may be
-seed data, not an application-wide scheduling assumption.
-
-For M1, exclude nonexistent or ambiguous local appointment start times rather
-than silently selecting an interpretation.
+APIs use ISO 8601 instants with explicit offsets, preferably UTC; display formatting stays separate. Europe/Sofia may be seed data, never an application-wide assumption. M1 excludes nonexistent/ambiguous local appointment starts rather than silently choosing an interpretation.
 
 ## Business Rationale
-Clients book against the business's local hours. A recurring opening time must
-remain the same local clock time when daylight-saving offsets change, while a
-confirmed appointment must identify an exact instant.
-
-Separating these concepts supports future locations in other zones without
-reinterpreting existing appointment timestamps. Preserving the booking's zone
-also avoids relying on the viewer's or database session's current time zone to
-explain the appointment.
+Local opening times must survive DST offset changes, while appointments identify exact instants. Preserving the booking zone avoids reinterpretation through viewer/database-session defaults and supports future zone expansion.
 
 ## Alternatives Considered
-- Store appointment times as unzoned local timestamps: cannot uniquely identify
-  an instant during repeated clock times.
-- Store only UTC values for schedules: would not preserve recurring local hours
-  across daylight-saving changes.
-- Use fixed UTC offsets as zone identifiers: offsets do not encode a location's
-  daylight-saving rules.
+Unzoned appointment timestamps cannot distinguish repeated times; UTC-only schedules lose recurring local hours across DST; fixed offsets do not encode daylight-saving rules.
 
 ## Consequences
-- Scheduling tests must cover multiple IANA zones and daylight-saving boundaries.
-- Time-zone conversion must be explicit; machine-local defaults cannot define
-  booking behavior.
-- Multiple locations are still outside M1. This record establishes time semantics,
-  not location tables, location selection, or a multi-location scheduling model.
-- Exact schedule-boundary handling and future time-zone-rule changes still need
-  detailed specification; this record does not settle them by implication.
+Use explicit conversion and tests across IANA zones/DST boundaries, never machine-local scheduling defaults. This does not authorize multi-location data models. The ADR alone does not settle exact schedule-boundary handling or future time-zone-rule changes; consult the scoped specification/contract rather than infer policy.
 
 ## Reference
 [PostgreSQL date/time types](https://www.postgresql.org/docs/current/datatype-datetime.html)

@@ -2,7 +2,14 @@
 
 **Slotwell** is a scheduling web app for a **single business at one location**. Clients book appointments
 through a self-service wizard; the business manages the calendar, services, and schedules
-through an admin area. This document is for validating scope with the client before build.
+through an admin area.
+
+**Scope:** this brief describes the broader MVP, not implemented functionality or permission
+to build every feature now. Active milestone scope, approvals, and progress live in GitHub:
+[MVP roadmap #1](https://github.com/PavelDobranov/slotwell/issues/1) and
+[M1 specification #53](https://github.com/PavelDobranov/slotwell/issues/53).
+M1 is local persisted staff-first booking with view-only confirmation; the time-first
+prototype, client changes, admin features, and notifications do not imply M1 delivery.
 
 **Initial version (MVP):** email notifications only. Authentication, staff invitations,
 and role-based access are deferred. The admin area is for a trusted development/demo

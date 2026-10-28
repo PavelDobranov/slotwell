@@ -1,23 +1,17 @@
-# Issue tracker
+# GitHub planning and issue relationships
 
-Use GitHub Issues for issues, specifications, and tickets. Use the GitHub CLI (`gh`) to publish and manage them.
+Use GitHub Issues through `gh` for specifications, plans, tasks, approval, and delivery evidence. No local `tasks/plan.md`, `tasks/todo.md`, or pointer copies; this overrides skill defaults.
 
-## Implementation plans
+## Ownership and approval
 
-- Store the authoritative implementation plan in a dedicated GitHub issue under its specification/feature issue. Include architecture decisions, an ordered task index, checkpoints, risks, open decisions, and the approval status.
-- Add a `Plan: #…` reference to the specification/feature issue and every task covered by that plan. Keep tasks under the specification/feature; the plan issue is a sibling, not their parent.
-- Keep plans and task lists in GitHub only; do not create local `tasks/plan.md` or `tasks/todo.md` files, including pointer copies. Discover the plan through the specification/feature issue and task references. Update the GitHub plan when decisions change. This repository convention supersedes the planning skill's default local output files.
-- Keep native execution dependencies between actual prerequisite tasks. A plan reference is not a blocking edge; do not make every task depend on the plan issue just for navigation. Approval remains an explicit gate before implementation.
-- Close the plan issue only when the human approves planning and unresolved decisions are resolved or explicitly deferred. Closing it does not approve or complete implementation, close the specification/feature, or remove its other blockers. Agreement to relocate a plan is not approval of its contents.
+- A dedicated plan issue owns decisions, ordered task index, checkpoints, risks, open questions, and approval status. Specification and tasks reference it with `Plan: #…`.
+- Plan and implementation tasks are sibling native sub-issues of their specification/feature. Attach the feature to its roadmap where applicable.
+- Publication/relocation is not approval. Close a plan only after explicit human approval and resolution or explicit deferral of open decisions. This does not approve/complete implementation or close the feature.
+- Discover current work through the specification/plan; do not copy progress into repository context documents. At restart checkpoints record changed paths, working-tree state, exact verification/results, next task, risks, and required approvals.
 
-## Relationships and dependency graph
+## Native graph
 
-When creating or updating an issue, maintain its native GitHub relationships, not just references in its description:
-
-- Attach scoped specifications and implementation tasks to their roadmap/feature issue using **sub-issues**. Parent/child relationships describe scope, not execution order.
-- Add **blocked by / blocking** dependencies for genuine prerequisites. If B depends on A, set B as blocked by A. Keep the graph acyclic; do not treat the suggested working sequence as a dependency unless it is actually required.
-- For an aggregate roadmap/feature, link required child deliverables as blockers of the aggregate. Do not make a child depend on its parent merely because it belongs to that parent.
-- Review existing relationships before adding links. Use `gh api` for native relationships not supported by `gh issue` commands, and verify the resulting links after changes.
-- State closure effects explicitly: closing a prerequisite resolves that dependency; it does not automatically complete or close downstream issues. Close an aggregate only when its full completion criteria are met. Closing a prototype does not imply the persisted/backend milestone is complete.
-- As follow-up issues are created or scope changes, update affected dependencies and parent/child links. Add a short dependency summary when helpful, but do not substitute a Markdown checklist or diagram for native links.
-- If native relationships are unavailable due to permissions or repository support, report the limitation and record explicit issue links as a fallback; do not claim the native graph was updated.
+- Sub-issues express scope; `blocked by`/`blocking` express actual prerequisites. Keep dependencies acyclic. Do not make tasks depend on the plan for navigation, or children depend on their parent merely for scope.
+- Required deliverables block the aggregate. Closing one prerequisite resolves only its edge, not downstream work; close the aggregate only when its full acceptance criteria pass. Prototype completion is not backend/persistence completion.
+- Inspect existing relationships, use `gh api` where CLI commands lack native support, and verify the resulting graph after scope changes/splits. Markdown references/checklists do not replace native links.
+- If permissions/repository support prevent native links, report the limitation and use explicit issue references as a fallback; never claim the graph was updated.

@@ -7,43 +7,20 @@ Accepted
 2026-10-27
 
 ## Context
-Slotwell supports guest booking without client accounts. Staff need a name and
-contact details for each appointment, and the business wants to recognize possible
-returning clients. Entering a name, phone, or email does not prove ownership of
-those details. Phone numbers can be shared, mistyped, or reassigned.
+Guest contact fields do not prove identity/ownership; phones may be shared, mistyped, or reassigned. The business still needs visit-specific contact details and possible-returning-client matching.
 
 ## Decision
-Use a stable internal client ID and normalized international phone numbers for
-internal returning-client matching. Collect one name field, phone, and email;
-do not require a fixed number of name parts or merge clients by name or email.
+Match normalized international phone numbers to stable internal client IDs. Collect one name field, phone, and email; no fixed name-part count or automatic name/email merging.
 
-Preserve submitted contact details on each appointment. A matching phone does not
-allow a guest to retrieve an existing client's details or overwrite their contact
-profile. Scope guest access to a specific appointment through an unguessable access
-link, not through entered contact fields. Confirmation retrieval belongs to M1;
-client cancellation and rescheduling remain M5 capabilities.
+Preserve submitted contacts on each appointment. A match grants neither access to stored details nor permission to overwrite the client profile. Guest access uses an unguessable appointment-specific link, not contact fields. Confirmation retrieval belongs to M1; cancellation/rescheduling remain M5 scope.
 
 ## Business Rationale
-This keeps booking simple and account-free while giving staff the contact details
-provided for the particular visit. Separating contact matching from authorization
-prevents a returning-client convenience from becoming a way to expose previous
-bookings or modify another person's contact profile.
-
-A single name field supports the name the client uses without treating additional
-name parts as stronger identity evidence.
+Keep account-free booking convenient without exposing history or allowing an unverified guest to alter another person's profile. Additional name parts are not stronger identity evidence.
 
 ## Alternatives Considered
-The original brief overwrote stored name/email on a matching phone. The agreed
-approach preserves the existing profile because an unverified submission cannot
-safely establish who is requesting that change. Requiring verification at booking
-would introduce an additional workflow not selected for this MVP.
+The original brief overwrote name/email on a matching phone. This is unsafe without ownership verification; adding verification at booking was not selected for the MVP.
 
 ## Consequences
-- Phone-based matches are possible-client associations, not verified person identity.
-- Appointment communications use that appointment's submitted contact details rather
-  than changes made by a later guest booking.
-- Contact validation, matching, and authorization need distinct tests.
-- Token lifecycle and profile correction procedures still need specification; this
-  record does not invent those policies or claim they are implemented.
-- The product brief owns the detailed product rules. This decision supersedes its
-  former guest contact-overwrite policy.
+Communications use the appointment's submitted details, not later guest changes. Test validation, matching, and authorization separately. This supersedes the former contact-overwrite policy.
+
+This ADR does not define profile-correction policy or private-link transport. Backend replay/expiry/retention obligations are specified in the [retry contract](../contracts/booking-retries.md); active tasks own remaining scope and delivery status.

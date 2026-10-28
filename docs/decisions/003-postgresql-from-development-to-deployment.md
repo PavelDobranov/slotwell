@@ -7,44 +7,22 @@ Accepted
 2026-10-27
 
 ## Context
-The current database scaffold uses SQLite, but the agreed final deployment target
-is Google Cloud Run with managed PostgreSQL. That deployment will start with a
-fresh, seeded database rather than importing development or demo records.
-
-The user wants to focus on booking functionality now without spending M1 on cloud
-infrastructure. A Google Cloud VM running the application and PostgreSQL is the
-agreed demo arrangement for M2.
+At decision time, the scaffold used SQLite. The agreed final target was Cloud Run with managed PostgreSQL and a fresh seeded database, not imported demo records. The user wanted M1 focused on booking rather than cloud infrastructure.
 
 ## Decision
-Use PostgreSQL from the beginning of persisted booking implementation:
-- **M1:** local application and local PostgreSQL only.
-- **M2:** add a Google Cloud VM hosting the application and PostgreSQL for demos.
-- **Final deployment direction:** Cloud Run with managed PostgreSQL, initialized
-  with seed records. Its delivery milestone is not assigned by this record.
+Use PostgreSQL for persisted booking across environments, with migrations and repeatable seeds:
+- **M1:** local application and PostgreSQL.
+- **M2:** application and self-operated PostgreSQL on a Google Cloud VM for demos.
+- **Final direction:** Cloud Run with managed PostgreSQL, freshly seeded; no delivery milestone assigned here.
 
-Use the same database engine and maintain schema migrations and repeatable seeds
-across these environments. The existing SQLite scaffold must be replaced during
-implementation; this decision does not claim that conversion is already complete.
+The decision required replacing the SQLite scaffold; this is historical rationale, not a claim about the current implementation. GitHub owns delivery status.
 
 ## Business Rationale
-Using the intended database engine now avoids a known SQLite-to-PostgreSQL
-conversion later, including reworking and reverifying booking transactions and
-constraints. Local-only delivery keeps M1 focused on a real persisted booking
-without cloud setup. The later VM demo arrangement avoids requiring a separately
-managed database during development.
+One engine avoids reworking/reverifying booking transactions and constraints during a later conversion. Local M1 avoids cloud setup; the VM demo postpones a separately managed database.
 
 ## Alternatives Considered
-- SQLite now and PostgreSQL later: inexpensive initially, but adds an engine
-  conversion even though the final database choice is already known.
-- Cloud hosting during M1: enables shared demonstrations sooner, but introduces
-  deployment work the user explicitly prefers to undertake in M2.
+- SQLite first: lower initial cost, but a known conversion later.
+- Cloud during M1: earlier shared demos, but work the user deferred to M2.
 
 ## Consequences
-- M1 acceptance uses local PostgreSQL; it does not require a hosted demo.
-- Database integration and concurrency tests must exercise PostgreSQL.
-- M2 includes VM deployment, secure access, persistent storage, and backup/recovery
-  setup; PostgreSQL on the VM is operated by us, not a managed database service.
-- Moving to Cloud Run still requires deployment configuration and verification,
-  but not a database-engine conversion or transfer of existing demo records.
-- Exact VM sizing, local database tooling, cloud costs, and final managed database
-  configuration remain implementation-planning decisions.
+Acceptance and concurrency tests must exercise PostgreSQL. M2 requires secure access, persistent storage, and backup/recovery; its database is operated by us. Cloud Run still needs deployment verification, but not an engine conversion or demo-data transfer. Sizing, tooling, costs, and managed-service configuration belong to implementation planning.
