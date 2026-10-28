@@ -31,6 +31,9 @@ export type BookingReceipt = {
   confirmationExpiresAt: string;
   viewToken: string;
 };
+export type IntentResolution =
+  | { state: "pending"; submitBefore: string }
+  | { state: "committed"; receipt: BookingReceipt };
 type KeyRing = { currentId: string; keys: Record<string, Buffer> };
 export type BookingKeys = { fingerprint: KeyRing; replay: KeyRing };
 export type OperationCredential = { operationId: string; credential: string };
@@ -412,6 +415,34 @@ export function createBookingOperations(configuration: BookingKeys) {
             ? result.operation
             : await lockOperation(tx, authorization);
         return receipt(tx, operation, clock, payload);
+      });
+    },
+    /** A locked snapshot only; never permission to clear or replace an intent. */
+    async resolveIntent(
+      db: Database,
+      credential: OperationCredential,
+      clock: () => number = Date.now,
+    ): Promise<IntentResolution> {
+      const authorization = {
+        operationId: credential.operationId,
+        credential: credential.credential,
+      };
+      credentialHash(authorization);
+      return guarded(db, async (tx) => {
+        const operation = await lockOperation(tx, authorization);
+        const instant = now(clock);
+        if (operation.state === "pending") {
+          if (instant >= Date.parse(operation.submitBefore))
+            throw new OperationError("operation_unavailable");
+          return {
+            state: "pending",
+            submitBefore: new Date(operation.submitBefore).toISOString(),
+          };
+        }
+        return {
+          state: "committed",
+          receipt: await receipt(tx, operation, clock),
+        };
       });
     },
     async recover(

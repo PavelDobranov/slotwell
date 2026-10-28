@@ -18,7 +18,10 @@ import {
 import { seedCatalog } from "@/db/seed";
 import { withTestDatabase } from "@/db/testing";
 import type { BookingInput } from "@/server/book-appointment";
-import { createBookingOperations } from "@/server/booking-operation";
+import {
+  type BookingKeys,
+  createBookingOperations,
+} from "@/server/booking-operation";
 
 const NOW = Date.parse("2026-05-31T22:00:00Z");
 const keys = () => ({
@@ -448,6 +451,107 @@ test("inconsistent replay expiry cannot authorize early pruning or recovery", as
   });
 });
 
+test("resolution authenticates pending snapshots and never registers, extends or clears intents", async () => {
+  await withTestDatabase({}, async ({ db }) => {
+    const service = createBookingOperations(keys());
+    const intent = await service.createIntent(db, () => NOW);
+    const original = await db.select().from(bookingOperations);
+    const pending = {
+      state: "pending",
+      submitBefore: new Date(NOW + 86_400_000).toISOString(),
+    };
+    assert.deepEqual(
+      await service.resolveIntent(db, intent, () => NOW),
+      pending,
+    );
+    assert.deepEqual(
+      await service.resolveIntent(db, intent, () => NOW + 86_399_999),
+      pending,
+    );
+    for (const other of [
+      { ...intent, credential: "f".repeat(64) },
+      { ...intent, operationId: "22222222-2222-4222-8222-222222222222" },
+    ])
+      await assert.rejects(
+        service.resolveIntent(db, other, () => NOW),
+        code("operation_unavailable"),
+      );
+    await assert.rejects(
+      service.resolveIntent(db, intent, () => NOW + 86_400_000),
+      code("operation_unavailable"),
+    );
+    assert.deepEqual(await db.select().from(bookingOperations), original);
+    for (const state of ["abandoned", "tombstone"]) {
+      await db.update(bookingOperations).set({ state });
+      const terminal = await db.select().from(bookingOperations);
+      await assert.rejects(
+        service.resolveIntent(db, intent, () => NOW),
+        code("operation_unavailable"),
+      );
+      await assert.rejects(
+        service.resolveIntent(db, intent, () => NaN),
+        code("recovery_unavailable"),
+      );
+      assert.deepEqual(await db.select().from(bookingOperations), terminal);
+    }
+  });
+});
+
+test("resolution recovers a committed receipt without the agreement and preserves replay safeguards", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const input = await fixture(db);
+    const service = createBookingOperations(keys());
+    const intent = await service.createIntent(db, () => NOW);
+    const receipt = await service.submit(db, intent, input, () => NOW);
+    const original = await db.select().from(bookingOperations);
+    const access = await db.select().from(appointmentAccess);
+    await db.update(services).set({ name: "Changed", isActive: false });
+    const restarted = createBookingOperations(keys());
+    const expiry = Date.parse(receipt.confirmationExpiresAt);
+    assert.deepEqual(
+      await restarted.resolveIntent(independentDb, intent, () => expiry - 1),
+      { state: "committed", receipt },
+    );
+    await assert.rejects(
+      restarted.resolveIntent(db, intent, () => expiry),
+      code("operation_unavailable"),
+    );
+    assert.deepEqual(await db.select().from(bookingOperations), original);
+    assert.deepEqual(await db.select().from(appointmentAccess), access);
+    for (const ring of ["fingerprint", "replay"] as const) {
+      const missing: BookingKeys = keys();
+      missing[ring] = {
+        currentId: "missing",
+        keys: { missing: Buffer.alloc(32, 3) },
+      };
+      await assert.rejects(
+        createBookingOperations(missing).resolveIntent(db, intent, () => NOW),
+        code("recovery_unavailable"),
+      );
+    }
+    for (const patch of [
+      { encryptedReplay: "00".repeat(60) },
+      { replayExpiresAt: new Date(NOW + 1000).toISOString() },
+    ]) {
+      await db.update(bookingOperations).set(patch);
+      await assert.rejects(
+        service.resolveIntent(db, intent, () => NOW),
+        code("recovery_unavailable"),
+      );
+      await db.update(bookingOperations).set({
+        encryptedReplay: original[0].encryptedReplay,
+        replayExpiresAt: original[0].replayExpiresAt,
+      });
+    }
+    await db.update(appointmentAccess).set({ tokenHash: "0".repeat(64) });
+    await assert.rejects(
+      service.resolveIntent(db, intent, () => NOW),
+      code("recovery_unavailable"),
+    );
+    assert.equal((await db.select().from(appointments)).length, 1);
+  });
+});
+
 async function waitForBlocked(
   observer: Pick<NodePgDatabase, "execute">,
   pid: number,
@@ -462,6 +566,101 @@ async function waitForBlocked(
   }
   assert.fail("retry did not wait on the operation lock");
 }
+
+test("resolution waits for submission commit or rollback and snapshots caller credentials", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const input = await fixture(db);
+    const service = createBookingOperations(keys());
+    const [session] = await independentDb.execute(
+      sql`SELECT pg_backend_pid() AS pid`,
+      "objects",
+    );
+    for (const rollback of [true, false]) {
+      const intent = await service.createIntent(db, () => NOW);
+      const mutable = { ...intent };
+      let pending: ReturnType<typeof service.resolveIntent> | undefined;
+      let expected: Awaited<ReturnType<typeof service.submit>> | undefined;
+      const transaction = db.transaction(async (tx) => {
+        expected = await service.submit(tx, intent, input, () => NOW);
+        pending = service.resolveIntent(independentDb, mutable, () => NOW);
+        void pending.catch(() => {});
+        await waitForBlocked(tx, Number(session.pid));
+        mutable.operationId = "22222222-2222-4222-8222-222222222222";
+        mutable.credential = "f".repeat(64);
+        if (rollback) throw new Error("deliberate rollback");
+      });
+      if (rollback) await assert.rejects(transaction, /deliberate rollback/);
+      else await transaction;
+      assert.deepEqual(
+        await pending,
+        rollback
+          ? {
+              state: "pending",
+              submitBefore: new Date(NOW + 86_400_000).toISOString(),
+            }
+          : { state: "committed", receipt: expected },
+      );
+    }
+    assert.equal((await db.select().from(appointments)).length, 1);
+  });
+});
+
+test("resolution samples pending expiry after lock wait and observes concurrent pruning", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const service = createBookingOperations(keys());
+    const [session] = await independentDb.execute(
+      sql`SELECT pg_backend_pid() AS pid`,
+      "objects",
+    );
+    for (const prune of [false, true]) {
+      const intent = await service.createIntent(db, () => NOW);
+      let instant = NOW + 86_399_999;
+      let pending: ReturnType<typeof service.resolveIntent> | undefined;
+      await db.transaction(async (tx) => {
+        await tx
+          .select()
+          .from(bookingOperations)
+          .where(eq(bookingOperations.id, intent.operationId))
+          .for("update");
+        pending = service.resolveIntent(independentDb, intent, () => instant);
+        void pending.catch(() => {});
+        await waitForBlocked(tx, Number(session.pid));
+        instant++;
+        if (prune)
+          await service.pruneExpired(tx, intent.operationId, () => instant);
+      });
+      assert.ok(pending);
+      await assert.rejects(pending, code("operation_unavailable"));
+    }
+    assert.equal((await db.select().from(appointments)).length, 0);
+  });
+});
+
+test("resolution lock timeout stays unknown and cannot mutate the intent", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const service = createBookingOperations(keys());
+    const intent = await service.createIntent(db, () => NOW);
+    const original = await db.select().from(bookingOperations);
+    await db.transaction(async (tx) => {
+      await tx.select().from(bookingOperations).for("update");
+      await assert.rejects(
+        service.resolveIntent(independentDb, intent, () => NOW),
+        (error: unknown) => {
+          assert.ok(error instanceof Error);
+          assert.equal(error.message, "recovery_unavailable");
+          assert.ok(!Object.hasOwn(error, "cause"));
+          assert.ok(!error.stack?.includes(intent.credential));
+          return true;
+        },
+      );
+    });
+    assert.deepEqual(await db.select().from(bookingOperations), original);
+    assert.deepEqual(await service.resolveIntent(db, intent, () => NOW), {
+      state: "pending",
+      submitBefore: new Date(NOW + 86_400_000).toISOString(),
+    });
+  });
+});
 
 test("synchronized concurrent identical submissions share one booking and private token", async () => {
   await withTestDatabase({}, async ({ db, independentDb }) => {

@@ -222,6 +222,47 @@ test("registration rejects nonprimitive/malformed credentials before database ac
   );
 });
 
+test("resolution validates primitive credentials before I/O and redacts database failures", async () => {
+  const service = createBookingOperations({
+    fingerprint: { currentId: "h1", keys: { h1: Buffer.alloc(32, 1) } },
+    replay: { currentId: "e1", keys: { e1: Buffer.alloc(32, 2) } },
+  });
+  const valid = {
+    operationId: "11111111-1111-4111-8111-111111111111",
+    credential: "a".repeat(64),
+  };
+  const noDatabase = {
+    transaction: async () =>
+      assert.fail("invalid input must not access database"),
+  };
+  for (const patch of [
+    { operationId: Object(valid.operationId) },
+    { operationId: "invalid" },
+    { credential: Object(valid.credential) },
+    { credential: "A".repeat(64) },
+    { credential: null },
+  ])
+    await assert.rejects(
+      service.resolveIntent(noDatabase, { ...valid, ...patch } as typeof valid),
+      /operation_unavailable/,
+    );
+  const failingDatabase = {
+    transaction: async () => {
+      throw new Error(`private database failure ${valid.credential}`);
+    },
+  };
+  await assert.rejects(
+    service.resolveIntent(failingDatabase, valid),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.message, "recovery_unavailable");
+      assert.ok(!Object.hasOwn(error, "cause"));
+      assert.ok(!error.stack?.includes(valid.credential));
+      return true;
+    },
+  );
+});
+
 test("key configuration requires independent durable 32-byte keys and existing current IDs", () => {
   const good = {
     fingerprint: { currentId: "h1", keys: { h1: Buffer.alloc(32, 1) } },
