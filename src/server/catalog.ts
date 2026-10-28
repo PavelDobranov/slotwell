@@ -3,15 +3,19 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Hono } from "hono";
 
 import { businessSettings, services, staff, staffServices } from "@/db/schema";
+import {
+  ServiceSelectionError,
+  validateServiceSelection as validateSelectionRule,
+} from "@/shared/service-selection";
+
+// The count bound is part of the shared selection policy, not a catalog
+// internal. Re-exported here so existing catalog consumers keep one import site
+// while the rule itself is owned by the shared selection module.
+export { MAX_SELECTED_SERVICES } from "@/shared/service-selection";
 
 // Reads only; a structural handle accepts the app pool and the test harness's
 // held private-schema connection alike.
 export type CatalogDatabase = Pick<NodePgDatabase, "select">;
-
-// Bound the qualified-staff request. M1 seeds 12 services; 20 leaves headroom
-// without accepting unbounded selections.
-export const MAX_SELECTED_SERVICES = 20;
-const MAX_SERVICE_ID_LENGTH = 64;
 
 export type BusinessView = {
   name: string;
@@ -93,32 +97,23 @@ export async function readCatalog(db: CatalogDatabase): Promise<CatalogView> {
 
 /**
  * Validate the raw `service` query array against the approved bounds. Pure, so
- * the handler can reject malformed requests before resolving a database.
+ * the handler can reject malformed requests before resolving a database. The
+ * bounds/de-duplication policy lives in the shared selection rule; this wrapper
+ * only translates its transport-independent failure into the catalog's HTTP
+ * error, keeping existing response bodies unchanged.
  */
 export function validateServiceSelection(raw: string[] | undefined): string[] {
-  if (!raw || raw.length === 0) {
-    throw new CatalogError("services_required", 400);
+  try {
+    return validateSelectionRule(raw);
+  } catch (error) {
+    if (error instanceof ServiceSelectionError) {
+      throw new CatalogError(error.code, 400, {
+        serviceIds: error.serviceIds,
+        max: error.max,
+      });
+    }
+    throw error;
   }
-  if (raw.length > MAX_SELECTED_SERVICES) {
-    throw new CatalogError("too_many_services", 400, {
-      max: MAX_SELECTED_SERVICES,
-    });
-  }
-  if (raw.some((id) => id.length === 0 || id.length > MAX_SERVICE_ID_LENGTH)) {
-    throw new CatalogError("invalid_service_id", 400);
-  }
-  const seen = new Set<string>();
-  const duplicates = new Set<string>();
-  for (const id of raw) {
-    if (seen.has(id)) duplicates.add(id);
-    seen.add(id);
-  }
-  if (duplicates.size > 0) {
-    throw new CatalogError("duplicate_services", 400, {
-      serviceIds: [...duplicates],
-    });
-  }
-  return raw;
 }
 
 /**
