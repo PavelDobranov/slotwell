@@ -1,13 +1,13 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
-import type { BookingInput } from "@/server/book-appointment";
+import type { BookingInput } from "@/server/booking/book-appointment";
 import {
   type BookingKeys,
   type BookingReceipt,
   canonicalBookingPayload,
   createBookingOperations,
   type OperationCredential,
-} from "@/server/booking-operation";
+} from "@/server/booking/operations";
 
 export type BookingSubmission = {
   authorization: OperationCredential;
