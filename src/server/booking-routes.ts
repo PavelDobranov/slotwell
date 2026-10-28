@@ -1,16 +1,16 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Hono } from "hono";
 
-import { BookingError, type BookingInput } from "@/server/book-appointment";
+import {
+  BookingError,
+  type BookingInput,
+  OperationError,
+  submitBooking,
+} from "@/server/booking";
 import {
   type BookingConfiguration,
   readBookingConfiguration,
 } from "@/server/booking-configuration";
-import {
-  canonicalBookingPayload,
-  createBookingOperations,
-  OperationError,
-} from "@/server/booking-operation";
 import { MAX_SELECTED_SERVICES } from "@/server/catalog";
 
 export type BookingDatabase = Pick<NodePgDatabase, "transaction">;
@@ -71,16 +71,14 @@ function parseInput(value: unknown) {
       "durationMinutes",
       "cleanupMinutes",
     ]);
-  // Existing canonical validation bounds primitive values and validates selections/time.
-  // Reviewed values express consent only; submit revalidates authoritative catalog values.
-  const input = booking as BookingInput;
-  canonicalBookingPayload(input);
+  // Structural/transport shape only. The use case runs canonical business
+  // validation (and rejects invalid input before registering an intent).
   return {
     authorization: {
       operationId: body.operationId,
       credential: body.credential,
     },
-    input,
+    input: booking as BookingInput,
   };
 }
 async function readBody(request: Request): Promise<unknown> {
@@ -142,14 +140,10 @@ export function registerBookingRoutes<Database extends BookingDatabase>(
       const { authorization, input } = parseInput(await readBody(c.req.raw));
       const db = c.env?.db;
       if (!db) throw new Error();
-      const operations = createBookingOperations(configuration.keys);
-      // Registration is idempotent, never mints credentials or resets an existing deadline.
-      await operations.registerIntent(db, authorization, options.clock);
-      const receipt = await operations.submit(
+      const receipt = await submitBooking(
         db,
-        authorization,
-        input,
-        options.clock,
+        { authorization, input },
+        { keys: configuration.keys, clock: options.clock },
       );
       return c.json({
         appointmentId: receipt.appointmentId,
