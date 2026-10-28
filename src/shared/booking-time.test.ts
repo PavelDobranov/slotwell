@@ -13,7 +13,7 @@ import {
   resolveLocalStart,
   toOffsetIso,
   toUtcIso,
-} from "@/server/booking-time";
+} from "@/shared/booking-time";
 
 const SOFIA = "Europe/Sofia";
 const NEW_YORK = "America/New_York"; // non-European DST zone
