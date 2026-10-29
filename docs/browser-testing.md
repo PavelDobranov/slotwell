@@ -2,7 +2,7 @@
 
 Use a production build (`npm run build`), not a development server. Prototype and mocked-API tests use the ordinary Playwright environment; they are not database-backed acceptance evidence.
 
-## Run the persisted smoke
+## Run the persisted browser suites
 
 From the repository root, with the existing local PostgreSQL test credentials configured:
 
@@ -11,9 +11,15 @@ npm run build
 SLOTWELL_BROWSER_TEST=private-schema-v1 npm run test:e2e
 ```
 
-This explicit mode runs only `persisted-real.spec.ts`, with two Chromium workers by default. Each worker owns a separate schema, server port/origin and ephemeral key set; replacement workers start fresh. No global server is reused. Setup errors fail visibly rather than skipping tests or selecting demo data. The smoke covers actual HTTP booking, confirmation reload, occupied conflict and expired access; it is not the full guest-journey/accessibility acceptance suite.
+This explicit mode runs `persisted-real*.spec.ts`, with two Chromium workers by default. Each worker owns a separate schema, server port/origin and ephemeral key set; replacement workers start fresh. No global server is reused. Setup errors fail visibly rather than skipping tests or selecting demo data.
 
-Without that environment selection, `npm run test:e2e` retains the existing prototype/mocked-API project and server environment and excludes the real-data smoke. Do not run a build concurrently with browser tests using its output. The lifecycle helper also accepts a finite injected `anchor` for rolling setup; runtime HTTP clocks are never overridden. Its optional `onOwned` observer exposes only its own nonsecret schema name for failure-cleanup assertions, not deletion authority.
+- `persisted-real.spec.ts`: existing actual-HTTP smoke, confirmation reload, occupied conflict, expired access and artifact-policy checks.
+- `persisted-real-journeys.spec.ts`: staff-first `/book` UI submission/reload, duplicate click with database counts, contact validation/back/edit preservation, real competing-slot rejection, generic transport failure with identical retry, and committed-but-lost-response recovery after reload and tab closure. Only transport faults are intercepted; catalog, availability, lifecycle, successful submission and confirmation use the owned production server and PostgreSQL. Aggregate counts and same-pair booleans avoid secret-bearing diagnostics.
+- `persisted-real-accessibility.spec.ts`: actual Tab/Enter/Space/arrow-key walkthroughs at 390px and 1280px with a device zone different from the business zone. Checks named controls, focus transfer, validation descriptions, live status/busy states, horizontal overflow and console/page errors. This is automated keyboard/layout evidence, not a human visual review, screen-reader audit or WCAG certification.
+
+To focus a slice, append its filename to the command above. The seed/scenario contract supplies fictional Sofia business hours; expected display values are formatted independently in that business zone, never the browser/device zone.
+
+Without that environment selection, `npm run test:e2e` retains the existing prototype/mocked-API project and server environment and excludes all real-data suites. Do not run a build concurrently with browser tests using its output. The lifecycle helper also accepts a finite injected `anchor` for rolling setup; runtime HTTP clocks are never overridden. Its optional `onOwned` observer exposes only its own nonsecret schema name for failure-cleanup assertions, not deletion authority.
 
 ## Private-schema connection contract
 
@@ -49,4 +55,4 @@ Use the fixture's `submit`, `openConfirmation` and `reloadConfirmation` helpers 
 
 Output is confined to `coverage/playwright/persisted-results`; do not upload it automatically. Playwright clears this directory for a new run. Remove that run's local output when no longer needed; never broaden cleanup to developer data, another run's directory or abandoned schemas. Unexpectedly credential-bearing artifacts must not be shared: stop capture and treat the link/credential as disclosed. Browser profiles are disposable; confirmation tokens are never added to browser storage by the fixture.
 
-Existing prototype capture settings do not make them suitable for persisted journeys. Connection-attachment tests and this smoke do not establish full browser/M1 acceptance.
+Existing prototype capture settings do not make them suitable for persisted journeys. Preserve and run their meaningful assertions separately; neither mocked API checks nor prototype journeys count as database-backed acceptance. An occupied default server port is a setup limitation, not a passing regression run: do not reuse or stop an unrelated server. A temporary config may preserve test sources/assertions while selecting a free owned port; disclose origin-specific assertions and any unrun or pre-existing failures in the GitHub delivery evidence. Connection-attachment checks and browser suites alone do not establish aggregate M1 acceptance.
