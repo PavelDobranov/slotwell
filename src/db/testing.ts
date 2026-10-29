@@ -165,7 +165,7 @@ async function verifySchema(client: pg.PoolClient, expected: SchemaIdentity) {
 
 /** Owns two held connections and only its fresh private schema; never use after callback. */
 export async function withTestDatabase<T>(
-  options: { now?: number },
+  options: { now?: number; canCleanup?: () => boolean },
   callback: (context: TestContext) => Promise<T>,
 ): Promise<T> {
   dotenv.config({
@@ -272,6 +272,15 @@ export async function withTestDatabase<T>(
     cleanupFailed =
       connectionFailed ||
       rolledBack.some((entry) => entry.status === "rejected");
+    // External process owners may only reduce cleanup authority. If shutdown
+    // cannot be confirmed, retain the private schema rather than drop under it.
+    if (owned && options.canCleanup) {
+      try {
+        cleanupFailed ||= options.canCleanup() !== true;
+      } catch {
+        cleanupFailed = true;
+      }
+    }
     if (owned && !cleanupFailed) {
       try {
         await verifySchema(clients[0], owned);

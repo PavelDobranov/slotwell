@@ -139,6 +139,28 @@ function closed() {
     ),
   );
 }
+for (const decision of [
+  () => false,
+  () => {
+    throw new Error("private detail");
+  },
+]) {
+  test("owner can veto schema deletion while all held resources still close", async () => {
+    await assert.rejects(
+      withTestDatabase({ canCleanup: decision }, async () => undefined),
+      {
+        message: "Test database cleanup failed",
+      },
+    );
+    assert.ok(schema);
+    assert.equal(
+      commands.some((command) => command.startsWith("DROP SCHEMA")),
+      false,
+    );
+    closed();
+  });
+}
+
 function migrationSql(content: string) {
   const read = fs.readFileSync;
   mock.method(

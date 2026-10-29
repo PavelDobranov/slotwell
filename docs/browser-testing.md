@@ -20,6 +20,10 @@ This is isolation for **trusted repository SQL and cooperating local processes**
 
 The owner must remain alive for the entire server/browser lifetime. A worker gets its own fresh schema, server and loopback origin; replacement workers must not adopt old schemas. Stop the child and await actual process termination **before** returning from the owner callback and allowing guarded schema cleanup. Handle partial startup, readiness timeout and test failure as well as success. Do not reuse an existing server or drop a schema beneath a possibly live process.
 
+`scripts/e2e-db.ts` exposes `withPersistedBrowserServer(callback)` for this lifetime. Invoke it only with `SLOTWELL_BROWSER_TEST=private-schema-v1`; the existing harness loads local test credentials on invocation. Build first, including before the production-lifecycle checks in `npm run test:db`. The helper selects an OS-assigned loopback port, launches Next directly, passes ephemeral independent booking keys, and verifies database-backed readiness against a unique fictional business-name marker. It never captures child output. The callback receives rolling scenario helpers for a new booking, occupying it through the public booking use case, and historical expired confirmation access. Each new scenario must select availability afresh; two prepared submissions intentionally compete for the same slot.
+
+The optional harness `canCleanup` callback can only reduce deletion authority: anything other than exact `true`, including an exception, refuses DROP and reports cleanup failure while closing the owner's held resources. The server helper uses this veto when TERM/KILL have not produced confirmed child closure.
+
 Only the creating owner may attempt cleanup, using the existing retained identity guards. Do not reset shared/developer databases, scan/drop abandoned schemas or silently substitute demo fixtures on setup failure. Hard owner death can leave a private schema; it does not authorize a later run to adopt or delete it automatically.
 
 ## Sensitive browser artifacts
