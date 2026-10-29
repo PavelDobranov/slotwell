@@ -20,8 +20,8 @@ if (persisted) {
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: persisted ? "**/persisted-real.spec.ts" : undefined,
-  testIgnore: persisted ? [] : "**/persisted-real.spec.ts",
+  testMatch: persisted ? "**/persisted-real*.spec.ts" : undefined,
+  testIgnore: persisted ? [] : "**/persisted-real*.spec.ts",
   fullyParallel: persisted,
   workers: persisted ? 2 : undefined,
   outputDir: persisted

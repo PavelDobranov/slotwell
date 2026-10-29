@@ -1,10 +1,105 @@
-import { test as base, type TestInfo } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type Page,
+  type TestInfo,
+} from "@playwright/test";
 
 import type { BookingReceipt, BookingSubmission } from "@/server/booking";
 import {
   type PersistedBrowserServer,
   withPersistedBrowserServer,
 } from "../scripts/e2e-db";
+
+/** Real catalog/staff/availability through the owned production server; no API mocks. */
+export async function enterPersistedDetails(
+  page: Page,
+  persisted: PersistedBrowserServer,
+) {
+  const scenario = await persisted.booking();
+  const clock = (instant: string) =>
+    new Intl.DateTimeFormat("bg-BG", {
+      timeZone: "Europe/Sofia",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(new Date(instant));
+  const date = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Sofia",
+  }).format(new Date(scenario.input.startsAt));
+  const end = new Date(
+    Date.parse(scenario.input.startsAt) + 30 * 60_000,
+  ).toISOString();
+  const range = `${clock(scenario.input.startsAt)}–${clock(end)}`;
+  await page.goto("/book");
+  await page.getByRole("checkbox", { name: /Мъжко подстригване/ }).check();
+  await page
+    .getByRole("button", { name: "Продължи към избор на специалист" })
+    .click();
+  await page
+    .getByRole("radio", { name: "Павел Добранов", exact: true })
+    .check();
+  await page.getByRole("button", { name: "Продължи към дата и час" }).click();
+  await expect(
+    page.getByText("Часова зона: Europe/Sofia", { exact: true }),
+  ).toBeVisible();
+  // Scenario is the first available day in tomorrow's rolling seven-day window.
+  // It can be on the next UI page when tomorrow + six is the only available day.
+  if (!(await page.locator(`#date-${date}`).count()))
+    await page.getByRole("button", { name: "Следващи дни" }).click();
+  const dateLabel = new Intl.DateTimeFormat("bg-BG", {
+    timeZone: "UTC",
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+  }).format(new Date(`${date}T00:00:00Z`));
+  await page
+    .getByRole("radiogroup", { name: "Дати", exact: true })
+    .getByRole("radio", { name: dateLabel, exact: true })
+    .check();
+  await page.getByRole("radio", { name: range, exact: true }).check();
+  await page.getByRole("button", { name: "Продължи към данните" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Вашите данни" }),
+  ).toBeFocused();
+  return { scenario, range };
+}
+
+export async function fillPersistedContact(page: Page) {
+  await page
+    .getByRole("textbox", { name: "Име", exact: true })
+    .fill("Fictional Journey Guest");
+  await page
+    .getByRole("textbox", { name: "Телефон", exact: true })
+    .fill("0888123456");
+  await page
+    .getByRole("textbox", { name: "Имейл", exact: true })
+    .fill("journey@example.test");
+  await page
+    .getByRole("textbox", { name: "Бележка (по желание)", exact: true })
+    .fill("Fictional note");
+}
+
+export async function reviewPersistedBooking(page: Page) {
+  await page.getByRole("button", { name: "Прегледай резервацията" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Проверете и потвърдете" }),
+  ).toBeFocused();
+}
+
+export const confirmPersistedBooking = (page: Page) =>
+  page.getByRole("button", { name: "Потвърди резервацията", exact: true });
+
+export async function expectPersistedConfirmation(page: Page) {
+  await expect(
+    page.getByRole("heading", { name: "Резервацията е потвърдена" }),
+  ).toBeVisible();
+  // Only public labels, never the fragment/receipt, enter assertion diagnostics.
+  await expect(
+    page.getByText("Мъжко подстригване", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Павел Добранов", { exact: true })).toBeVisible();
+}
 
 type SubmissionResult = {
   status: number;
