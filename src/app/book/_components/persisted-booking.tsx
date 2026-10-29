@@ -350,6 +350,15 @@ export function PersistedBooking() {
                     ? "Съхранението на опитите не е достъпно."
                     : "Проверете избора и данните отново."}
             </AlertTitle>
+            {!current && problem === "intent_storage_unavailable" && (
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={() => act((binding) => binding.initialize())}
+              >
+                Провери съхранението отново
+              </Button>
+            )}
           </Alert>
         )}
       {!current &&
