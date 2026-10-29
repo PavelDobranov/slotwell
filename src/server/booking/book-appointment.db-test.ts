@@ -624,6 +624,60 @@ test("separate connections cannot commit overlapping bookings; loser leaves no p
   });
 });
 
+test("synchronized independent connections can commit adjacent occupied intervals including cleanup", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const input = await fixture(db);
+    const firstIntent = await intent(db);
+    const secondIntent = await intent(db);
+    const [session] = await independentDb.execute(
+      sql`SELECT pg_backend_pid() AS pid`,
+      "objects",
+    );
+    let pending: ReturnType<typeof bookAppointment> | undefined;
+    try {
+      await db.transaction(async (tx) => {
+        const first = await bookAppointment(tx, input, firstIntent, () => NOW);
+        assert.equal(first.kind, "created");
+        const [stored] = await tx
+          .select()
+          .from(appointments)
+          .where(eq(appointments.id, first.appointmentId));
+        // Start exactly at occupied end, not service end: cleanup is occupied.
+        assert.ok(
+          Date.parse(stored.occupiedEndsAt) > Date.parse(stored.serviceEndsAt),
+        );
+        pending = bookAppointment(
+          independentDb,
+          { ...input, startsAt: new Date(stored.occupiedEndsAt).toISOString() },
+          secondIntent,
+          () => NOW,
+        );
+        void pending.catch(() => {});
+        await waitForBlocked(tx, Number(session.pid));
+      });
+    } finally {
+      if (pending) assert.equal((await pending).kind, "created");
+    }
+    const stored = await db
+      .select()
+      .from(appointments)
+      .orderBy(appointments.startsAt);
+    assert.equal(stored.length, 2);
+    assert.equal(
+      Date.parse(stored[0].occupiedEndsAt),
+      Date.parse(stored[1].startsAt),
+    );
+    assert.equal((await db.select().from(staffOccupancy)).length, 2);
+    assert.equal((await db.select().from(appointmentServices)).length, 2);
+    assert.equal((await db.select().from(appointmentAccess)).length, 2);
+    assert.ok(
+      (await db.select().from(bookingOperations)).every(
+        (row) => row.state === "committed",
+      ),
+    );
+  });
+});
+
 test("same-phone concurrent bookings on different staff share one immutable client association", async () => {
   await withTestDatabase({}, async ({ db, independentDb }) => {
     const input = await fixture(db);
