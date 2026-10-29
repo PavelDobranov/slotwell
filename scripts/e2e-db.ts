@@ -235,12 +235,21 @@ async function fixtureBooking(
       staffId: "pavel",
       serviceIds: [service.id],
       startsAt: start,
-      reviewedServices: [service],
+      reviewedServices: [
+        {
+          id: service.id,
+          name: service.name,
+          priceCents: service.priceCents,
+          currency: service.currency,
+          durationMinutes: service.durationMinutes,
+          cleanupMinutes: service.cleanupMinutes,
+        },
+      ],
       contact: {
         name: "Fictional Browser Guest",
         phone: "+359888123456",
         email: "browser@example.test",
-        notes: "",
+        note: "",
         phoneCountry: "BG",
       },
     },

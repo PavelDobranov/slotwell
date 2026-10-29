@@ -2,6 +2,19 @@
 
 Use a production build (`npm run build`), not a development server. Prototype and mocked-API tests use the ordinary Playwright environment; they are not database-backed acceptance evidence.
 
+## Run the persisted smoke
+
+From the repository root, with the existing local PostgreSQL test credentials configured:
+
+```sh
+npm run build
+SLOTWELL_BROWSER_TEST=private-schema-v1 npm run test:e2e
+```
+
+This explicit mode runs only `persisted-real.spec.ts`, with two Chromium workers by default. Each worker owns a separate schema, server port/origin and ephemeral key set; replacement workers start fresh. No global server is reused. Setup errors fail visibly rather than skipping tests or selecting demo data. The smoke covers actual HTTP booking, confirmation reload, occupied conflict and expired access; it is not the full guest-journey/accessibility acceptance suite.
+
+Without that environment selection, `npm run test:e2e` retains the existing prototype/mocked-API project and server environment and excludes the real-data smoke. Do not run a build concurrently with browser tests using its output. The lifecycle helper also accepts a finite injected `anchor` for rolling setup; runtime HTTP clocks are never overridden. Its optional `onOwned` observer exposes only its own nonsecret schema name for failure-cleanup assertions, not deletion authority.
+
 ## Private-schema connection contract
 
 A test owner creates and migrates a fresh private schema through `withTestDatabase`. Its two held connections do **not** configure a separate Next.js process. A browser server must explicitly attach its own pool with these server-only runtime variables:
@@ -30,4 +43,10 @@ Only the creating owner may attempt cleanup, using the existing retained identit
 
 Use fictional contacts only. Confirmation fragments and retained operation credentials are still sensitive, even for fictional bookings. Never record them in traces, screenshots, videos, HTML/DOM error context, copied prompts, request dumps, attachments or console output. Do not compare or print whole credential-bearing URLs/receipts in assertion diagnostics. Disable automatic capture **before** visiting credential-bearing pages; deleting a trace afterward is not prevention. Persisted test output should contain only safe status/assertion summaries. Do not publish raw artifacts from these journeys.
 
-Existing prototype capture settings do not make them suitable for persisted journeys. A database-backed fixture must enforce separate capture settings and verify its own child's database-backed readiness. Connection-attachment tests alone do not establish that lifecycle or full browser acceptance.
+The persisted configuration turns off traces/screenshots/videos, blocks service workers, uses only the list reporter, and sets the installed Playwright `PLAYWRIGHT_NO_COPY_PROMPT=1` switch to prevent automatic DOM snapshots. Its automatic fixture refuses unsafe capture/report overrides, reused or remote contexts, preloaded storage and recording context options before private navigation. Debug modes are refused. Do not bypass these guards, call explicit screenshot/trace/attachment APIs, or add network/body/console dumps.
+
+Use the fixture's `submit`, `openConfirmation` and `reloadConfirmation` helpers so unexpected request/navigation failures expose fixed errors without private arguments. Assert safe booleans/status codes rather than whole receipts, browser URLs, storage values or request bodies. Standard Playwright can still generate `error-context.md` with sanitized errors and static test source; this is not a retained private DOM snapshot. Review any new assertion or helper for credential-bearing failure diagnostics before expanding the suite.
+
+Output is confined to `coverage/playwright/persisted-results`; do not upload it automatically. Playwright clears this directory for a new run. Remove that run's local output when no longer needed; never broaden cleanup to developer data, another run's directory or abandoned schemas. Unexpectedly credential-bearing artifacts must not be shared: stop capture and treat the link/credential as disclosed. Browser profiles are disposable; confirmation tokens are never added to browser storage by the fixture.
+
+Existing prototype capture settings do not make them suitable for persisted journeys. Connection-attachment tests and this smoke do not establish full browser/M1 acceptance.
