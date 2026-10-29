@@ -63,7 +63,7 @@ function integer(value: unknown, minimum: number): number {
   return value as number;
 }
 /** Copy only fields that execute; never retain caller-owned objects across awaits. */
-function snapshot(input: BookingInput): BookingInput {
+export function snapshotBookingInput(input: BookingInput): BookingInput {
   try {
     const staffId = text(input.staffId, 64);
     if (!Array.isArray(input.serviceIds) || typeof input.startsAt !== "string")
@@ -132,7 +132,7 @@ function canonical(input: BookingInput): string {
   ]);
 }
 export function canonicalBookingPayload(input: BookingInput): string {
-  return canonical(snapshot(input));
+  return canonical(snapshotBookingInput(input));
 }
 function now(clock: () => number): number {
   const value = clock();
@@ -357,7 +357,7 @@ export function createBookingOperations(configuration: BookingKeys) {
       input: BookingInput,
       clock: () => number = Date.now,
     ): Promise<BookingReceipt> {
-      const agreement = snapshot(input);
+      const agreement = snapshotBookingInput(input);
       const payload = canonical(agreement);
       const authorization = { ...credential };
       return guarded(db, async (tx) => {

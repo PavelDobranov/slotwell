@@ -142,10 +142,8 @@ export function registerBookingRoutes<Database extends BookingDatabase>(
       )
         return c.json({ error: { code: "unsupported_media_type" } }, 415);
       const { authorization, input } = parseInput(await readBody(c.req.raw));
-      const db = c.env?.db;
-      if (!db) throw new Error();
       const receipt = await submitBooking(
-        db,
+        c.env?.db,
         { authorization, input },
         { keys: configuration.keys, clock: options.clock },
       );

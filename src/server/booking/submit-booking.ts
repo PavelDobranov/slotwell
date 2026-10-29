@@ -4,9 +4,10 @@ import type { BookingInput } from "@/server/booking/book-appointment";
 import {
   type BookingKeys,
   type BookingReceipt,
-  canonicalBookingPayload,
   createBookingOperations,
   type OperationCredential,
+  OperationError,
+  snapshotBookingInput,
 } from "@/server/booking/operations";
 
 export type BookingSubmission = {
@@ -19,21 +20,23 @@ export type BookingSubmission = {
 // (without HTTP) it still enforces the application invariants below. Keys are a
 // trusted construction contract; clock defaults to the operations' trusted time.
 export async function submitBooking(
-  db: Pick<NodePgDatabase, "transaction">,
+  db: Pick<NodePgDatabase, "transaction"> | undefined,
   submission: BookingSubmission,
   options: { keys: BookingKeys; clock?: () => number },
 ): Promise<BookingReceipt> {
   // Canonical validation bounds primitive values and validates selections/time.
   // Reviewed values express consent only; submit revalidates authoritative
   // catalog values. Reject invalid boundary input before registering an intent.
-  canonicalBookingPayload(submission.input);
+  const input = snapshotBookingInput(submission.input);
+  const authorization = {
+    operationId: submission.authorization.operationId,
+    credential: submission.authorization.credential,
+  };
+  // Invalid input remains a validation failure even when setup could not supply a DB.
+  if (!db) throw new OperationError("recovery_unavailable");
   const operations = createBookingOperations(options.keys);
+  // Retain only owned values across registration's asynchronous boundary.
   // Registration is idempotent, never mints credentials or resets an existing deadline.
-  await operations.registerIntent(db, submission.authorization, options.clock);
-  return operations.submit(
-    db,
-    submission.authorization,
-    submission.input,
-    options.clock,
-  );
+  await operations.registerIntent(db, authorization, options.clock);
+  return operations.submit(db, authorization, input, options.clock);
 }

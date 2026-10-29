@@ -99,6 +99,59 @@ test("submitBooking registers a retained pair and creates the appointment once",
   });
 });
 
+for (const mutation of ["agreement", "authorization"] as const) {
+  test(`submitBooking snapshots ${mutation} before awaiting registration`, async () => {
+    await withTestDatabase({}, async ({ db }) => {
+      const submission = await fixture(db);
+      const original = structuredClone(submission);
+      const options = { keys: keys(), clock: () => NOW };
+      let release = () => {};
+      const registrationGate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let transactions = 0;
+      const held: Pick<NodePgDatabase, "transaction"> = {
+        transaction: async (action, config) => {
+          if (++transactions === 1) await registrationGate;
+          return db.transaction(action, config);
+        },
+      };
+      const pending = submitBooking(held, submission, options);
+      // Do not leave a rejected submission unhandled while the gate is held.
+      void pending.catch(() => {});
+      try {
+        if (mutation === "agreement") {
+          const contact = submission.input.contact as Record<string, string>;
+          contact.name = "Changed";
+          contact.note = "Changed";
+          submission.input.serviceIds[0] = "changed";
+          submission.input.reviewedServices[0].name = "Changed";
+          submission.input.startsAt = "invalid";
+          submission.input = { ...submission.input };
+        } else {
+          submission.authorization.operationId =
+            "22222222-2222-4222-8222-222222222222";
+          submission.authorization.credential = "b".repeat(64);
+          submission.authorization = { ...submission.authorization };
+        }
+      } finally {
+        release();
+      }
+      const receipt = await pending;
+      assert.deepEqual(await submitBooking(db, original, options), receipt);
+      const rows = await db.select().from(appointments);
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].contactName, "Guest");
+      assert.equal(rows[0].notes, "Private");
+      const operations = await db.select().from(bookingOperations);
+      assert.equal(operations.length, 1);
+      assert.equal(operations[0].id, original.authorization.operationId);
+      assert.equal(operations[0].appointmentId, receipt.appointmentId);
+      assert.equal(operations[0].state, "committed");
+    });
+  });
+}
+
 test("invalid input is rejected before any intent is registered", async () => {
   await withTestDatabase({}, async ({ db }) => {
     const { authorization, input } = await fixture(db);

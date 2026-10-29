@@ -92,7 +92,7 @@ async function fixture(db: NodePgDatabase) {
 }
 function post(
   app: ReturnType<typeof testApp>,
-  db: BookingDatabase,
+  db: BookingDatabase | undefined,
   body: unknown,
   headers: Record<string, string> = {},
 ) {
@@ -278,6 +278,39 @@ test("POST enforces origin, media, actual byte limit and malformed JSON before d
     );
     assert.equal(query.status, 400);
     assert.equal((await db.select().from(bookingOperations)).length, 0);
+  });
+});
+
+test("POST validates business input before reporting an unavailable database", async () => {
+  await withTestDatabase({}, async ({ db }) => {
+    const input = await fixture(db);
+    for (const [booking, status, error] of [
+      [
+        input.booking,
+        503,
+        { code: "recovery_unavailable", outcome: "unknown" },
+      ],
+      [
+        { ...input.booking, startsAt: "invalid" },
+        400,
+        { code: "invalid_booking" },
+      ],
+      [
+        {
+          ...input.booking,
+          contact: { ...input.booking.contact, name: 42 },
+        },
+        400,
+        { code: "invalid_booking" },
+      ],
+    ] as const) {
+      const response = await post(testApp(), undefined, { ...input, booking });
+      assert.equal(response.status, status);
+      privateResponse(response);
+      assert.deepEqual(await response.json(), { error });
+    }
+    assert.equal((await db.select().from(bookingOperations)).length, 0);
+    assert.equal((await db.select().from(appointments)).length, 0);
   });
 });
 
