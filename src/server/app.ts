@@ -7,6 +7,7 @@ import {
   registerBookingRoutes,
 } from "@/server/http/booking.routes";
 import { registerCatalogRoutes } from "@/server/http/catalog.routes";
+import { registerConfirmationRoutes } from "@/server/http/confirmation.routes";
 
 // Bindings are injected by the Next adapter or tests; importing the app opens no database.
 const app = new Hono<{
@@ -21,5 +22,6 @@ registerCatalogRoutes(reads);
 registerAvailabilityRoutes(reads);
 app.route("/", reads);
 registerBookingRoutes(app);
+registerConfirmationRoutes(app);
 
 export default app;
