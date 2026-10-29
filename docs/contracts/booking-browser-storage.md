@@ -20,6 +20,12 @@ Never remove based on pending snapshots, expiry, unavailable responses, or lost 
 
 `clearRetainedBookingIntent` is explicit-clear orchestration, not a local reset. Its trusted callback must authenticate an owned copy of the exact pair and acknowledge only a durable server fence. No IndexedDB transaction spans networking. Callback failure/invalid acknowledgement exposes only `intent_clear_unresolved` and retains the record; `committed` also retains it. After `fenced`, a strict readwrite transaction revalidates schema/records and compares the current locator **and credential** before deleting. Absence is idempotent success; mismatch or local failure exposes `intent_storage_unavailable`. Report `fenced` only after local transaction completion. Local failure after server fencing is safely retried with the same pair. Delayed/duplicate acknowledgements never insert or recreate a record, delete another pair, or override capacity refusal. This function alone does not authorize submission or establish wizard recovery integration.
 
+## Locator-only tab association
+
+A tab association stores only one raw public lowercase UUID locator in sessionStorage, never credentials, contacts, agreements or receipts. Storage access is lazy. Missing means no association; malformed data, mismatched expected values and storage failures fail closed with `intent_association_unavailable`, without nested causes, repair or fallback. Writes require the matching expected previous locator (null for absent), even for same-value writes. Removal requires the matching expected locator; absence is idempotent after argument validation. These synchronous checks guard stale callers, not cross-frame atomicity or exclusive ownership.
+
+Reload retains the hint; a tab opened with an opener may copy it. Copied hints must resume the same intent recovery-only through the controller. Independent tabs have separate hints. Pointer writes/removals do not allocate, authenticate, fence, delete retained pairs, release capacity or authorize replacement/submission. Consumer integration must await durable allocation, associate the locator before registration/submission, and stop networking on association failure; the allocated pair remains discoverable. Neither discovery nor malformed/missing association permits automatic replacement. Controller binding, explicit selection/new-intent interactions and independent-tab booking acceptance remain integration gates, not guarantees of this primitive.
+
 ## In-memory submission coordination
 
 A controller selects only one retained pair at a time. Discovery lists public locators without registering or auto-selecting. Explicit new-intent allocation awaits durable completion before authenticated resolution; no error starts a replacement. Resume re-reads an explicitly selected locator. Resumed pending work is recovery-only: the original agreement was not persisted, and a pending snapshot cannot exclude another tab's delayed submission. A later UI may retain a locator-only tab pointer, never contacts, agreements or receipts.
@@ -36,6 +42,7 @@ Rollback means stop invoking integration, not delete the browser database, repla
 
 ```sh
 npx tsx --test src/app/_lib/booking/intent-storage.browser-test.ts
+npx tsx --test src/app/_lib/booking/intent-association.browser-test.ts
 ```
 
 The separate `.browser-test.ts` suffix keeps browser requirements out of unit tests. Use installed Playwright Chromium with fresh isolated contexts and synthetic data; no dev server, personal profile, or trace artifacts. Only counts/booleans may leave the browser. These tests do not establish wizard acceptance.
