@@ -2,7 +2,9 @@
 
 ## Application boundaries
 
-The agreed server target is capability modules with a separate HTTP adapter. The flat server files have not yet been migrated; follow the approved task's scope rather than assuming the target already exists.
+The server uses capability modules with a separate HTTP adapter. Catalog, availability, and booking have public `index.ts` entry points; legacy flat compatibility files have been removed. Runtime capability dependencies are booking → availability/catalog and availability → catalog, with no reverse edges.
+
+Boundary enforcement is currently manual: review public exports, cross-capability imports, application/HTTP separation, shared dependencies, and cycles when changing these modules. Automated architecture checks were explicitly deferred during #106 acceptance work; existing tests do not enforce those import boundaries.
 
 - Business modules expose application use cases, their input/output types, and application errors through explicit named exports in `index.ts`. Export minimal construction contracts only when needed for dependency wiring. No utility/repository/route exports, database-row-shaped business contracts, or `export *`.
 - HTTP routes consume those public interfaces. They own request parsing, transport validation, origin/media-type policies, headers, and status mapping. Application logic must not depend on Hono, Request/Response, or HTTP status codes.

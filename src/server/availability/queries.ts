@@ -16,6 +16,7 @@ import {
 } from "@/server/availability/compute";
 import { type CatalogDatabase, CatalogError } from "@/server/catalog";
 import { addCalendarDays } from "@/shared/booking-time";
+import { validateServiceSelection } from "@/shared/service-selection";
 
 export type AvailabilityQuery = {
   staffId: string;
@@ -67,6 +68,7 @@ export async function readAvailability(
   now = Date.now(),
 ): Promise<AvailabilityView> {
   const { staffId, serviceIds, from, to } = query;
+  validateServiceSelection(serviceIds);
   const [business] = await db
     .select()
     .from(businessSettings)

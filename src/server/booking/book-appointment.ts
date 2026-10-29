@@ -19,15 +19,14 @@ import { addCalendarDays, businessDate } from "@/shared/booking-time";
 import { parseGuestContact } from "@/shared/guest-contact";
 import { validateServiceSelection } from "@/shared/service-selection";
 
-export type ReviewedService = Pick<
-  typeof services.$inferSelect,
-  | "id"
-  | "name"
-  | "priceCents"
-  | "currency"
-  | "durationMinutes"
-  | "cleanupMinutes"
->;
+export type ReviewedService = {
+  id: string;
+  name: string;
+  priceCents: number | null;
+  currency: string;
+  durationMinutes: number;
+  cleanupMinutes: number;
+};
 export type BookingInput = {
   staffId: string;
   serviceIds: string[];

@@ -2,6 +2,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import { businessSettings, services, staff, staffServices } from "@/db/schema";
+import { validateServiceSelection } from "@/shared/service-selection";
 
 // Reads only; a structural handle accepts the app pool and the test harness's
 // held private-schema connection alike.
@@ -74,15 +75,12 @@ export async function readCatalog(db: CatalogDatabase): Promise<CatalogView> {
   return { business, services: serviceRows };
 }
 
-/**
- * Active staff qualified for EVERY distinct selected active service. Expects an
- * already-validated, distinct `serviceIds` (see the shared
- * `validateServiceSelection` rule in `@/shared/service-selection`).
- */
+/** Active staff qualified for EVERY distinct selected active service. */
 export async function readQualifiedStaff(
   db: CatalogDatabase,
   serviceIds: string[],
 ): Promise<StaffView[]> {
+  validateServiceSelection(serviceIds);
   const active = await db
     .select({ id: services.id })
     .from(services)
