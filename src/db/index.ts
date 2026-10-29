@@ -1,5 +1,6 @@
 import "server-only";
 
+import { openBrowserTestDatabase } from "@/db/browser-test";
 import {
   openPostgresDatabase,
   validateApplicationDatabaseUrl,
@@ -13,8 +14,15 @@ export function getDatabase() {
     throw new Error("Database is closed");
   }
   if (!handle) {
-    const url = validateApplicationDatabaseUrl(process.env.DATABASE_URL);
-    handle = openPostgresDatabase(url);
+    if (
+      process.env.SLOTWELL_BROWSER_TEST !== undefined ||
+      process.env.SLOTWELL_BROWSER_SCHEMA !== undefined
+    ) {
+      handle = openBrowserTestDatabase(process.env);
+    } else {
+      const url = validateApplicationDatabaseUrl(process.env.DATABASE_URL);
+      handle = openPostgresDatabase(url);
+    }
   }
   return handle.db;
 }
