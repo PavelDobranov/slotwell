@@ -50,7 +50,13 @@ function isIntent(value: unknown): value is RetainedBookingIntent {
   );
 }
 
-async function transact(allocate: boolean): Promise<RetainedBookingIntent[]> {
+type StorageAction = "list" | "allocate" | { clear: RetainedBookingIntent };
+
+async function transact(
+  action: StorageAction,
+): Promise<RetainedBookingIntent[]> {
+  const allocate = action === "allocate";
+  const write = action !== "list";
   let db: IDBDatabase;
   try {
     db = await openDatabase();
@@ -61,11 +67,9 @@ async function transact(allocate: boolean): Promise<RetainedBookingIntent[]> {
     return await new Promise<RetainedBookingIntent[]>((resolve, reject) => {
       let failure = "intent_storage_unavailable";
       let result: RetainedBookingIntent[] = [];
-      const tx = db.transaction(
-        storeName,
-        allocate ? "readwrite" : "readonly",
-        { durability: "strict" },
-      );
+      const tx = db.transaction(storeName, write ? "readwrite" : "readonly", {
+        durability: "strict",
+      });
       tx.onabort = () => reject(new Error(failure));
       tx.onerror = () => {
         /* Abort is the terminal failure event. */
@@ -82,7 +86,7 @@ async function transact(allocate: boolean): Promise<RetainedBookingIntent[]> {
           index.keyPath !== "credential" ||
           !index.unique ||
           index.multiEntry ||
-          (allocate && tx.durability !== "strict")
+          (write && tx.durability !== "strict")
         ) {
           tx.abort();
           return;
@@ -106,7 +110,17 @@ async function transact(allocate: boolean): Promise<RetainedBookingIntent[]> {
               return;
             }
             result = records as RetainedBookingIntent[];
-            if (allocate) {
+            if (typeof action === "object") {
+              const existing = result.find(
+                ({ operationId }) => operationId === action.clear.operationId,
+              );
+              if (existing && existing.credential !== action.clear.credential) {
+                tx.abort();
+                return;
+              }
+              if (existing) store.delete(existing.operationId);
+              result = [];
+            } else if (allocate) {
               const intent = {
                 operationId: crypto.randomUUID(),
                 credential: Array.from(
@@ -136,10 +150,42 @@ async function transact(allocate: boolean): Promise<RetainedBookingIntent[]> {
 
 /** A fresh intent, not a retry. Await completion BEFORE any registration/networking. */
 export async function allocateBookingIntent(): Promise<RetainedBookingIntent> {
-  return (await transact(true))[0];
+  return (await transact("allocate"))[0];
 }
 
 /** Discovery only: no server lifecycle or permission to remove/replace is implied. */
 export async function listBookingIntents(): Promise<RetainedBookingIntent[]> {
-  return transact(false);
+  return transact("list");
+}
+
+/** Explicit clear only. The trusted callback authenticates this exact pair and
+ * acknowledges only after the server's owning fence transaction commits.
+ * No IndexedDB transaction spans networking. Committed never authorizes deletion.
+ */
+export async function clearRetainedBookingIntent(
+  intent: RetainedBookingIntent,
+  requestFence: (pair: RetainedBookingIntent) => Promise<unknown>,
+): Promise<{ state: "fenced" | "committed" }> {
+  let pair: RetainedBookingIntent;
+  let state: "fenced" | "committed";
+  try {
+    if (Array.isArray(intent)) throw new Error();
+    pair = { ...intent };
+    if (!isIntent(pair)) throw new Error();
+    const acknowledgement = await requestFence({ ...pair });
+    if (
+      !acknowledgement ||
+      typeof acknowledgement !== "object" ||
+      Array.isArray(acknowledgement) ||
+      Object.keys(acknowledgement).join(",") !== "state"
+    )
+      throw new Error();
+    const value = (acknowledgement as { state?: unknown }).state;
+    if (value !== "fenced" && value !== "committed") throw new Error();
+    state = value;
+  } catch {
+    throw new Error("intent_clear_unresolved");
+  }
+  if (state === "fenced") await transact({ clear: pair });
+  return { state };
 }

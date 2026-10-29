@@ -18,6 +18,8 @@ Keep the same pair for registration retries, unknown outcomes, and recovery. A t
 
 Never remove based on pending snapshots, expiry, unavailable responses, or lost acknowledgements. Explicit clear must first receive a durable server fence, then atomically release local capacity across tabs; delayed responses must not recreate the record. A committed classification does not authorize forgetting/replacement. Committed-forget requires its own reviewed contract. Without clearing integration, capacity can remain exhausted.
 
+`clearRetainedBookingIntent` is explicit-clear orchestration, not a local reset. Its trusted callback must authenticate an owned copy of the exact pair and acknowledge only a durable server fence. No IndexedDB transaction spans networking. Callback failure/invalid acknowledgement exposes only `intent_clear_unresolved` and retains the record; `committed` also retains it. After `fenced`, a strict readwrite transaction revalidates schema/records and compares the current locator **and credential** before deleting. Absence is idempotent success; mismatch or local failure exposes `intent_storage_unavailable`. Report `fenced` only after local transaction completion. Local failure after server fencing is safely retried with the same pair. Delayed/duplicate acknowledgements never insert or recreate a record, delete another pair, or override capacity refusal. This function alone does not authorize submission or establish wizard recovery integration.
+
 Rollback means stop invoking integration, not delete the browser database, replace credentials, or reset server fences. Exact database/schema identifiers and exported functions live in implementation/tests, not a parallel inventory here.
 
 ## Focused browser verification
