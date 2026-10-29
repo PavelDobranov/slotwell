@@ -6,6 +6,7 @@ import {
   type BookingDatabase,
   registerBookingRoutes,
 } from "@/server/http/booking.routes";
+import { registerBookingIntentRoutes } from "@/server/http/booking-intents.routes";
 import { registerCatalogRoutes } from "@/server/http/catalog.routes";
 import { registerConfirmationRoutes } from "@/server/http/confirmation.routes";
 
@@ -22,6 +23,7 @@ registerCatalogRoutes(reads);
 registerAvailabilityRoutes(reads);
 app.route("/", reads);
 registerBookingRoutes(app);
+registerBookingIntentRoutes(app);
 registerConfirmationRoutes(app);
 
 export default app;

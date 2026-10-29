@@ -14,6 +14,14 @@ First success and identical retry return the same private receipt. Never expose 
 
 All endpoint responses, including errors, require `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff`. The authorized receipt token belongs only in the private response/reviewed confirmation-link flow, not API URLs or headers. Keep request bodies, credentials, receipts, and raw exceptions out of logs, telemetry, and artifacts.
 
+## Retained-intent lifecycle transport
+
+`POST /api/booking-intents/resolve` and `POST /api/booking-intents/clear` accept exactly `{ operationId, credential }`, with the same primitive pair syntax as submission. They call the public booking lifecycle use cases, not private operations. Resolve idempotently registers the already-retained pair and returns either `{ state: "pending", submitBefore }` or `{ state: "committed", receipt }`. Clear returns only `{ state: "fenced" }` or `{ state: "committed" }`; it never registers pending work or decrypts a receipt. Pending is a snapshot, and committed classification is not permission to forget. Only an explicit clear with a received durable `fenced` acknowledgement may proceed to reviewed atomic local deletion; no response/error permits automatic replacement.
+
+Both endpoints inherit submission's trusted origin/key configuration, required Origin, optional same-origin Sec-Fetch-Site, JSON/UTF-8, identity encoding, query rejection and private response headers. Pair-only bodies are limited to **1,024 actual bytes**, independent of Content-Length. Rejection order is method → configuration → origin → query/media → strict UTF-8 bounded body/shape → use case. Unsupported methods return private 405 with `Allow: POST` (HEAD has no body), including through explicit Next dispatch. No cookies or CORS grant.
+
+Success is 200 with the exact application result. Malformed input returns 400 `invalid_booking`, oversized bodies 413 `request_too_large`, origin rejection 403 `origin_forbidden`, and media/encoding rejection 415 `unsupported_media_type`. Authenticated `operation_unavailable` returns 409. Configuration/driver/lock/other unavailable failures return redacted 503 `recovery_unavailable` with `outcome: "unknown"`. Neither 409 nor 503 authorizes discarding the pair, releasing capacity or starting a replacement. Credentials and recovered receipts remain sensitive; the same no-logging/no-artifact rules apply.
+
 ## Trusted configuration
 
 Use ignored root `.env.local`, mode `0600`; never `NEXT_PUBLIC_` variables or committed secrets. Read configuration lazily at invocation, not import/build time or from request data. Next loads server variables; standalone tooling must provide its environment explicitly.
