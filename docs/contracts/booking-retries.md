@@ -14,7 +14,9 @@ Registration atomically inserts if absent, then locks/authenticates. A matching 
 
 ## Resolution and submission
 
-Resolution authenticates under the bounded operation-row lock without contacts/agreement or current-catalog access. It returns pending with the original deadline or recovers the committed receipt; it never registers, submits, or mutates lifecycle/access data. Sample trusted time after acquiring the lock, including terminal rows. Exact deadline/confirmation-expiry equality is expired.
+The public `resolveBookingIntent` use case copies the retained pair, idempotently registers it, then invokes read-only resolution in a separate transaction. Registration can commit even if resolution fails; an intervening clear fails closed and an intervening submission is recovered. No outcome permits replacement. `clearBookingIntent` invokes only fencing, never registration or receipt recovery. Both use explicit database/key/clock dependencies; clear requires valid configured key rings but not the historical keys needed for receipt decryption. Neither exposes the private operation factory or trusted pruning.
+
+Read-only resolution authenticates under the bounded operation-row lock without contacts/agreement or current-catalog access. It returns pending with the original deadline or recovers the committed receipt; it never registers, submits, or mutates lifecycle/access data. Sample trusted time after acquiring the lock, including terminal rows. Exact deadline/confirmation-expiry equality is expired.
 
 Pending is **only a snapshot**: submission may occur after lock release. Missing rows cannot exclude delayed registration. No resolution result/error authorizes record removal, released capacity, or automatic replacement. Idempotently register an already-retained unregistered pair before resolving it.
 
