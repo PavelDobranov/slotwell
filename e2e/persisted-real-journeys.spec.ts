@@ -241,15 +241,17 @@ test("commit with lost response recovers on reload and after tab closure without
   let operationId = "";
   let credential = "";
   let samePair = true;
-  page.on("request", (request) => {
+  let recoveries = 0;
+  page.context().on("request", (request) => {
     const path = new URL(request.url()).pathname;
     if (path === "/api/booking-intents/resolve" && operationId) {
+      recoveries++;
       const pair = request.postDataJSON();
       samePair &&=
         pair.operationId === operationId && pair.credential === credential;
     }
   });
-  await page.route("**/api/bookings", async (route) => {
+  await page.context().route("**/api/bookings", async (route) => {
     posts++;
     const pair = route.request().postDataJSON();
     operationId = pair.operationId;
@@ -298,6 +300,7 @@ test("commit with lost response recovers on reload and after tab closure without
   }
   assert.equal(posts, 1);
   assert.equal(samePair, true);
+  assert.equal(recoveries, 2); // Reload and explicit recovery in the independent tab.
   assert.deepEqual(
     await totals(persisted),
     before.map((value) => value + 1),
