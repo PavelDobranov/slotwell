@@ -1,4 +1,4 @@
-// Public interface of the booking capability: the submission use case, its
+// Public interface of the booking capability: submission and confirmation reads, their
 // input/output contracts, the application errors, and the key/application
 // configuration reader. Transport (origin, cookie policy, content-type/body-size,
 // response mapping) lives in the HTTP adapter (src/server/http/booking.routes.ts);
@@ -10,6 +10,14 @@
 export type { BookingInput } from "@/server/booking/book-appointment";
 export { BookingError } from "@/server/booking/book-appointment";
 export { readBookingKeys } from "@/server/booking/configuration";
+export type {
+  ConfirmationCredential,
+  ConfirmationView,
+} from "@/server/booking/confirmation";
+export {
+  ConfirmationError,
+  readConfirmation,
+} from "@/server/booking/confirmation";
 export type {
   BookingKeys,
   BookingReceipt,
