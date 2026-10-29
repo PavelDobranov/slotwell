@@ -2,6 +2,10 @@
 
 Owns transport/security and operational configuration. [Retry semantics](booking-retries.md) own lifecycle and agreement identity; [browser storage](booking-browser-storage.md) owns durable allocation. Delivery scope/status belongs to GitHub tasks, not this contract. POST availability alone does not establish wizard or browser-recovery acceptance (#74/#77).
 
+## Catalog inputs for booking
+
+`GET /api/catalog` exposes configured `business.defaultPhoneCountry` for contact parsing and each active service's `cleanupMinutes` and `currency` alongside its name, price and duration. These required read fields come from the corresponding business/service records; service currency is not inferred from business currency, and zero cleanup is preserved. They let the browser present the current agreement without fabricating consent values or hardcoding a phone country. Catalog reads are not a reservation or authority to submit stale values: booking still revalidates the reviewed service values and contact input on the server.
+
 ## Transport contract
 
 `POST /api/bookings` accepts `{ operationId, credential, booking }`. The pair must already be durably retained before networking. Registration is idempotent: never mint a replacement pair or reset its deadline. Invalid boundary input is rejected before registration; a later business rejection can leave an intent pending.

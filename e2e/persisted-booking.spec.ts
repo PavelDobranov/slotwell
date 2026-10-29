@@ -6,6 +6,7 @@ const catalog = {
     address: "Тест адрес",
     timeZone: "Asia/Tokyo",
     currency: "EUR",
+    defaultPhoneCountry: "JP",
   },
   services: [
     {
@@ -14,6 +15,8 @@ const catalog = {
       category: "Коса",
       priceCents: 2000,
       durationMinutes: 37,
+      cleanupMinutes: 0,
+      currency: "EUR",
     },
     {
       id: "color",
@@ -21,6 +24,8 @@ const catalog = {
       category: "Коса",
       priceCents: 3000,
       durationMinutes: 60,
+      cleanupMinutes: 10,
+      currency: "EUR",
     },
   ],
 };

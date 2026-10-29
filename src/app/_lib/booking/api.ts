@@ -1,4 +1,4 @@
-// Browser client for the catalog/staff reads exposed in src/server/catalog.ts.
+// Browser client for the catalog/staff reads exposed by @/server/catalog.
 // The view types mirror that JSON contract but are declared here, not imported,
 // so the client bundle pulls in no server-only database code.
 
@@ -7,6 +7,7 @@ export type BusinessView = {
   address: string;
   timeZone: string;
   currency: string;
+  defaultPhoneCountry: string;
 };
 export type ServiceView = {
   id: string;
@@ -14,6 +15,8 @@ export type ServiceView = {
   category: string;
   priceCents: number | null;
   durationMinutes: number;
+  cleanupMinutes: number;
+  currency: string;
 };
 export type StaffView = {
   id: string;

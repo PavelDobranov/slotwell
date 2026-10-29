@@ -13,6 +13,7 @@ export type BusinessView = {
   address: string;
   timeZone: string;
   currency: string;
+  defaultPhoneCountry: string;
 };
 export type ServiceView = {
   id: string;
@@ -20,6 +21,8 @@ export type ServiceView = {
   category: string;
   priceCents: number | null;
   durationMinutes: number;
+  cleanupMinutes: number;
+  currency: string;
 };
 export type StaffView = {
   id: string;
@@ -55,6 +58,7 @@ export async function readCatalog(db: CatalogDatabase): Promise<CatalogView> {
       address: businessSettings.address,
       timeZone: businessSettings.timeZone,
       currency: businessSettings.currency,
+      defaultPhoneCountry: businessSettings.defaultPhoneCountry,
     })
     .from(businessSettings)
     .where(eq(businessSettings.id, 1));
@@ -68,6 +72,8 @@ export async function readCatalog(db: CatalogDatabase): Promise<CatalogView> {
       category: services.category,
       priceCents: services.priceCents,
       durationMinutes: services.durationMinutes,
+      cleanupMinutes: services.cleanupMinutes,
+      currency: services.currency,
     })
     .from(services)
     .where(eq(services.isActive, true))

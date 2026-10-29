@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { services, staff } from "@/db/schema";
+import { businessSettings, services, staff } from "@/db/schema";
 import { seedCatalog } from "@/db/seed";
 import { withTestDatabase } from "@/db/testing";
 import app from "@/server/app";
@@ -41,6 +41,7 @@ test("/api/catalog exposes the allowlisted business and active services in order
       address: "ул. „Шипка“ 18, София",
       timeZone: "Europe/Sofia",
       currency: "EUR",
+      defaultPhoneCountry: "BG",
     });
     assert.equal(body.services?.length, 12);
     // Ordered by sort_order; first seeded service and its allowlisted fields.
@@ -50,6 +51,8 @@ test("/api/catalog exposes the allowlisted business and active services in order
       category: "Коса",
       priceCents: 2800,
       durationMinutes: 45,
+      cleanupMinutes: 10,
+      currency: "EUR",
     });
     const keratin = body.services?.find((s) => s.id === "keratin");
     assert.equal(keratin?.priceCents, null);
@@ -57,12 +60,44 @@ test("/api/catalog exposes the allowlisted business and active services in order
     for (const service of body.services ?? []) {
       assert.deepEqual(keys(service), [
         "category",
+        "cleanupMinutes",
+        "currency",
         "durationMinutes",
         "id",
         "name",
         "priceCents",
       ]);
     }
+  });
+});
+
+test("/api/catalog reads configured country and each service's consent values without defaults", async () => {
+  await withTestDatabase({}, async ({ db }) => {
+    await seedCatalog(db);
+    await db
+      .update(businessSettings)
+      .set({ defaultPhoneCountry: "US" })
+      .where(eq(businessSettings.id, 1));
+    await db
+      .update(services)
+      .set({ currency: "USD", cleanupMinutes: 0 })
+      .where(eq(services.id, "cut_w"));
+    await db
+      .update(services)
+      .set({ cleanupMinutes: 17 })
+      .where(eq(services.id, "keratin"));
+
+    const { status, body } = await get(db, "/catalog");
+    assert.equal(status, 200);
+    assert.equal(body.business?.defaultPhoneCountry, "US");
+    assert.equal(body.business?.currency, "EUR");
+    const cut = body.services?.find((service) => service.id === "cut_w");
+    assert.equal(cut?.currency, "USD");
+    assert.equal(cut?.cleanupMinutes, 0);
+    const keratin = body.services?.find((service) => service.id === "keratin");
+    assert.equal(keratin?.currency, "EUR");
+    assert.equal(keratin?.cleanupMinutes, 17);
+    assert.equal(keratin?.priceCents, null);
   });
 });
 
