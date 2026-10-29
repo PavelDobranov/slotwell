@@ -38,6 +38,14 @@ Committed knowledge is monotonic: later pending/errors cannot downgrade it. A kn
 
 Rollback means stop invoking integration, not delete the browser database, replace credentials, or reset server fences. Exact database/schema identifiers and exported functions live in implementation/tests, not a parallel inventory here.
 
+## Persisted booking UI binding
+
+`/book` discovers retained locators on mount and resumes only its validated tab hint. With no hint, discovery does not select, register or allocate: a retained attempt requires explicit selection, and a distinct booking requires an explicit new-intent action. A first confirmation without retained attempts is itself an explicit new-intent action. The route binding awaits durable allocation, writes the locator before handing the pair back to the existing controller, and stops networking if association fails. The pair remains discoverable. Failed discovery keeps the UI unready and offers explicit storage retry; it does not allocate a fallback.
+
+Contact drafts, review consent and submission agreements stay in memory. Review snapshots the ordered authoritative service values and explicit phone country. Selection changes require authoritative staff/time reconciliation; catalog duration/cleanup changes invalidate time validation even during contact entry. A stale pre-change response cannot revalidate that time. Invalid services are removed without inventing replacements; valid selections and contacts survive. Conflict/catalog recovery may change the draft only when the controller grants editing, never after submission uncertainty. Unknown outcomes lock every draft control, including non-native checkbox/radio primitives, and permit only same-agreement retry, authenticated recovery or explicit safe clear.
+
+Only a completed controller clear with no selected intent permits removal of the matching tab hint. A pointer-removal failure after durable deletion locks replacement; explicit storage retry can finish that pointer removal in the same binding. Disposal drops the binding's receipt snapshot/listeners and forbids late association/networking. Valid committed receipts navigate to the existing private confirmation fragment; they are never stored in the tab association or draft storage. These UI guarantees do not establish database-process fixture isolation or full milestone acceptance.
+
 ## Focused browser verification
 
 ```sh

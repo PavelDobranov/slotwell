@@ -240,6 +240,197 @@ test("paging and edits retain tentative selections until their date is revalidat
   assert.equal(state.slot, null);
 });
 
+const reviewedService = {
+  id: "cut",
+  name: "Подстригване",
+  priceCents: 2000,
+  currency: "JPY",
+  durationMinutes: 37,
+  cleanupMinutes: 10,
+};
+function withReview(): PersistedState {
+  let state = persistedReducer(withSlot(), {
+    type: "contact",
+    draft: { name: "Test", phone: "09012345678", email: "test@example.test" },
+  });
+  state = persistedReducer(state, {
+    type: "catalog",
+    services: [reviewedService],
+  });
+  state = persistedReducer(state, {
+    type: "availability",
+    selectionKey,
+    days: [{ date: chosenSlot.date, slots: [chosenSlot] }],
+  });
+  state = persistedReducer(state, { type: "edit", step: "details" });
+  return persistedReducer(state, {
+    type: "review",
+    services: [reviewedService],
+    defaultPhoneCountry: "JP",
+  });
+}
+
+test("details require a slot validated for the current selection; still-valid slots survive revalidation", () => {
+  assert.equal(
+    persistedReducer(withServices(["cut"]), { type: "edit", step: "details" })
+      .step,
+    "staff",
+  );
+  assert.equal(
+    persistedReducer(withSlot(), { type: "edit", step: "details" }).step,
+    "details",
+  );
+  const changed = persistedReducer(withSlot(), {
+    type: "services",
+    ids: ["cut", "color"],
+  });
+  assert.deepEqual(changed.slot, chosenSlot);
+  assert.equal(
+    persistedReducer(changed, { type: "edit", step: "details" }).step,
+    "time",
+  );
+  const revalidated = persistedReducer(changed, {
+    type: "availability",
+    selectionKey: availabilitySelectionKey(changed.serviceIds, changed.staffId),
+    days: [{ date: chosenSlot.date, slots: [chosenSlot] }],
+  });
+  assert.equal(
+    persistedReducer(revalidated, { type: "edit", step: "details" }).step,
+    "details",
+  );
+});
+
+test("review validates configured country, snapshots authoritative service consent, and requires explicit renewal after edits", () => {
+  const state = withReview();
+  assert.equal(state.step, "review");
+  assert.equal(state.contact.phoneCountry, "JP");
+  assert.deepEqual(state.reviewedServices, [reviewedService]);
+  assert.notEqual(state.reviewedServices?.[0], reviewedService);
+  const contactEdit = persistedReducer(state, {
+    type: "contact",
+    draft: { note: "Changed" },
+  });
+  assert.equal(contactEdit.step, "details");
+  assert.equal(contactEdit.reviewedServices, null);
+  const back = persistedReducer(state, { type: "back" });
+  assert.equal(back.step, "details");
+  assert.equal(persistedReducer(back, { type: "next" }).step, "details");
+  assert.equal(
+    persistedReducer(back, { type: "edit", step: "review" }).step,
+    "details",
+  );
+});
+
+test("invalid contacts and missing/changed service agreement cannot reach review", () => {
+  const invalid = persistedReducer(withSlot(), {
+    type: "review",
+    services: [reviewedService],
+    defaultPhoneCountry: "JP",
+  });
+  assert.notEqual(invalid.step, "review");
+  const state = withReview();
+  const missing = persistedReducer(state, {
+    type: "review",
+    services: [],
+    defaultPhoneCountry: "JP",
+  });
+  assert.equal(missing.step, "details");
+  assert.equal(missing.reviewedServices, null);
+  assert.deepEqual(missing.contact, state.contact);
+});
+
+test("conflict clears only the invalid time; catalog review requires consent again; other failures preserve selections", () => {
+  const state = withReview();
+  const conflict = persistedReducer(state, {
+    type: "submission-rejected",
+    code: "availability_conflict",
+  });
+  assert.equal(conflict.step, "time");
+  assert.equal(conflict.slot, null);
+  assert.deepEqual(conflict.contact, state.contact);
+  assert.deepEqual(conflict.serviceIds, state.serviceIds);
+  assert.equal(conflict.staffId, state.staffId);
+  const review = persistedReducer(state, {
+    type: "submission-rejected",
+    code: "review_required",
+  });
+  assert.equal(review.step, "time");
+  assert.equal(
+    review.slotSelectionKey,
+    null,
+    "changed catalog needs authoritative time revalidation, not a fabricated replacement",
+  );
+  assert.deepEqual(review.slot, state.slot);
+  assert.equal(review.reviewedServices, null);
+  assert.deepEqual(
+    persistedReducer(state, {
+      type: "submission-rejected",
+      code: "unknown_outcome",
+    }),
+    state,
+  );
+  assert.deepEqual(
+    persistedReducer(state, {
+      type: "submission-rejected",
+      code: "booking_busy",
+    }),
+    state,
+  );
+});
+
+test("catalog reconciliation removes only unavailable services and preserves entered contacts", () => {
+  const state = withReview();
+  const unchanged = persistedReducer(state, {
+    type: "catalog",
+    services: [reviewedService, { ...reviewedService, id: "color" }],
+  });
+  assert.equal(unchanged, state);
+  const changed = persistedReducer(state, {
+    type: "catalog",
+    services: [{ ...reviewedService, id: "color" }],
+  });
+  assert.deepEqual(changed.serviceIds, []);
+  assert.equal(changed.step, "services");
+  assert.equal(changed.reviewedServices, null);
+  assert.deepEqual(changed.contact, state.contact);
+  assert.equal(changed.staffId, null);
+});
+
+test("catalog duration or cleanup changes during details require a fresh authoritative slot snapshot", () => {
+  const state = persistedReducer(withReview(), {
+    type: "edit",
+    step: "details",
+  });
+  const changed = persistedReducer(state, {
+    type: "catalog",
+    services: [{ ...reviewedService, cleanupMinutes: 20 }],
+  });
+  assert.equal(changed.step, "time");
+  assert.deepEqual(
+    changed.slot,
+    state.slot,
+    "keep tentative choice, do not invent replacement",
+  );
+  assert.notEqual(changed.slotTimingKey, changed.catalogTimingKey);
+  assert.equal(
+    persistedReducer(changed, {
+      type: "availability",
+      selectionKey,
+      catalogTimingKey: state.catalogTimingKey,
+      days: [{ date: chosenSlot.date, slots: [chosenSlot] }],
+    }),
+    changed,
+    "stale pre-catalog response cannot revalidate",
+  );
+  const revalidated = persistedReducer(changed, {
+    type: "availability",
+    selectionKey,
+    catalogTimingKey: changed.catalogTimingKey,
+    days: [{ date: chosenSlot.date, slots: [chosenSlot] }],
+  });
+  assert.equal(persistedReducer(revalidated, { type: "next" }).step, "details");
+});
+
 test("changing date clears incompatible time; identical date preserves it", () => {
   const state = withSlot();
   assert.deepEqual(

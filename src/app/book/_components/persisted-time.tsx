@@ -42,9 +42,11 @@ export function PersistedTime({
   state,
   timeZone,
   dispatch,
+  disabled = false,
 }: {
   state: PersistedState;
   timeZone: string;
+  disabled?: boolean;
   dispatch: Dispatch<PersistedAction>;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
@@ -61,7 +63,13 @@ export function PersistedTime({
     state.staffId,
   );
   const query = useQuery({
-    queryKey: ["availability", selectionKey, page.from, to],
+    queryKey: [
+      "availability",
+      selectionKey,
+      state.catalogTimingKey,
+      page.from,
+      to,
+    ],
     queryFn: ({ signal }) =>
       fetchAvailability(
         {
@@ -82,7 +90,12 @@ export function PersistedTime({
     // Cached success, failed refreshes and pages for another selection are not
     // evidence that the selected time disappeared.
     if (!ready) return;
-    dispatch({ type: "availability", selectionKey, days: query.data.days });
+    dispatch({
+      type: "availability",
+      selectionKey,
+      catalogTimingKey: state.catalogTimingKey,
+      days: query.data.days,
+    });
     if (!page.browsed && state.date === null) {
       const serverDate = dateAt(query.data.serverNow, query.data.timeZone);
       if (serverDate !== page.from)
@@ -96,6 +109,7 @@ export function PersistedTime({
     page.browsed,
     page.from,
     state.date,
+    state.catalogTimingKey,
   ]);
 
   const zone = query.data?.timeZone ?? timeZone;
@@ -170,6 +184,7 @@ export function PersistedTime({
         </Button>
       </div>
       <RadioGroup
+        disabled={disabled}
         aria-label="Дати"
         value={visibleDate}
         className="grid grid-cols-2 gap-2 sm:grid-cols-4"
@@ -214,6 +229,7 @@ export function PersistedTime({
         </Alert>
       ) : (
         <RadioGroup
+          disabled={disabled}
           aria-label={`Часове за ${dateLabel(visibleDate)}`}
           value={state.slot?.date === visibleDate ? state.slot.start : null}
           className="grid grid-cols-2 gap-2 sm:grid-cols-3"
@@ -223,7 +239,8 @@ export function PersistedTime({
               dispatch({
                 type: "slot",
                 selectionKey,
-                slot: { ...slot, date: visibleDate },
+                catalogTimingKey: state.catalogTimingKey,
+                slot: { ...slot, date: visibleDate, timeZone: zone },
               });
           }}
         >
@@ -256,10 +273,18 @@ export function PersistedTime({
           потвърждение.
         </output>
       )}
-      <p className="text-sm text-muted-foreground">
-        Въвеждането на данни за контакт и потвърждението предстоят. Засега тази
-        страница не прави реална резервация.
-      </p>
+      <Button
+        className="self-end"
+        disabled={
+          !ready ||
+          !state.slot ||
+          state.slotSelectionKey !== selectionKey ||
+          state.slotTimingKey !== state.catalogTimingKey
+        }
+        onClick={() => dispatch({ type: "next" })}
+      >
+        Продължи към данните
+      </Button>
     </section>
   );
 }
