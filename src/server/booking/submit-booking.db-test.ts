@@ -1,14 +1,21 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { test } from "node:test";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import {
+  appointmentAccess,
+  appointmentServices,
   appointments,
   bookingOperations,
   businessHours,
   businessSettings,
+  clients,
   services,
+  staff,
+  staffOccupancy,
   staffSchedules,
 } from "@/db/schema";
 import { seedCatalog } from "@/db/seed";
@@ -184,6 +191,111 @@ test("an identical retry with the same pair replays the exact receipt", async ()
     );
     assert.deepEqual(retry, first);
     assert.equal((await db.select().from(appointments)).length, 1);
+  });
+});
+
+test("exited application processes preserve lost-response replay, confirmation snapshots and exact expiry", async () => {
+  await withTestDatabase({}, async ({ db, independentDb }) => {
+    const submission = await fixture(db);
+    const result = await db.execute<{ name: string }>(
+      sql`SELECT current_schema() AS name`,
+    );
+    const schema = result.rows[0].name;
+    assert.match(schema, /^slotwell_test_[a-f0-9]{32}$/);
+    const run = (action: string, now: number, receipt?: unknown) => {
+      const child = spawnSync(
+        process.execPath,
+        ["--import", "tsx", "src/server/booking/persistence.fixture.ts"],
+        {
+          env: process.env,
+          input: JSON.stringify({ action, schema, submission, now, receipt }),
+          encoding: "utf8",
+          timeout: 30000,
+          maxBuffer: 1024 * 1024,
+        },
+      );
+      // Captured output may contain synthetic contacts or bearer tokens; never
+      // include it in assertions, logs, command arguments or retained artifacts.
+      assert.equal(
+        child.status,
+        0,
+        "application child exits cleanly; output withheld",
+      );
+      assert.equal(child.signal, null);
+      return JSON.parse(child.stdout);
+    };
+    const discarded = run("discard", NOW);
+    assert.deepEqual(Object.keys(discarded), ["pid"]);
+    const [stored] = await independentDb.select().from(appointments);
+    const [access] = await independentDb.select().from(appointmentAccess);
+    const [operation] = await independentDb.select().from(bookingOperations);
+    assert.equal(operation.state, "committed");
+    assert.equal(operation.appointmentId, stored.id);
+    assert.equal(access.appointmentId, stored.id);
+    const expiry = Date.parse(stored.confirmationExpiresAt);
+    assert.equal(expiry, Date.parse(stored.serviceEndsAt) + 168 * 3_600_000);
+
+    const recovered = run("recover", NOW);
+    assert.notEqual(recovered.pid, discarded.pid);
+    assert.notEqual(recovered.pid, process.pid);
+    assert.equal(recovered.receipt.appointmentId, stored.id);
+    assert.equal(Date.parse(recovered.receipt.confirmationExpiresAt), expiry);
+    assert.ok(
+      createHash("sha256")
+        .update(Buffer.from(recovered.receipt.viewToken, "hex"))
+        .digest("hex") === access.tokenHash,
+    );
+
+    await db
+      .update(services)
+      .set({ name: "Changed", durationMinutes: 15, priceCents: 1 });
+    await db.update(staff).set({ name: "Changed" });
+    await db.update(businessSettings).set({ address: "Changed" });
+    await db.update(clients).set({ normalizedPhone: "+447911123456" });
+    const history = async () =>
+      JSON.stringify([
+        await independentDb.select().from(appointments),
+        await independentDb.select().from(appointmentServices),
+        await independentDb.select().from(appointmentAccess),
+        await independentDb.select().from(staffOccupancy),
+        await independentDb.select().from(clients),
+        await independentDb.select().from(bookingOperations),
+      ]);
+    const before = await history();
+    const lastValid = run("recover", expiry - 1);
+    assert.notEqual(lastValid.pid, recovered.pid);
+    assert.ok(
+      JSON.stringify(lastValid.receipt) === JSON.stringify(recovered.receipt),
+      "restart replays the exact original receipt",
+    );
+    assert.ok(
+      JSON.stringify(lastValid.view) === JSON.stringify(recovered.view),
+      "restart reads immutable confirmation snapshots despite profile/catalog edits",
+    );
+    for (const now of [expiry, expiry + 1]) {
+      const expired = run("expired", now, recovered.receipt);
+      assert.equal(expired.replay, "operation_unavailable");
+      assert.equal(expired.confirmation, "confirmation_unavailable");
+    }
+    assert.ok(
+      (await history()) === before,
+      "replay and expiry reads preserve all persisted booking/history/access/operation rows",
+    );
+    assert.equal((await independentDb.select().from(appointments)).length, 1);
+    assert.equal(
+      (await independentDb.select().from(appointmentServices)).length,
+      1,
+    );
+    assert.equal(
+      (await independentDb.select().from(appointmentAccess)).length,
+      1,
+    );
+    assert.equal((await independentDb.select().from(staffOccupancy)).length, 1);
+    assert.equal((await independentDb.select().from(clients)).length, 1);
+    assert.equal(
+      (await independentDb.select().from(bookingOperations)).length,
+      1,
+    );
   });
 });
 
