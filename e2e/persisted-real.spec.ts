@@ -114,6 +114,10 @@ test("real booking keeps contacts and receipts out of storage, URLs, referrers a
   await expectPersistedConfirmation(page);
   // Inspect only this disposable fictional profile; return booleans, never pairs.
   const storageSafe = await page.evaluate(async (forbidden) => {
+    const viewToken = new URLSearchParams(location.hash.slice(1)).get(
+      "viewToken",
+    );
+    if (!viewToken) return false;
     const values = [
       ...Object.values(localStorage),
       ...Object.values(sessionStorage),
@@ -156,6 +160,8 @@ test("real booking keeps contacts and receipts out of storage, URLs, referrers a
           /^[a-f0-9-]{36}$/.test(row.operationId) &&
           typeof row.credential === "string" &&
           /^[a-f0-9]{64}$/.test(row.credential) &&
+          row.credential !== viewToken &&
+          values[0] === row.operationId &&
           !forbidden.some((value) => JSON.stringify(row).includes(value))
         );
       })
