@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { expect, test as policyTest, type TestInfo } from "@playwright/test";
 
-import { assertPrivateArtifactPolicy, test } from "./persisted-fixtures";
+import {
+  assertPrivateArtifactPolicy,
+  confirmPersistedBooking,
+  enterPersistedDetails,
+  expectPersistedConfirmation,
+  fillPersistedContact,
+  reviewPersistedBooking,
+  test,
+} from "./persisted-fixtures";
 
 policyTest(
   "private artifact policy rejects capture overrides before any private navigation",
@@ -70,6 +78,117 @@ test("real PostgreSQL booking renders a private confirmation after reload", asyn
     page.getByRole("heading", { name: "Резервацията е потвърдена" }),
   ).toBeVisible();
   assert.equal(await page.getByText("browser@example.test").count(), 0);
+});
+
+test("real booking keeps contacts and receipts out of storage, URLs, referrers and console", async ({
+  page,
+  context,
+  persisted,
+}) => {
+  let leaked = false;
+  let consoleMessages = 0;
+  const sensitive = [
+    "Fictional Journey Guest",
+    "0888123456",
+    "journey@example.test",
+    "Fictional note",
+    "viewToken=",
+    "credential=",
+  ];
+  page.on("console", () => consoleMessages++);
+  page.on("pageerror", () => consoleMessages++);
+  context.on("request", (request) => {
+    const metadata = `${request.url()} ${JSON.stringify(request.headers())}`;
+    leaked ||=
+      /[a-f0-9]{64}/.test(metadata) ||
+      sensitive.some(
+        (value) =>
+          metadata.includes(value) ||
+          metadata.includes(encodeURIComponent(value)),
+      );
+  });
+  await enterPersistedDetails(page, persisted);
+  await fillPersistedContact(page);
+  await reviewPersistedBooking(page);
+  await confirmPersistedBooking(page).click();
+  await expectPersistedConfirmation(page);
+  // Inspect only this disposable fictional profile; return booleans, never pairs.
+  const storageSafe = await page.evaluate(async (forbidden) => {
+    const values = [
+      ...Object.values(localStorage),
+      ...Object.values(sessionStorage),
+    ];
+    const databases = await indexedDB.databases();
+    if (
+      databases.length !== 1 ||
+      databases[0].name !== "slotwell-booking-intents"
+    )
+      return false;
+    const records = await new Promise<unknown[]>((resolve, reject) => {
+      const open = indexedDB.open("slotwell-booking-intents", 1);
+      open.onerror = () =>
+        reject(new Error("Private storage inspection failed"));
+      open.onsuccess = () => {
+        const db = open.result;
+        const tx = db.transaction("intents", "readonly");
+        const read = tx.objectStore("intents").getAll();
+        tx.oncomplete = () => {
+          db.close();
+          resolve(read.result);
+        };
+        tx.onabort = () => {
+          db.close();
+          reject(new Error("Private storage inspection failed"));
+        };
+      };
+    });
+    return (
+      localStorage.length === 0 &&
+      sessionStorage.length === 1 &&
+      values.every((value) => /^[a-f0-9-]{36}$/.test(value)) &&
+      records.length === 1 &&
+      records.every((record) => {
+        if (!record || typeof record !== "object") return false;
+        const row = record as Record<string, unknown>;
+        return (
+          Object.keys(row).sort().join(",") === "credential,operationId" &&
+          typeof row.operationId === "string" &&
+          /^[a-f0-9-]{36}$/.test(row.operationId) &&
+          typeof row.credential === "string" &&
+          /^[a-f0-9]{64}$/.test(row.credential) &&
+          !forbidden.some((value) => JSON.stringify(row).includes(value))
+        );
+      })
+    );
+  }, sensitive);
+  assert.equal(storageSafe, true);
+  assert.equal(leaked, false);
+  assert.equal(consoleMessages, 0);
+  // Fulfil the known Maps destination locally: no third-party network or artifacts.
+  let externalRequests = 0;
+  let referrerAbsent = false;
+  await context.route("https://www.google.com/maps/dir/**", async (route) => {
+    externalRequests++;
+    referrerAbsent = route.request().headers().referer === undefined;
+    const destination = new URL(route.request().url());
+    leaked ||=
+      destination.searchParams.size !== 2 ||
+      destination.searchParams.get("api") !== "1" ||
+      destination.searchParams.get("destination") !== "ул. „Шипка“ 18, София";
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: "Map stub",
+    });
+  });
+  const popupPromise = context.waitForEvent("page");
+  await page.getByRole("link", { name: "Упътване до салона" }).click();
+  const popup = await popupPromise;
+  await popup.waitForLoadState();
+  assert.equal(externalRequests, 1);
+  assert.equal(referrerAbsent, true);
+  assert.equal(leaked, false);
+  await popup.close();
 });
 
 test("real occupied conflict and expired confirmation use isolated fictional scenarios", async ({

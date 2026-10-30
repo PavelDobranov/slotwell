@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { isDeepStrictEqual } from "node:util";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Hono } from "hono";
@@ -101,7 +102,17 @@ function privacy(response: Response) {
 async function failure(response: Response, status: number, code: string) {
   privacy(response);
   assert.equal(response.status, status);
-  assert.deepEqual(await response.json(), { error: { code } });
+  let safeBody = false;
+  try {
+    safeBody = isDeepStrictEqual(await response.json(), { error: { code } });
+  } catch {
+    // Parsing failures may contain private response text too.
+  }
+  assert.equal(
+    safeBody,
+    true,
+    "Private error matches the exact redacted allowlist",
+  );
 }
 
 test("confirmation POST returns the exact minimal booked snapshot without token or contact data", async () => {
@@ -146,6 +157,80 @@ test("confirmation POST returns the exact minimal booked snapshot without token 
     );
     assert.equal((await db.select().from(appointments)).length, 1);
   });
+});
+
+test("cross-appointment access and private failures neither disclose nor log sensitive data", async (t) => {
+  const logged: unknown[][] = [];
+  for (const method of ["log", "info", "warn", "error", "debug"] as const)
+    t.mock.method(console, method, (...args: unknown[]) => logged.push(args));
+  await withTestDatabase({}, async ({ db }) => {
+    await fixture(db);
+    const secondId = "22222222-2222-4222-8222-222222222222";
+    const secondToken = "cd".repeat(32);
+    const [original] = await db.select().from(appointments);
+    await db.insert(appointments).values({ ...original, id: secondId });
+    const bookedServices = await db.select().from(appointmentServices);
+    await db.insert(appointmentServices).values(
+      bookedServices.map((service) => ({
+        ...service,
+        appointmentId: secondId,
+      })),
+    );
+    await db.insert(appointmentAccess).values({
+      appointmentId: secondId,
+      tokenHash: createHash("sha256")
+        .update(Buffer.from(secondToken, "hex"))
+        .digest("hex"),
+    });
+    const app = testApp();
+    // Both credentials work for their own appointment, but never each other's.
+    assert.equal((await request(app, db, input)).status, 200);
+    assert.equal(
+      (
+        await request(app, db, {
+          appointmentId: secondId,
+          viewToken: secondToken,
+        })
+      ).status,
+      200,
+    );
+    for (const pair of [
+      { ...input, viewToken: secondToken },
+      { ...input, appointmentId: secondId },
+    ])
+      await failure(
+        await request(app, db, pair),
+        404,
+        "confirmation_unavailable",
+      );
+    await failure(
+      await request(app, db, {
+        ...input,
+        contactEmail: "private@example.test",
+      }),
+      400,
+      "invalid_confirmation",
+    );
+    const failingDb = {
+      select: () => {
+        throw new Error(
+          `Private name private@example.test Private note ${token}`,
+        );
+      },
+    } as unknown as NodePgDatabase;
+    await failure(
+      await request(app, failingDb),
+      503,
+      "confirmation_temporarily_unavailable",
+    );
+    assert.equal((await db.select().from(appointments)).length, 2);
+  });
+  // Do not include captured arguments in assertion diagnostics.
+  assert.equal(
+    logged.length === 0,
+    true,
+    "Private route emits no console logs",
+  );
 });
 
 test("confirmation validates origin, media, exact fields and primitives before database I/O", async () => {
