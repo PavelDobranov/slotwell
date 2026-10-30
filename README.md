@@ -1,19 +1,22 @@
 # Slotwell
 
-A salon appointment-booking demo built with Next.js. Customers can choose services, a specialist, and a time slot. Bookings currently stay in memory and reset on reload.
+A Bulgarian salon-booking application built with Next.js, Hono and PostgreSQL.
+`/book` persists staff-first bookings locally; `/` is the separate in-memory prototype.
 
 ## Run locally
 
-Requires Node.js 22.13+ and npm. No database setup is needed for the demo.
+Requires Node.js 22.13+, npm and Docker/Compose. Follow the
+[PostgreSQL setup](docs/postgresql.md) first, including credentials, bootstrap,
+migrations and seeds.
 
 ```sh
 npm ci --ignore-scripts
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000).
+Open [localhost:3000/book](http://localhost:3000/book).
 
-## Run a production build
+## Production-mode local run
 
 ```sh
 npm run build
