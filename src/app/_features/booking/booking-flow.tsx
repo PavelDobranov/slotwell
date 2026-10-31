@@ -17,6 +17,11 @@ import {
   type ServiceView,
 } from "@/app/_features/booking/api";
 import {
+  formatPersistedPrice,
+  PersistedDetails,
+} from "@/app/_features/booking/persisted-details";
+import { PersistedTime } from "@/app/_features/booking/persisted-time";
+import {
   initialPersistedState,
   persistedReducer,
 } from "@/app/_features/booking/state";
@@ -26,11 +31,6 @@ import type {
   BookingReceipt,
 } from "@/app/_features/booking/submission/submission-api";
 import { formatDuration } from "@/app/_lib/duration";
-import {
-  formatPersistedPrice,
-  PersistedDetails,
-} from "@/app/book/_components/persisted-details";
-import { PersistedTime } from "@/app/book/_components/persisted-time";
 
 function loadErrorMessage(error: unknown): string {
   if (error instanceof CatalogApiError && error.code === "network")

@@ -1,4 +1,4 @@
-import { PersistedBooking } from "@/app/book/_components/persisted-booking";
+import { PersistedBooking } from "@/app/_features/booking/booking-flow";
 
 // The persisted, PostgreSQL-backed staff-first entry (#61). Kept on its own
 // route so the in-memory prototype at "/" stays honestly separate and is never
