@@ -1,11 +1,11 @@
 import { createIntentAssociation } from "@/app/_features/booking/submission/intent-association";
 import { allocateBookingIntent } from "@/app/_features/booking/submission/intent-storage";
-import type { BookingAgreement } from "@/app/_lib/booking/submission-api";
+import type { BookingAgreement } from "@/app/_features/booking/submission/submission-api";
 import {
   createSubmissionController,
   type SubmissionControllerDependencies,
   type SubmissionSnapshot,
-} from "@/app/_lib/booking/submission-controller";
+} from "@/app/_features/booking/submission/submission-controller";
 
 type Snapshot = Readonly<{
   booking: SubmissionSnapshot;

@@ -7,7 +7,7 @@ import {
   requestBookingIntentFence,
   resolveRetainedBookingIntent,
   submitBookingIntent,
-} from "@/app/_lib/booking/submission-api";
+} from "@/app/_features/booking/submission/submission-api";
 
 // Synthetic only; assertions never print request/receipt material.
 const pair = {

@@ -5,11 +5,11 @@ import type { RetainedBookingIntent } from "@/app/_features/booking/submission/i
 import {
   type BookingAgreement,
   BookingApiError,
-} from "@/app/_lib/booking/submission-api";
+} from "@/app/_features/booking/submission/submission-api";
 import {
   createSubmissionController as createController,
   type SubmissionControllerDependencies,
-} from "@/app/_lib/booking/submission-controller";
+} from "@/app/_features/booking/submission/submission-controller";
 
 // Dispatch through the fake's current implementation so a test can change server outcomes.
 function createSubmissionController(deps: SubmissionControllerDependencies) {

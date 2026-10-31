@@ -13,7 +13,7 @@ import {
   requestBookingIntentFence,
   resolveRetainedBookingIntent,
   submitBookingIntent,
-} from "@/app/_lib/booking/submission-api";
+} from "@/app/_features/booking/submission/submission-api";
 
 export type SubmissionControllerDependencies = {
   allocate: () => Promise<RetainedBookingIntent>;

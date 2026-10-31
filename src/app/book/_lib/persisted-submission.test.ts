@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { createIntentAssociation } from "@/app/_features/booking/submission/intent-association";
 import type { RetainedBookingIntent } from "@/app/_features/booking/submission/intent-storage";
-import { BookingApiError } from "@/app/_lib/booking/submission-api";
+import { BookingApiError } from "@/app/_features/booking/submission/submission-api";
 import { createPersistedSubmission } from "@/app/book/_lib/persisted-submission";
 
 const pair = {
