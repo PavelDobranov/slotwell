@@ -31,24 +31,24 @@ import {
 import { Success } from "@/app/_components/booking/success";
 import { TimeStep } from "@/app/_components/booking/time-step";
 import { Button } from "@/app/_components/button";
-import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
-import {
-  businessDateAt,
-  formatBusinessShortDate,
-  formatBusinessTime,
-} from "@/app/_features/demo-booking/time";
 import {
   availableSlots,
   qualifiedStaff,
-} from "@/app/_lib/booking/availability";
-import { createDemoSession } from "@/app/_lib/booking/session";
+} from "@/app/_features/demo-booking/availability";
+import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
+import { createDemoSession } from "@/app/_features/demo-booking/session";
 import {
   type BookingAction,
   bookingReducer,
   initialBookingState,
   selectedTotals,
   stepOrder,
-} from "@/app/_lib/booking/state";
+} from "@/app/_features/demo-booking/state";
+import {
+  businessDateAt,
+  formatBusinessShortDate,
+  formatBusinessTime,
+} from "@/app/_features/demo-booking/time";
 import { cn } from "@/app/_lib/utils";
 
 export function BookingWizard() {

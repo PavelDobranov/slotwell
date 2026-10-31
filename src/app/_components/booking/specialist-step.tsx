@@ -9,9 +9,9 @@ import {
   FieldSet,
 } from "@/app/_components/field";
 import { RadioGroup } from "@/app/_components/radio-group";
+import { qualifiedStaff } from "@/app/_features/demo-booking/availability";
 import { formatBusinessTime } from "@/app/_features/demo-booking/time";
 import type { DemoSalon } from "@/app/_features/demo-booking/types";
-import { qualifiedStaff } from "@/app/_lib/booking/availability";
 
 export function SpecialistStep({
   salon,

@@ -2,8 +2,8 @@ import {
   type BookingState,
   type BookingStep,
   stepOrder,
-} from "@/app/_lib/booking/state";
-import { validateContact } from "@/app/_lib/booking/validation";
+} from "@/app/_features/demo-booking/state";
+import { validateContact } from "@/app/_features/demo-booking/validation";
 import { cn } from "@/app/_lib/utils";
 
 export const milestoneLabels = [

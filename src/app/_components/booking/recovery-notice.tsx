@@ -1,12 +1,12 @@
 import { Info, TriangleAlert } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
+import type { BookingState } from "@/app/_features/demo-booking/state";
 import {
   businessDateAt,
   formatBusinessDate,
   formatBusinessTime,
 } from "@/app/_features/demo-booking/time";
-import type { BookingState } from "@/app/_lib/booking/state";
 
 export function RecoveryNotice({
   state,

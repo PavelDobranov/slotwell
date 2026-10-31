@@ -15,17 +15,17 @@ import {
 } from "@/app/_components/sheet";
 import { formatTotalPrice } from "@/app/_features/demo-booking/format";
 import {
+  type BookingState,
+  type BookingStep,
+  selectedTotals,
+  stepOrder,
+} from "@/app/_features/demo-booking/state";
+import {
   businessDateAt,
   formatBusinessDate,
   formatBusinessTime,
 } from "@/app/_features/demo-booking/time";
 import type { DemoSalon } from "@/app/_features/demo-booking/types";
-import {
-  type BookingState,
-  type BookingStep,
-  selectedTotals,
-  stepOrder,
-} from "@/app/_lib/booking/state";
 import { formatDuration } from "@/app/_lib/duration";
 import { cn } from "@/app/_lib/utils";
 

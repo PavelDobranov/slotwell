@@ -14,12 +14,12 @@ import {
 } from "@/app/_components/field";
 import { Input } from "@/app/_components/input";
 import { Textarea } from "@/app/_components/textarea";
-import type { ContactDraft } from "@/app/_lib/booking/state";
+import type { ContactDraft } from "@/app/_features/demo-booking/state";
 import {
   type ContactErrors,
   contactLimits,
   validateContact,
-} from "@/app/_lib/booking/validation";
+} from "@/app/_features/demo-booking/validation";
 
 const countryNames = new Intl.DisplayNames(["bg"], { type: "region" });
 const countries = getCountries()

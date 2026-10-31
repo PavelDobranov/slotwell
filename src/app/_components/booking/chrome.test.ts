@@ -9,7 +9,7 @@ import {
   type BookingPath,
   initialBookingState,
   stepOrder,
-} from "@/app/_lib/booking/state";
+} from "@/app/_features/demo-booking/state";
 
 for (const path of ["staff-first", "time-first"] satisfies BookingPath[]) {
   test(`${path}: only completed steps link back and exactly one step is current`, () => {

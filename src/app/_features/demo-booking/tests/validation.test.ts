@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import type { ContactDraft } from "@/app/_lib/booking/state";
-import { validateContact } from "@/app/_lib/booking/validation";
+import type { ContactDraft } from "@/app/_features/demo-booking/state";
+import { validateContact } from "@/app/_features/demo-booking/validation";
 
 const valid: ContactDraft = {
   name: "Демо Посетител",

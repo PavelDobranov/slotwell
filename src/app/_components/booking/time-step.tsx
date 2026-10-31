@@ -9,6 +9,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 import { DayStrip } from "@/app/_components/booking/day-strip";
 import { TimeSlots } from "@/app/_components/booking/time-slots";
 import { Button } from "@/app/_components/button";
+import {
+  type AvailabilityInput,
+  availableSlots,
+} from "@/app/_features/demo-booking/availability";
 import { serviceTotals } from "@/app/_features/demo-booking/fixtures";
 import {
   addCalendarDays,
@@ -20,10 +24,6 @@ import {
   formatBusinessWeekdayDate,
 } from "@/app/_features/demo-booking/time";
 import type { Weekday } from "@/app/_features/demo-booking/types";
-import {
-  type AvailabilityInput,
-  availableSlots,
-} from "@/app/_lib/booking/availability";
 import { formatDuration } from "@/app/_lib/duration";
 
 export function TimeStep({

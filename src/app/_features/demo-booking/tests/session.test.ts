@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { availableSlots } from "@/app/_features/demo-booking/availability";
 import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
-import { localStart } from "@/app/_features/demo-booking/time";
-import { availableSlots } from "@/app/_lib/booking/availability";
-import { createDemoSession } from "@/app/_lib/booking/session";
+import { createDemoSession } from "@/app/_features/demo-booking/session";
 import {
   type BookingState,
   bookingReducer,
   initialBookingState,
-} from "@/app/_lib/booking/state";
+} from "@/app/_features/demo-booking/state";
+import { localStart } from "@/app/_features/demo-booking/time";
 
 const now = Date.parse("2026-06-01T05:00:00Z");
 const salon = createDemoSalon(() => now);

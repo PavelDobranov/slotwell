@@ -5,7 +5,7 @@ import { bookingProgress } from "@/app/_components/booking/stepper";
 import {
   type BookingState,
   initialBookingState,
-} from "@/app/_lib/booking/state";
+} from "@/app/_features/demo-booking/state";
 
 const complete: BookingState = {
   ...initialBookingState,

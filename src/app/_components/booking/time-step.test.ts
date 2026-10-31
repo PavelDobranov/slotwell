@@ -5,9 +5,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { TimeSlots } from "@/app/_components/booking/time-slots";
 import { TimeStep } from "@/app/_components/booking/time-step";
+import { availableSlots } from "@/app/_features/demo-booking/availability";
 import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
 import { localStart } from "@/app/_features/demo-booking/time";
-import { availableSlots } from "@/app/_lib/booking/availability";
 
 const now = Date.parse("2026-06-01T05:00:00Z");
 const availability = {

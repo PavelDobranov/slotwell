@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/app/_components/card";
 import { Separator } from "@/app/_components/separator";
-import type { ContactDraft } from "@/app/_lib/booking/state";
+import type { ContactDraft } from "@/app/_features/demo-booking/state";
 
 export function Review({
   contact,

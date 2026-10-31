@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { test } from "node:test";
+import { qualifiedStaff } from "@/app/_features/demo-booking/availability";
 import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
 import {
   businessDateAt,
   businessWeekday,
   localStart,
 } from "@/app/_features/demo-booking/time";
-import { qualifiedStaff } from "@/app/_lib/booking/availability";
 
 test("wellness studio has exactly the requested team and separates hair from massage", () => {
   const salon = createDemoSalon(() => Date.parse("2026-06-01T05:00:00Z"));
