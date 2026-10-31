@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { createDemoSalon, serviceTotals } from "@/app/_lib/booking/fixtures";
-import { localStart } from "@/app/_lib/booking/time";
+import {
+  createDemoSalon,
+  serviceTotals,
+} from "@/app/_features/demo-booking/fixtures";
+import { localStart } from "@/app/_features/demo-booking/time";
 
 test("the fictional catalog has distinct competencies, integer prices and trailing buffers", () => {
   const salon = createDemoSalon(() => Date.parse("2026-06-01T08:00:00Z"));

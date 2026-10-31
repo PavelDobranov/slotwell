@@ -3,14 +3,14 @@ import {
   businessDateAt,
   businessWeekday,
   localStart,
-} from "@/app/_lib/booking/time";
+} from "@/app/_features/demo-booking/time";
 import type {
   Clock,
   DemoSalon,
   OccupiedInterval,
   Service,
   WeeklyHours,
-} from "@/app/_lib/booking/types";
+} from "@/app/_features/demo-booking/types";
 
 // User-provided staff identities; studio details, services and prices are illustrative.
 const services: readonly Service[] = [

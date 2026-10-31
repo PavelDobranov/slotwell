@@ -10,7 +10,7 @@ import {
   formatBusinessTime,
   formatEuro,
   localStart,
-} from "@/app/_lib/booking/time";
+} from "@/app/_features/demo-booking/time";
 import { addCalendarDays as sharedAddCalendarDays } from "@/shared/booking-time";
 
 test("business dates and Bulgarian labels use Sofia rather than the device timezone", () => {

@@ -17,7 +17,7 @@ import {
   businessDateAt,
   formatBusinessShortDate,
   formatBusinessTime,
-} from "@/app/_lib/booking/time";
+} from "@/app/_features/demo-booking/time";
 import { formatDuration } from "@/app/_lib/duration";
 import { cn } from "@/app/_lib/utils";
 

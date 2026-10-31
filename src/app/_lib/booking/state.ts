@@ -1,10 +1,16 @@
+import { serviceTotals } from "@/app/_features/demo-booking/fixtures";
+import {
+  addCalendarDays,
+  businessDateAt,
+} from "@/app/_features/demo-booking/time";
+import type {
+  DemoSalon,
+  OccupiedInterval,
+} from "@/app/_features/demo-booking/types";
 import {
   availableSlots,
   qualifiedStaff,
 } from "@/app/_lib/booking/availability";
-import { serviceTotals } from "@/app/_lib/booking/fixtures";
-import { addCalendarDays, businessDateAt } from "@/app/_lib/booking/time";
-import type { DemoSalon, OccupiedInterval } from "@/app/_lib/booking/types";
 import type { GuestContactDraft } from "@/shared/guest-contact";
 
 export type BookingPath = "staff-first" | "time-first";

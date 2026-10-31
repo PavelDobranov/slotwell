@@ -1,15 +1,15 @@
-import { serviceTotals } from "@/app/_lib/booking/fixtures";
+import { serviceTotals } from "@/app/_features/demo-booking/fixtures";
 import {
   addCalendarDays,
   businessDateAt,
   businessWeekday,
   localStart,
-} from "@/app/_lib/booking/time";
+} from "@/app/_features/demo-booking/time";
 import type {
   DemoSalon,
   OccupiedInterval,
   WorkingHours,
-} from "@/app/_lib/booking/types";
+} from "@/app/_features/demo-booking/types";
 
 const MINUTE_MS = 60_000;
 

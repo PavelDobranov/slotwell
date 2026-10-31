@@ -1,4 +1,7 @@
-import { businessWeekday, formatBusinessDate } from "@/app/_lib/booking/time";
+import {
+  businessWeekday,
+  formatBusinessDate,
+} from "@/app/_features/demo-booking/time";
 
 export function DayStrip({
   days,

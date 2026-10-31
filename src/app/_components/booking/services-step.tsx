@@ -11,7 +11,7 @@ import {
   FieldSet,
 } from "@/app/_components/field";
 import { Separator } from "@/app/_components/separator";
-import type { Service } from "@/app/_lib/booking/types";
+import type { Service } from "@/app/_features/demo-booking/types";
 
 export function ServicesStep({
   services,

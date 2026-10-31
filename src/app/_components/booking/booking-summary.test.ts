@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { BookingSummary } from "@/app/_components/booking/booking-summary";
-import { createDemoSalon } from "@/app/_lib/booking/fixtures";
+import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
 import { initialBookingState } from "@/app/_lib/booking/state";
 
 for (const step of ["services", "time", "staff", "details"] as const) {

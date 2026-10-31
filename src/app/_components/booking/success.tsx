@@ -14,13 +14,13 @@ import {
   formatServicePrice,
   formatTotalPrice,
 } from "@/app/_features/demo-booking/format";
-import { type BookingState, selectedTotals } from "@/app/_lib/booking/state";
 import {
   businessDateAt,
   formatBusinessDate,
   formatBusinessTime,
-} from "@/app/_lib/booking/time";
-import type { DemoSalon } from "@/app/_lib/booking/types";
+} from "@/app/_features/demo-booking/time";
+import type { DemoSalon } from "@/app/_features/demo-booking/types";
+import { type BookingState, selectedTotals } from "@/app/_lib/booking/state";
 
 export function Success({
   salon,

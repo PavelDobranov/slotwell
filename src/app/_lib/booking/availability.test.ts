@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-
+import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
+import {
+  formatBusinessTime,
+  localStart,
+} from "@/app/_features/demo-booking/time";
+import type { DemoSalon } from "@/app/_features/demo-booking/types";
 import {
   availableSlots,
   qualifiedStaff,
 } from "@/app/_lib/booking/availability";
-import { createDemoSalon } from "@/app/_lib/booking/fixtures";
-import { formatBusinessTime, localStart } from "@/app/_lib/booking/time";
-import type { DemoSalon } from "@/app/_lib/booking/types";
 
 const date = "2026-01-05";
 const now = Date.parse("2026-01-05T06:00:00Z"); // 08:00 Sofia

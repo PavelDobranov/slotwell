@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
-import { createDemoSalon } from "@/app/_lib/booking/fixtures";
+import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
 import {
   businessHours,
   businessSettings,

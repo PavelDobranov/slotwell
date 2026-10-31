@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/_components/avatar";
 import { RadioGroupItem } from "@/app/_components/radio-group";
-import type { Staff } from "@/app/_lib/booking/types";
+import type { Staff } from "@/app/_features/demo-booking/types";
 import { cn } from "@/app/_lib/utils";
 
 export function SpecialistOption({

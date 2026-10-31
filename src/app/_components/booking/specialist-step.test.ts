@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { SpecialistStep } from "@/app/_components/booking/specialist-step";
-import { createDemoSalon } from "@/app/_lib/booking/fixtures";
+import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
 
 const salon = createDemoSalon(() => Date.UTC(2026, 5, 1));
 function render(

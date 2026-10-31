@@ -1,11 +1,11 @@
-import { availableSlots } from "@/app/_lib/booking/availability";
-import type { BookingState } from "@/app/_lib/booking/state";
-import { businessDateAt } from "@/app/_lib/booking/time";
+import { businessDateAt } from "@/app/_features/demo-booking/time";
 import type {
   Clock,
   DemoSalon,
   OccupiedInterval,
-} from "@/app/_lib/booking/types";
+} from "@/app/_features/demo-booking/types";
+import { availableSlots } from "@/app/_lib/booking/availability";
+import type { BookingState } from "@/app/_lib/booking/state";
 import { validateContact } from "@/app/_lib/booking/validation";
 
 export type ConfirmationResult =

@@ -1,11 +1,11 @@
 import { CheckIcon } from "lucide-react";
 
 import { Skeleton } from "@/app/_components/skeleton";
-import type { availableSlots } from "@/app/_lib/booking/availability";
 import {
   formatBusinessDate,
   formatBusinessTime,
-} from "@/app/_lib/booking/time";
+} from "@/app/_features/demo-booking/time";
+import type { availableSlots } from "@/app/_lib/booking/availability";
 
 export function TimeSlots({
   slots,
