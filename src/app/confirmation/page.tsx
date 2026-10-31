@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { Confirmation } from "@/app/confirmation/_components/confirmation";
+import { Confirmation } from "@/app/_features/confirmation/confirmation";
 
 export const metadata: Metadata = {
   title: "Потвърждение на резервация",
