@@ -10,6 +10,7 @@ import { Button } from "@/app/_components/button";
 import { Checkbox } from "@/app/_components/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/app/_components/radio-group";
 import { Skeleton } from "@/app/_components/skeleton";
+import { createPersistedSubmission } from "@/app/_features/booking/submission/persisted-submission";
 import type {
   BookingAgreement,
   BookingReceipt,
@@ -30,7 +31,6 @@ import {
   PersistedDetails,
 } from "@/app/book/_components/persisted-details";
 import { PersistedTime } from "@/app/book/_components/persisted-time";
-import { createPersistedSubmission } from "@/app/book/_lib/persisted-submission";
 
 function loadErrorMessage(error: unknown): string {
   if (error instanceof CatalogApiError && error.code === "network")
