@@ -14,25 +14,18 @@ import {
 import { useEffect, useReducer, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
-
-import { BookingHeader } from "@/app/_components/booking/booking-header";
 import { BookingSummary } from "@/app/_components/booking/booking-summary";
 import { DetailsStep } from "@/app/_components/booking/details-step";
-import { MobileProgress } from "@/app/_components/booking/mobile-progress";
-import { RecoveryNotice } from "@/app/_components/booking/recovery-notice";
-import {
-  bookingProgress,
-  milestoneLabels,
-  Stepper,
-  stepLabels,
-} from "@/app/_components/booking/stepper";
 import { Success } from "@/app/_components/booking/success";
 import { Button } from "@/app/_components/button";
 import {
   availableSlots,
   qualifiedStaff,
 } from "@/app/_features/demo-booking/availability";
+import { BookingHeader } from "@/app/_features/demo-booking/booking-header";
 import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
+import { MobileProgress } from "@/app/_features/demo-booking/mobile-progress";
+import { RecoveryNotice } from "@/app/_features/demo-booking/recovery-notice";
 import { ServicesStep } from "@/app/_features/demo-booking/services-step";
 import { createDemoSession } from "@/app/_features/demo-booking/session";
 import { SpecialistStep } from "@/app/_features/demo-booking/specialist-step";
@@ -43,6 +36,12 @@ import {
   selectedTotals,
   stepOrder,
 } from "@/app/_features/demo-booking/state";
+import {
+  bookingProgress,
+  milestoneLabels,
+  Stepper,
+  stepLabels,
+} from "@/app/_features/demo-booking/stepper";
 import {
   businessDateAt,
   formatBusinessShortDate,

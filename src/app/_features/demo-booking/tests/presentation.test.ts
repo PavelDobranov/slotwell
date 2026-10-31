@@ -1,11 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
-import { bookingProgress } from "@/app/_components/booking/stepper";
 import {
   type BookingState,
   initialBookingState,
 } from "@/app/_features/demo-booking/state";
+import { bookingProgress } from "@/app/_features/demo-booking/stepper";
 
 const complete: BookingState = {
   ...initialBookingState,
