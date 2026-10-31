@@ -235,3 +235,92 @@ test("changing the fragment discards the previous snapshot", async ({
   await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
   await expect(page.getByText(snapshot.staffName)).toHaveCount(0);
 });
+
+test("only persisted pageshow reloads the private snapshot", async ({
+  page,
+}) => {
+  let reads = 0;
+  await page.route("**/api/confirmations/read", (route) => {
+    reads++;
+    return route.fulfill({ json: snapshot });
+  });
+  await page.goto(`/confirmation#${fragment}`);
+  const heading = page.getByRole("heading", {
+    name: "Резервацията е потвърдена",
+  });
+  await expect(heading).toBeFocused();
+  expect(reads).toBe(1);
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new PageTransitionEvent("pageshow", { persisted: false }),
+    ),
+  );
+  expect(reads).toBe(1);
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new PageTransitionEvent("pageshow", { persisted: true }),
+    ),
+  );
+  await expect.poll(() => reads).toBe(2);
+  await expect(heading).toBeFocused();
+});
+
+test("timeout aborts the read and keyboard retry can recover", async ({
+  page,
+}) => {
+  await page.clock.install();
+  let recover = false;
+  let reads = 0;
+  let release = () => {};
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/confirmations/read", async (route) => {
+    reads++;
+    if (!recover) await pending;
+    await route.fulfill({ json: snapshot }).catch(() => {});
+  });
+  await page.goto(`/confirmation#${fragment}`);
+  await expect(page.getByRole("status")).toHaveText("Зареждаме резервацията…");
+  await expect.poll(() => reads).toBe(1);
+  await page.clock.fastForward(15_000);
+  release();
+  const retry = page.getByRole("button", { name: "Опитай отново" });
+  await expect(retry).toBeVisible();
+  recover = true;
+  await retry.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "Резервацията е потвърдена" }),
+  ).toBeFocused();
+});
+
+test("an in-flight read cannot restore a snapshot after an invalid hashchange", async ({
+  page,
+}) => {
+  let release = () => {};
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let completed = false;
+  let started = false;
+  await page.route("**/api/confirmations/read", async (route) => {
+    started = true;
+    await pending;
+    await route.fulfill({ json: snapshot }).catch(() => {});
+    completed = true;
+  });
+  await page.goto(`/confirmation#${fragment}`);
+  await expect(page.getByRole("status")).toHaveText("Зареждаме резервацията…");
+  await expect.poll(() => started).toBe(true);
+  await page.goto("/confirmation#invalid");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    "Линкът е невалиден или е изтекъл.",
+  );
+  release();
+  await expect.poll(() => completed).toBe(true);
+  await expect(page.getByText(snapshot.staffName)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Опитай отново" })).toHaveCount(
+    0,
+  );
+});
