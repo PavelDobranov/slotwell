@@ -6,7 +6,7 @@ import {
   initialPersistedState,
   type PersistedState,
   persistedReducer,
-} from "@/app/_lib/booking/persisted-state";
+} from "@/app/_features/booking/state";
 
 const withServices = (ids: string[]): PersistedState =>
   persistedReducer(initialPersistedState, { type: "services", ids });

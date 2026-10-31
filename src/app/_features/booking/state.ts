@@ -3,8 +3,8 @@
 // Qualified staff come from the API; the reducer only reconciles the current
 // choice against that server-provided set. It never invents a replacement.
 
+import type { AvailabilityView, SlotView } from "@/app/_features/booking/api";
 import type { BookingAgreement } from "@/app/_features/booking/submission/submission-api";
-import type { AvailabilityView, SlotView } from "@/app/_lib/booking/api";
 import {
   type GuestContactDraft,
   parseGuestContact,

@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { CatalogApiError, fetchAvailability } from "@/app/_lib/booking/api";
+import {
+  CatalogApiError,
+  fetchAvailability,
+} from "@/app/_features/booking/api";
 
 const query = {
   staffId: "a & b",

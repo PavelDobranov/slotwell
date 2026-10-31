@@ -10,21 +10,21 @@ import { Button } from "@/app/_components/button";
 import { Checkbox } from "@/app/_components/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/app/_components/radio-group";
 import { Skeleton } from "@/app/_components/skeleton";
-import { createPersistedSubmission } from "@/app/_features/booking/submission/persisted-submission";
-import type {
-  BookingAgreement,
-  BookingReceipt,
-} from "@/app/_features/booking/submission/submission-api";
 import {
   CatalogApiError,
   fetchCatalog,
   fetchQualifiedStaff,
   type ServiceView,
-} from "@/app/_lib/booking/api";
+} from "@/app/_features/booking/api";
 import {
   initialPersistedState,
   persistedReducer,
-} from "@/app/_lib/booking/persisted-state";
+} from "@/app/_features/booking/state";
+import { createPersistedSubmission } from "@/app/_features/booking/submission/persisted-submission";
+import type {
+  BookingAgreement,
+  BookingReceipt,
+} from "@/app/_features/booking/submission/submission-api";
 import { formatDuration } from "@/app/_lib/duration";
 import {
   formatPersistedPrice,

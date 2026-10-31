@@ -20,11 +20,11 @@ import {
 } from "@/app/_components/field";
 import { Input } from "@/app/_components/input";
 import { Textarea } from "@/app/_components/textarea";
-import type { BusinessView, ServiceView } from "@/app/_lib/booking/api";
+import type { BusinessView, ServiceView } from "@/app/_features/booking/api";
 import type {
   PersistedAction,
   PersistedState,
-} from "@/app/_lib/booking/persisted-state";
+} from "@/app/_features/booking/state";
 import { formatDuration } from "@/app/_lib/duration";
 import {
   type ContactErrors,

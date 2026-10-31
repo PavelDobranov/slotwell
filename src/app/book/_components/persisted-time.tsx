@@ -8,12 +8,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 import { Button } from "@/app/_components/button";
 import { RadioGroup, RadioGroupItem } from "@/app/_components/radio-group";
 import { Skeleton } from "@/app/_components/skeleton";
-import { fetchAvailability } from "@/app/_lib/booking/api";
+import { fetchAvailability } from "@/app/_features/booking/api";
 import {
   availabilitySelectionKey,
   type PersistedAction,
   type PersistedState,
-} from "@/app/_lib/booking/persisted-state";
+} from "@/app/_features/booking/state";
 import { addCalendarDays } from "@/shared/booking-time";
 
 function dateAt(instant: string, timeZone: string): string {
