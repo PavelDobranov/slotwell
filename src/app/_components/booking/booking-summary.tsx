@@ -13,7 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/app/_components/sheet";
-import { formatTotalPrice } from "@/app/_lib/booking/format";
+import { formatTotalPrice } from "@/app/_features/demo-booking/format";
 import {
   type BookingState,
   type BookingStep,

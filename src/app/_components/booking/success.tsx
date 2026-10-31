@@ -13,7 +13,7 @@ import { Separator } from "@/app/_components/separator";
 import {
   formatServicePrice,
   formatTotalPrice,
-} from "@/app/_lib/booking/format";
+} from "@/app/_features/demo-booking/format";
 import { type BookingState, selectedTotals } from "@/app/_lib/booking/state";
 import {
   businessDateAt,

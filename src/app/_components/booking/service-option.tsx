@@ -1,5 +1,5 @@
 import { Checkbox } from "@/app/_components/checkbox";
-import { formatServicePrice } from "@/app/_lib/booking/format";
+import { formatServicePrice } from "@/app/_features/demo-booking/format";
 import type { Service } from "@/app/_lib/booking/types";
 import { formatDuration } from "@/app/_lib/duration";
 

@@ -4,7 +4,7 @@ import { test } from "node:test";
 import {
   formatServicePrice,
   formatTotalPrice,
-} from "@/app/_lib/booking/format";
+} from "@/app/_features/demo-booking/format";
 
 test("compact prices omit whole-euro decimals without rounding fractional amounts", () => {
   assert.match(formatServicePrice(2800, true), /^28\s*€$/);

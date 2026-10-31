@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { Stepper } from "@/app/_components/booking/stepper";
-import { euros } from "@/app/_lib/booking/format";
+import { euros } from "@/app/_features/demo-booking/format";
 import {
   type BookingPath,
   initialBookingState,
