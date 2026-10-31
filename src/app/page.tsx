@@ -1,4 +1,4 @@
-import { BookingWizard } from "@/app/_components/booking/wizard";
+import { BookingWizard } from "@/app/_features/demo-booking/wizard";
 
 export default function Home() {
   return (

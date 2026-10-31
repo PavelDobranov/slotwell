@@ -14,15 +14,14 @@ import {
 import { useEffect, useReducer, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
-import { BookingSummary } from "@/app/_components/booking/booking-summary";
-import { DetailsStep } from "@/app/_components/booking/details-step";
-import { Success } from "@/app/_components/booking/success";
 import { Button } from "@/app/_components/button";
 import {
   availableSlots,
   qualifiedStaff,
 } from "@/app/_features/demo-booking/availability";
 import { BookingHeader } from "@/app/_features/demo-booking/booking-header";
+import { BookingSummary } from "@/app/_features/demo-booking/booking-summary";
+import { DetailsStep } from "@/app/_features/demo-booking/details-step";
 import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
 import { MobileProgress } from "@/app/_features/demo-booking/mobile-progress";
 import { RecoveryNotice } from "@/app/_features/demo-booking/recovery-notice";
@@ -42,6 +41,7 @@ import {
   Stepper,
   stepLabels,
 } from "@/app/_features/demo-booking/stepper";
+import { Success } from "@/app/_features/demo-booking/success";
 import {
   businessDateAt,
   formatBusinessShortDate,

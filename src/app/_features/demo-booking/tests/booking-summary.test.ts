@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { BookingSummary } from "@/app/_components/booking/booking-summary";
+import { BookingSummary } from "@/app/_features/demo-booking/booking-summary";
 import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
 import { initialBookingState } from "@/app/_features/demo-booking/state";
 
