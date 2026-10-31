@@ -2,7 +2,6 @@ import { CircleAlertIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
-import { ServiceOption } from "@/app/_components/booking/service-option";
 import { Button } from "@/app/_components/button";
 import {
   FieldDescription,
@@ -11,6 +10,7 @@ import {
   FieldSet,
 } from "@/app/_components/field";
 import { Separator } from "@/app/_components/separator";
+import { ServiceOption } from "@/app/_features/demo-booking/service-option";
 import type { Service } from "@/app/_features/demo-booking/types";
 
 export function ServicesStep({

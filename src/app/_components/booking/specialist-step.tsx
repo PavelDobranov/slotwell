@@ -1,7 +1,6 @@
 import { TriangleAlertIcon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
-import { SpecialistOption } from "@/app/_components/booking/specialist-option";
 import { Button } from "@/app/_components/button";
 import {
   FieldDescription,
@@ -10,6 +9,7 @@ import {
 } from "@/app/_components/field";
 import { RadioGroup } from "@/app/_components/radio-group";
 import { qualifiedStaff } from "@/app/_features/demo-booking/availability";
+import { SpecialistOption } from "@/app/_features/demo-booking/specialist-option";
 import { formatBusinessTime } from "@/app/_features/demo-booking/time";
 import type { DemoSalon } from "@/app/_features/demo-booking/types";
 

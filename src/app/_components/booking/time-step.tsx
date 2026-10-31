@@ -6,13 +6,12 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
-import { DayStrip } from "@/app/_components/booking/day-strip";
-import { TimeSlots } from "@/app/_components/booking/time-slots";
 import { Button } from "@/app/_components/button";
 import {
   type AvailabilityInput,
   availableSlots,
 } from "@/app/_features/demo-booking/availability";
+import { DayStrip } from "@/app/_features/demo-booking/day-strip";
 import { serviceTotals } from "@/app/_features/demo-booking/fixtures";
 import {
   addCalendarDays,
@@ -23,6 +22,7 @@ import {
   formatBusinessTime,
   formatBusinessWeekdayDate,
 } from "@/app/_features/demo-booking/time";
+import { TimeSlots } from "@/app/_features/demo-booking/time-slots";
 import type { Weekday } from "@/app/_features/demo-booking/types";
 import { formatDuration } from "@/app/_lib/duration";
 
