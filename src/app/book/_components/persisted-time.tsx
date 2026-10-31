@@ -14,7 +14,7 @@ import {
   type PersistedAction,
   type PersistedState,
 } from "@/app/_lib/booking/persisted-state";
-import { addCalendarDays } from "@/app/_lib/booking/time";
+import { addCalendarDays } from "@/shared/booking-time";
 
 function dateAt(instant: string, timeZone: string): string {
   const parts = new Intl.DateTimeFormat("en-CA", {

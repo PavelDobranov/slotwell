@@ -11,6 +11,7 @@ import {
   formatEuro,
   localStart,
 } from "@/app/_lib/booking/time";
+import { addCalendarDays as sharedAddCalendarDays } from "@/shared/booking-time";
 
 test("business dates and Bulgarian labels use Sofia rather than the device timezone", () => {
   const instant = Date.parse("2026-12-31T22:30:00Z");
@@ -40,6 +41,55 @@ test("calendar arithmetic crosses months, leap days, years and both DST changes"
 
   assert.equal(businessWeekday("2026-03-29"), 0);
   assert.equal(businessWeekday("2026-03-30"), 1);
+});
+
+test("shared calendar arithmetic preserves demo results at civil-date boundaries", () => {
+  for (const [date, days, expected] of [
+    ["2026-06-15", 0, "2026-06-15"],
+    ["2026-01-31", 1, "2026-02-01"],
+    ["2026-03-01", -1, "2026-02-28"],
+    ["2028-02-28", 1, "2028-02-29"],
+    ["2028-03-01", -1, "2028-02-29"],
+    ["2000-02-28", 2, "2000-03-01"],
+    ["2100-02-28", 1, "2100-03-01"],
+    ["2026-12-31", 1, "2027-01-01"],
+    ["2027-01-01", -1, "2026-12-31"],
+    ["2026-03-28", 2, "2026-03-30"],
+    ["2026-03-30", -2, "2026-03-28"],
+    ["2026-10-24", 2, "2026-10-26"],
+    ["2026-10-26", -2, "2026-10-24"],
+    ["2026-03-01", 60, "2026-04-30"],
+  ] as const) {
+    assert.equal(addCalendarDays(date, days), expected);
+    assert.equal(sharedAddCalendarDays(date, days), expected);
+  }
+});
+
+test("shared calendar arithmetic preserves date and whole-day rejection behavior", () => {
+  for (const calendar of [addCalendarDays, sharedAddCalendarDays]) {
+    for (const date of [
+      "",
+      "2026-02-29",
+      "2026-13-01",
+      "2026-04-31",
+      "2026-00-01",
+      "2026-01-00",
+      "2026-1-01",
+      "26-01-01",
+      "2026-01-01T00:00:00Z",
+    ]) {
+      assert.throws(() => calendar(date, 1), {
+        name: "RangeError",
+        message: "Expected an ISO calendar date (YYYY-MM-DD)",
+      });
+    }
+    for (const days of [0.5, -0.5, Number.NaN, Infinity, -Infinity]) {
+      assert.throws(() => calendar("2026-01-01", days), {
+        name: "RangeError",
+        message: "Expected whole calendar days",
+      });
+    }
+  }
 });
 
 test("local starts resolve to explicit instants in winter and summer", () => {
