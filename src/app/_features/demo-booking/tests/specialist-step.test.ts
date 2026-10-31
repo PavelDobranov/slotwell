@@ -2,9 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-
-import { SpecialistStep } from "@/app/_components/booking/specialist-step";
 import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
+import { SpecialistStep } from "@/app/_features/demo-booking/specialist-step";
 
 const salon = createDemoSalon(() => Date.UTC(2026, 5, 1));
 function render(

@@ -1,7 +1,5 @@
 import { ChevronUp } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
-
-import { ReservationSummaryCard } from "@/app/_components/booking/reservation-summary-card";
 import { Button } from "@/app/_components/button";
 import {
   Sheet,
@@ -14,6 +12,7 @@ import {
   SheetTrigger,
 } from "@/app/_components/sheet";
 import { formatTotalPrice } from "@/app/_features/demo-booking/format";
+import { ReservationSummaryCard } from "@/app/_features/demo-booking/reservation-summary-card";
 import {
   type BookingState,
   type BookingStep,

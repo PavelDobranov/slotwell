@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { TimeStep } from "@/app/_components/booking/time-step";
 import { availableSlots } from "@/app/_features/demo-booking/availability";
 import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
 import { localStart } from "@/app/_features/demo-booking/time";
 import { TimeSlots } from "@/app/_features/demo-booking/time-slots";
+import { TimeStep } from "@/app/_features/demo-booking/time-step";
 
 const now = Date.parse("2026-06-01T05:00:00Z");
 const availability = {

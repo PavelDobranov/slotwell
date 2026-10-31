@@ -20,8 +20,6 @@ import { BookingSummary } from "@/app/_components/booking/booking-summary";
 import { DetailsStep } from "@/app/_components/booking/details-step";
 import { MobileProgress } from "@/app/_components/booking/mobile-progress";
 import { RecoveryNotice } from "@/app/_components/booking/recovery-notice";
-import { ServicesStep } from "@/app/_components/booking/services-step";
-import { SpecialistStep } from "@/app/_components/booking/specialist-step";
 import {
   bookingProgress,
   milestoneLabels,
@@ -29,14 +27,15 @@ import {
   stepLabels,
 } from "@/app/_components/booking/stepper";
 import { Success } from "@/app/_components/booking/success";
-import { TimeStep } from "@/app/_components/booking/time-step";
 import { Button } from "@/app/_components/button";
 import {
   availableSlots,
   qualifiedStaff,
 } from "@/app/_features/demo-booking/availability";
 import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
+import { ServicesStep } from "@/app/_features/demo-booking/services-step";
 import { createDemoSession } from "@/app/_features/demo-booking/session";
+import { SpecialistStep } from "@/app/_features/demo-booking/specialist-step";
 import {
   type BookingAction,
   bookingReducer,
@@ -49,6 +48,7 @@ import {
   formatBusinessShortDate,
   formatBusinessTime,
 } from "@/app/_features/demo-booking/time";
+import { TimeStep } from "@/app/_features/demo-booking/time-step";
 import { cn } from "@/app/_lib/utils";
 
 export function BookingWizard() {

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { TimeStep } from "@/app/_components/booking/time-step";
+import { TimeStep } from "@/app/_features/demo-booking/time-step";
 import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
 
 test("path switches preserve valid choices and service edits explain only invalidated choices", async ({

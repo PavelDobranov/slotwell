@@ -3,7 +3,6 @@ import { ChevronLeft } from "lucide-react";
 import { Fragment, useEffect, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
-import { Review } from "@/app/_components/booking/review";
 import { Button } from "@/app/_components/button";
 import {
   Field,
@@ -14,6 +13,7 @@ import {
 } from "@/app/_components/field";
 import { Input } from "@/app/_components/input";
 import { Textarea } from "@/app/_components/textarea";
+import { Review } from "@/app/_features/demo-booking/review";
 import type { ContactDraft } from "@/app/_features/demo-booking/state";
 import {
   type ContactErrors,

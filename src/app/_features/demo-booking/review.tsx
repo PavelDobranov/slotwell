@@ -2,7 +2,6 @@ import { ChevronLeft, Info, LoaderCircle } from "lucide-react";
 import { Fragment, useEffect, useRef } from "react";
 
 import { Alert, AlertDescription } from "@/app/_components/alert";
-import { ReservationSummaryCard } from "@/app/_components/booking/reservation-summary-card";
 import { Button } from "@/app/_components/button";
 import {
   Card,
@@ -11,6 +10,7 @@ import {
   CardTitle,
 } from "@/app/_components/card";
 import { Separator } from "@/app/_components/separator";
+import { ReservationSummaryCard } from "@/app/_features/demo-booking/reservation-summary-card";
 import type { ContactDraft } from "@/app/_features/demo-booking/state";
 
 export function Review({
