@@ -10,7 +10,6 @@ import {
 } from "@/app/_components/card";
 import { Separator } from "@/app/_components/separator";
 import {
-  formatDuration,
   formatServicePrice,
   formatTotalPrice,
 } from "@/app/_lib/booking/format";
@@ -19,6 +18,7 @@ import {
   formatBusinessShortDate,
   formatBusinessTime,
 } from "@/app/_lib/booking/time";
+import { formatDuration } from "@/app/_lib/duration";
 import { cn } from "@/app/_lib/utils";
 
 export type SummaryStep = "services" | "staff" | "time";

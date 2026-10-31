@@ -16,7 +16,6 @@ import {
   fetchQualifiedStaff,
   type ServiceView,
 } from "@/app/_lib/booking/api";
-import { formatDuration } from "@/app/_lib/booking/format";
 import {
   initialPersistedState,
   persistedReducer,
@@ -25,6 +24,7 @@ import type {
   BookingAgreement,
   BookingReceipt,
 } from "@/app/_lib/booking/submission-api";
+import { formatDuration } from "@/app/_lib/duration";
 import {
   formatPersistedPrice,
   PersistedDetails,

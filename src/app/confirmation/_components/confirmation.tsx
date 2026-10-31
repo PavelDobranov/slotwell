@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/app/_components/card";
-import { formatDuration } from "@/app/_lib/booking/format";
+import { formatDuration } from "@/app/_lib/duration";
 import type { ConfirmationView } from "@/server/booking";
 
 type Display = ReturnType<typeof formatConfirmation>;

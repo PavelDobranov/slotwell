@@ -14,7 +14,6 @@ import {
   availableSlots,
 } from "@/app/_lib/booking/availability";
 import { serviceTotals } from "@/app/_lib/booking/fixtures";
-import { formatDuration } from "@/app/_lib/booking/format";
 import {
   addCalendarDays,
   businessDateAt,
@@ -25,6 +24,7 @@ import {
   formatBusinessWeekdayDate,
 } from "@/app/_lib/booking/time";
 import type { Weekday } from "@/app/_lib/booking/types";
+import { formatDuration } from "@/app/_lib/duration";
 
 export function TimeStep({
   availability,

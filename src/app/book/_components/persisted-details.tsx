@@ -21,11 +21,11 @@ import {
 import { Input } from "@/app/_components/input";
 import { Textarea } from "@/app/_components/textarea";
 import type { BusinessView, ServiceView } from "@/app/_lib/booking/api";
-import { formatDuration } from "@/app/_lib/booking/format";
 import type {
   PersistedAction,
   PersistedState,
 } from "@/app/_lib/booking/persisted-state";
+import { formatDuration } from "@/app/_lib/duration";
 import {
   type ContactErrors,
   contactLimits,

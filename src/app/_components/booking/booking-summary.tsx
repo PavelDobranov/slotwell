@@ -13,7 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/app/_components/sheet";
-import { formatDuration, formatTotalPrice } from "@/app/_lib/booking/format";
+import { formatTotalPrice } from "@/app/_lib/booking/format";
 import {
   type BookingState,
   type BookingStep,
@@ -26,6 +26,7 @@ import {
   formatBusinessTime,
 } from "@/app/_lib/booking/time";
 import type { DemoSalon } from "@/app/_lib/booking/types";
+import { formatDuration } from "@/app/_lib/duration";
 import { cn } from "@/app/_lib/utils";
 
 export function BookingSummary({

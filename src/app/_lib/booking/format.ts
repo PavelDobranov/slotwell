@@ -11,14 +11,6 @@ const compactEuros = new Intl.NumberFormat("bg-BG", {
   maximumFractionDigits: 2,
 });
 
-/** Visit length as "45 мин" or "1 ч 30 мин"; minutes-only below an hour. */
-export function formatDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  if (!hours) return `${rest} мин`;
-  return rest ? `${hours} ч ${rest} мин` : `${hours} ч`;
-}
-
 /** A service's price or "на място"; compact omits unnecessary euro decimals. */
 export function formatServicePrice(
   priceCents: number | null,
