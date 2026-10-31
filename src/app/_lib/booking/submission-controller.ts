@@ -3,7 +3,7 @@ import {
   clearRetainedBookingIntent,
   listBookingIntents,
   type RetainedBookingIntent,
-} from "@/app/_lib/booking/intent-storage";
+} from "@/app/_features/booking/submission/intent-storage";
 import {
   type BookingAgreement,
   BookingApiError,

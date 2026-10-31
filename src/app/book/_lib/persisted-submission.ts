@@ -1,5 +1,5 @@
-import { createIntentAssociation } from "@/app/_lib/booking/intent-association";
-import { allocateBookingIntent } from "@/app/_lib/booking/intent-storage";
+import { createIntentAssociation } from "@/app/_features/booking/submission/intent-association";
+import { allocateBookingIntent } from "@/app/_features/booking/submission/intent-storage";
 import type { BookingAgreement } from "@/app/_lib/booking/submission-api";
 import {
   createSubmissionController,

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createIntentAssociation } from "@/app/_lib/booking/intent-association";
+import { createIntentAssociation } from "@/app/_features/booking/submission/intent-association";
 
 const first = "abcdefab-1111-4111-8111-111111111111";
 const second = "22222222-2222-4222-8222-222222222222";

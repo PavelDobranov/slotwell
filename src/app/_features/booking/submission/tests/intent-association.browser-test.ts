@@ -9,7 +9,10 @@ let browser: Browser;
 let source: string;
 before(async () => {
   source = ts.transpileModule(
-    readFileSync("src/app/_lib/booking/intent-association.ts", "utf8"),
+    readFileSync(
+      "src/app/_features/booking/submission/intent-association.ts",
+      "utf8",
+    ),
     {
       compilerOptions: {
         target: ts.ScriptTarget.ES2022,

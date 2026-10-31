@@ -49,8 +49,8 @@ Only a completed controller clear with no selected intent permits removal of the
 ## Focused browser verification
 
 ```sh
-npx tsx --test src/app/_lib/booking/intent-storage.browser-test.ts
-npx tsx --test src/app/_lib/booking/intent-association.browser-test.ts
+npx tsx --test src/app/_features/booking/submission/tests/intent-storage.browser-test.ts
+npx tsx --test src/app/_features/booking/submission/tests/intent-association.browser-test.ts
 ```
 
 The separate `.browser-test.ts` suffix keeps browser requirements out of unit tests. Use installed Playwright Chromium with fresh isolated contexts and synthetic data; no dev server, personal profile, or trace artifacts. Only counts/booleans may leave the browser. These tests do not establish wizard acceptance.

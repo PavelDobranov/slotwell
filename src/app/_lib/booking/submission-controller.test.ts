@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { RetainedBookingIntent } from "@/app/_lib/booking/intent-storage";
+import type { RetainedBookingIntent } from "@/app/_features/booking/submission/intent-storage";
 import {
   type BookingAgreement,
   BookingApiError,

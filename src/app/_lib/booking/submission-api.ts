@@ -1,5 +1,5 @@
+import type { RetainedBookingIntent } from "@/app/_features/booking/submission/intent-storage";
 import type { ServiceView } from "@/app/_lib/booking/api";
-import type { RetainedBookingIntent } from "@/app/_lib/booking/intent-storage";
 import type { GuestContactDraft } from "@/shared/guest-contact";
 
 export type BookingAgreement = {
