@@ -1,8 +1,7 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, TriangleAlertIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/_components/avatar";
@@ -10,23 +9,13 @@ import { Button } from "@/app/_components/button";
 import { Checkbox } from "@/app/_components/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/app/_components/radio-group";
 import { Skeleton } from "@/app/_components/skeleton";
-import {
-  CatalogApiError,
-  fetchCatalog,
-  fetchQualifiedStaff,
-  type ServiceView,
-} from "@/app/_features/booking/api";
+import { CatalogApiError, type ServiceView } from "@/app/_features/booking/api";
 import { useBooking } from "@/app/_features/booking/context";
 import {
   formatPersistedPrice,
   PersistedDetails,
 } from "@/app/_features/booking/persisted-details";
 import { PersistedTime } from "@/app/_features/booking/persisted-time";
-import { createPersistedSubmission } from "@/app/_features/booking/submission/persisted-submission";
-import type {
-  BookingAgreement,
-  BookingReceipt,
-} from "@/app/_features/booking/submission/submission-api";
 import { formatDuration } from "@/app/_lib/duration";
 
 function loadErrorMessage(error: unknown): string {
@@ -53,170 +42,24 @@ function initials(name: string): string {
     .join("");
 }
 
-function command(action: () => Promise<void>) {
-  void action().catch(() => {});
-}
-function openConfirmation(receipt: BookingReceipt) {
-  window.location.assign(
-    `/confirmation#${new URLSearchParams({ appointmentId: receipt.appointmentId, viewToken: receipt.viewToken })}`,
-  );
-}
-
-export function PersistedBooking() {
-  const { state, dispatch } = useBooking();
-  const queryClient = useQueryClient();
-  const session = useRef<ReturnType<typeof createPersistedSubmission> | null>(
-    null,
-  );
-  const [submission, setSubmission] = useState<ReturnType<
-    ReturnType<typeof createPersistedSubmission>["getSnapshot"]
-  > | null>(null);
-  const handled = useRef<unknown>(null);
-  const navigated = useRef<BookingReceipt | null>(null);
-  const recoveryHeading = useRef<HTMLHeadingElement>(null);
-  function act(
-    action: (
-      binding: ReturnType<typeof createPersistedSubmission>,
-    ) => Promise<void>,
-  ) {
-    const binding = session.current;
-    if (binding) command(() => action(binding));
-  }
-  useEffect(() => {
-    const binding = createPersistedSubmission();
-    session.current = binding;
-    const unsubscribe = binding.subscribe(() =>
-      setSubmission(binding.getSnapshot()),
-    );
-    setSubmission(binding.getSnapshot());
-    command(() => binding.initialize());
-    return () => {
-      unsubscribe();
-      binding.dispose();
-      session.current = null;
-    };
-  }, []);
-
-  const catalog = useQuery({
-    queryKey: ["catalog"],
-    queryFn: ({ signal }) => fetchCatalog(signal),
-  });
-
-  const staff = useQuery({
-    queryKey: ["qualified-staff", state.serviceIds],
-    queryFn: ({ signal }) => fetchQualifiedStaff(state.serviceIds, signal),
-    enabled: state.step === "staff" && state.serviceIds.length > 0,
-  });
-
-  // Reconcile the chosen staff against the server's qualified set once it loads;
-  // the reducer drops an invalid choice without inventing a replacement.
-  useEffect(() => {
-    if (staff.isSuccess && !staff.isFetching && staff.isFetchedAfterMount)
-      dispatch({
-        type: "qualified-staff",
-        serviceIds: state.serviceIds,
-        staffIds: staff.data.map((member) => member.id),
-      });
-  }, [
-    staff.data,
-    staff.isSuccess,
-    staff.isFetching,
-    staff.isFetchedAfterMount,
-    state.serviceIds,
+export function BookingFlow() {
+  const {
+    state,
     dispatch,
-  ]);
-
-  const business = catalog.data?.business;
-  const selectedServices = state.serviceIds.flatMap(
-    (id) => catalog.data?.services.find((service) => service.id === id) ?? [],
-  );
-  const selectedStaff = staff.data?.find(({ id }) => id === state.staffId);
-  const current = submission?.booking.current;
-  const busy = !submission?.ready || submission.busy;
-  const noSelectionProblem =
-    !current &&
-    Boolean(
-      submission?.booking.problem || submission?.booking.retainedIds.length,
-    );
-  const draftLocked =
-    busy ||
-    Boolean(
-      submission?.associationProblem ||
-        noSelectionProblem ||
-        (current &&
-          (current.kind === "committed" ||
-            current.kind === "fenced" ||
-            !current.canSubmit)),
-    );
-  useEffect(() => {
-    if (catalog.isSuccess && !catalog.isFetching && !draftLocked)
-      dispatch({
-        type: "catalog",
-        services: catalog.data.services.filter(({ id }) =>
-          state.serviceIds.includes(id),
-        ),
-      });
-  }, [
-    catalog.data,
-    catalog.isSuccess,
-    catalog.isFetching,
+    catalog,
+    staff,
+    selectedServices,
+    selectedStaff,
+    submission,
+    busy,
     draftLocked,
-    state.serviceIds,
-    dispatch,
-  ]);
-  const consent = selectedServices.map(
-    ({ id, name, priceCents, currency, durationMinutes, cleanupMinutes }) => ({
-      id,
-      name,
-      priceCents,
-      currency,
-      durationMinutes,
-      cleanupMinutes,
-    }),
-  );
-  const reviewMatches =
-    state.reviewedServices !== null &&
-    JSON.stringify(state.reviewedServices) === JSON.stringify(consent) &&
-    selectedServices.length === state.serviceIds.length;
-  const timingCurrent =
-    state.catalogTimingKey ===
-      JSON.stringify(
-        consent.map(({ id, durationMinutes, cleanupMinutes }) => [
-          id,
-          durationMinutes,
-          cleanupMinutes,
-        ]),
-      ) && state.slotTimingKey === state.catalogTimingKey;
-  const canConfirm =
-    !draftLocked &&
-    reviewMatches &&
-    timingCurrent &&
-    !catalog.isFetching &&
-    !catalog.isError;
+    canConfirm,
+    commands,
+  } = useBooking();
+  const business = catalog.data?.business;
+  const current = submission?.booking.current;
+  const recoveryHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    if (
-      current?.kind === "committed" &&
-      current.receipt &&
-      navigated.current !== current.receipt
-    ) {
-      navigated.current = current.receipt;
-      openConfirmation(current.receipt);
-    }
-    if (
-      current?.kind === "rejected" &&
-      current.canSubmit &&
-      handled.current !== current
-    ) {
-      handled.current = current;
-      dispatch({ type: "submission-rejected", code: current.code });
-      if (
-        current.code === "review_required" ||
-        current.code === "selection_unavailable"
-      )
-        void queryClient.invalidateQueries({ queryKey: ["catalog"] });
-      void queryClient.invalidateQueries({ queryKey: ["availability"] });
-      void queryClient.invalidateQueries({ queryKey: ["qualified-staff"] });
-    }
     if (
       !busy &&
       current &&
@@ -226,54 +69,7 @@ export function PersistedBooking() {
         (current.kind === "committed" && !current.receipt))
     )
       recoveryHeading.current?.focus();
-  }, [current, queryClient, busy, dispatch]);
-  useEffect(() => {
-    if (
-      state.step === "review" &&
-      !reviewMatches &&
-      !draftLocked &&
-      selectedServices.length === state.serviceIds.length
-    )
-      dispatch({ type: "submission-rejected", code: "review_required" });
-  }, [
-    state.step,
-    reviewMatches,
-    draftLocked,
-    selectedServices.length,
-    state.serviceIds.length,
-    dispatch,
-  ]);
-  async function confirm() {
-    const binding = session.current;
-    if (
-      !binding ||
-      binding.getSnapshot().busy ||
-      !canConfirm ||
-      !state.staffId ||
-      !state.slot ||
-      !state.reviewedServices
-    )
-      return;
-    const agreement: BookingAgreement = {
-      staffId: state.staffId,
-      serviceIds: [...state.serviceIds],
-      startsAt: state.slot.start,
-      reviewedServices: state.reviewedServices.map((service) => ({
-        ...service,
-      })),
-      contact: { ...state.contact },
-    };
-    if (!binding.getSnapshot().booking.current) await binding.startNew();
-    const snapshot = binding.getSnapshot();
-    const selected = snapshot.booking.current;
-    if (
-      !snapshot.associationProblem &&
-      selected &&
-      selected.kind !== "committed" &&
-      selected.canSubmit
-    )
-      await binding.submit(agreement);
-  }
+  }, [current, busy]);
   const problem = submission?.booking.problem;
   const needsRecovery =
     !busy &&
@@ -330,7 +126,7 @@ export function PersistedBooking() {
           <Button
             variant="outline"
             disabled={submission?.busy}
-            onClick={() => act((binding) => binding.initialize())}
+            onClick={commands.initialize}
           >
             Провери съхранението отново
           </Button>
@@ -354,7 +150,7 @@ export function PersistedBooking() {
               <Button
                 variant="outline"
                 disabled={busy}
-                onClick={() => act((binding) => binding.initialize())}
+                onClick={commands.initialize}
               >
                 Провери съхранението отново
               </Button>
@@ -377,17 +173,14 @@ export function PersistedBooking() {
                   key={id}
                   variant="outline"
                   disabled={busy}
-                  onClick={() => act((binding) => binding.resume(id))}
+                  onClick={() => commands.resume(id)}
                 >
                   Възстанови опит {index + 1}
                 </Button>
               ))}
             </div>
             {!problem && (
-              <Button
-                disabled={busy}
-                onClick={() => act((binding) => binding.startNew())}
-              >
+              <Button disabled={busy} onClick={commands.startNew}>
                 Започни отделна резервация
               </Button>
             )}
@@ -424,7 +217,7 @@ export function PersistedBooking() {
               <Button
                 variant="outline"
                 disabled={busy || submission?.associationProblem}
-                onClick={() => act((binding) => binding.recover())}
+                onClick={commands.recover}
               >
                 Провери резултата
               </Button>
@@ -434,7 +227,7 @@ export function PersistedBooking() {
               !current.canSubmit && (
                 <Button
                   disabled={busy || submission?.associationProblem}
-                  onClick={() => act((binding) => binding.retry())}
+                  onClick={commands.retry}
                 >
                   Повтори същото потвърждение
                 </Button>
@@ -443,25 +236,13 @@ export function PersistedBooking() {
               <Button
                 variant="outline"
                 disabled={busy || submission?.associationProblem}
-                onClick={() => {
-                  const binding = session.current;
-                  if (binding)
-                    command(async () => {
-                      await binding.clear();
-                      if (!binding.getSnapshot().booking.current)
-                        dispatch({ type: "edit", step: "details" });
-                    });
-                }}
+                onClick={commands.clear}
               >
                 Изчисти този опит
               </Button>
             )}
             {current.kind === "committed" && current.receipt && (
-              <Button
-                onClick={() =>
-                  current.receipt && openConfirmation(current.receipt)
-                }
-              >
+              <Button onClick={commands.openConfirmation}>
                 Отвори потвърждението
               </Button>
             )}
@@ -579,7 +360,7 @@ export function PersistedBooking() {
             business={business}
             dispatch={dispatch}
             canConfirm={canConfirm}
-            onConfirm={() => command(confirm)}
+            onConfirm={commands.confirm}
           />
         ) : state.step === "time" && business ? (
           <PersistedTime

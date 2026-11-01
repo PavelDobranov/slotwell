@@ -1,4 +1,4 @@
-import { PersistedBooking } from "@/app/_features/booking/booking-flow";
+import { BookingFlow } from "@/app/_features/booking/booking-flow";
 import { BookingProvider } from "@/app/_features/booking/context";
 
 // The persisted, PostgreSQL-backed staff-first entry (#61). Kept on its own
@@ -11,7 +11,7 @@ export default function BookPage() {
         Към резервацията
       </a>
       <BookingProvider>
-        <PersistedBooking />
+        <BookingFlow />
       </BookingProvider>
     </div>
   );

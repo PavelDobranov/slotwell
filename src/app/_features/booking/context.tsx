@@ -1,11 +1,19 @@
 "use client";
 
 import {
+  type UseQueryResult,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
   createContext,
   type Dispatch,
   type ReactNode,
   useContext,
+  useEffect,
   useReducer,
+  useRef,
+  useState,
 } from "react";
 
 // State for the persisted staff-first entry (#61). Deliberately separate from
@@ -13,8 +21,20 @@ import {
 // Qualified staff come from the API; the reducer only reconciles the current
 // choice against that server-provided set. It never invents a replacement.
 
-import type { AvailabilityView, SlotView } from "@/app/_features/booking/api";
-import type { BookingAgreement } from "@/app/_features/booking/submission/submission-api";
+import {
+  type AvailabilityView,
+  type CatalogView,
+  fetchCatalog,
+  fetchQualifiedStaff,
+  type ServiceView,
+  type SlotView,
+  type StaffView,
+} from "@/app/_features/booking/api";
+import { createPersistedSubmission } from "@/app/_features/booking/submission/persisted-submission";
+import type {
+  BookingAgreement,
+  BookingReceipt,
+} from "@/app/_features/booking/submission/submission-api";
 import {
   type GuestContactDraft,
   parseGuestContact,
@@ -99,9 +119,28 @@ export const initialPersistedState: PersistedState = {
   reviewedServices: null,
 };
 
+type BookingSubmission = ReturnType<typeof createPersistedSubmission>;
 type BookingContextValue = {
   state: PersistedState;
   dispatch: Dispatch<PersistedAction>;
+  catalog: UseQueryResult<CatalogView>;
+  staff: UseQueryResult<StaffView[]>;
+  selectedServices: ServiceView[];
+  selectedStaff: StaffView | undefined;
+  submission: ReturnType<BookingSubmission["getSnapshot"]> | null;
+  busy: boolean;
+  draftLocked: boolean;
+  canConfirm: boolean;
+  commands: {
+    initialize: () => void;
+    startNew: () => void;
+    resume: (locator: string) => void;
+    recover: () => void;
+    retry: () => void;
+    clear: () => void;
+    confirm: () => void;
+    openConfirmation: () => void;
+  };
 };
 
 export const BookingContext = createContext<BookingContextValue | null>(null);
@@ -111,15 +150,6 @@ export function useBooking() {
   if (!booking)
     throw new Error("useBooking must be used within BookingProvider");
   return booking;
-}
-
-export function BookingProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(persistedReducer, initialPersistedState);
-  return (
-    <BookingContext.Provider value={{ state, dispatch }}>
-      {children}
-    </BookingContext.Provider>
-  );
 }
 
 const stepOrder: readonly PersistedStep[] = [
@@ -359,4 +389,252 @@ export function persistedReducer(
   if (stepOrder.indexOf(next.step) > stepOrder.indexOf(unresolved))
     next.step = unresolved;
   return next;
+}
+
+function command(action: () => Promise<void>) {
+  void action().catch(() => {});
+}
+
+function openConfirmation(receipt: BookingReceipt) {
+  window.location.assign(
+    `/confirmation#${new URLSearchParams({ appointmentId: receipt.appointmentId, viewToken: receipt.viewToken })}`,
+  );
+}
+
+/** Connect the UI to server queries and the existing submission authority.
+ * Only the binding owns lifecycle permissions, single-flight and agreements. */
+export function BookingProvider({ children }: { children: ReactNode }) {
+  const [state, dispatch] = useReducer(persistedReducer, initialPersistedState);
+  const queryClient = useQueryClient();
+  const session = useRef<BookingSubmission | null>(null);
+  const [submission, setSubmission] =
+    useState<BookingContextValue["submission"]>(null);
+  const handled = useRef<unknown>(null);
+  const navigated = useRef<BookingReceipt | null>(null);
+
+  function act(action: (binding: BookingSubmission) => Promise<void>) {
+    const binding = session.current;
+    if (binding) command(() => action(binding));
+  }
+
+  useEffect(() => {
+    const binding = createPersistedSubmission();
+    session.current = binding;
+    const unsubscribe = binding.subscribe(() =>
+      setSubmission(binding.getSnapshot()),
+    );
+    setSubmission(binding.getSnapshot());
+    command(() => binding.initialize());
+    return () => {
+      unsubscribe();
+      binding.dispose();
+      session.current = null;
+    };
+  }, []);
+
+  const catalog = useQuery({
+    queryKey: ["catalog"],
+    queryFn: ({ signal }) => fetchCatalog(signal),
+  });
+  const staff = useQuery({
+    queryKey: ["qualified-staff", state.serviceIds],
+    queryFn: ({ signal }) => fetchQualifiedStaff(state.serviceIds, signal),
+    enabled: state.step === "staff" && state.serviceIds.length > 0,
+  });
+
+  // Reconcile the chosen staff against the server's qualified set once it loads;
+  // the reducer drops an invalid choice without inventing a replacement.
+  useEffect(() => {
+    if (staff.isSuccess && !staff.isFetching && staff.isFetchedAfterMount)
+      dispatch({
+        type: "qualified-staff",
+        serviceIds: state.serviceIds,
+        staffIds: staff.data.map((member) => member.id),
+      });
+  }, [
+    staff.data,
+    staff.isSuccess,
+    staff.isFetching,
+    staff.isFetchedAfterMount,
+    state.serviceIds,
+  ]);
+
+  const selectedServices = state.serviceIds.flatMap(
+    (id) => catalog.data?.services.find((service) => service.id === id) ?? [],
+  );
+  const selectedStaff = staff.data?.find(({ id }) => id === state.staffId);
+  const current = submission?.booking.current;
+  const busy = !submission?.ready || submission.busy;
+  const noSelectionProblem =
+    !current &&
+    Boolean(
+      submission?.booking.problem || submission?.booking.retainedIds.length,
+    );
+  const draftLocked =
+    busy ||
+    Boolean(
+      submission?.associationProblem ||
+        noSelectionProblem ||
+        (current &&
+          (current.kind === "committed" ||
+            current.kind === "fenced" ||
+            !current.canSubmit)),
+    );
+  useEffect(() => {
+    if (catalog.isSuccess && !catalog.isFetching && !draftLocked)
+      dispatch({
+        type: "catalog",
+        services: catalog.data.services.filter(({ id }) =>
+          state.serviceIds.includes(id),
+        ),
+      });
+  }, [
+    catalog.data,
+    catalog.isSuccess,
+    catalog.isFetching,
+    draftLocked,
+    state.serviceIds,
+  ]);
+  const consent = selectedServices.map(
+    ({ id, name, priceCents, currency, durationMinutes, cleanupMinutes }) => ({
+      id,
+      name,
+      priceCents,
+      currency,
+      durationMinutes,
+      cleanupMinutes,
+    }),
+  );
+  const reviewMatches =
+    state.reviewedServices !== null &&
+    JSON.stringify(state.reviewedServices) === JSON.stringify(consent) &&
+    selectedServices.length === state.serviceIds.length;
+  const timingCurrent =
+    state.catalogTimingKey ===
+      JSON.stringify(
+        consent.map(({ id, durationMinutes, cleanupMinutes }) => [
+          id,
+          durationMinutes,
+          cleanupMinutes,
+        ]),
+      ) && state.slotTimingKey === state.catalogTimingKey;
+  const canConfirm =
+    !draftLocked &&
+    reviewMatches &&
+    timingCurrent &&
+    !catalog.isFetching &&
+    !catalog.isError;
+
+  useEffect(() => {
+    if (
+      current?.kind === "committed" &&
+      current.receipt &&
+      navigated.current !== current.receipt
+    ) {
+      navigated.current = current.receipt;
+      openConfirmation(current.receipt);
+    }
+    if (
+      current?.kind === "rejected" &&
+      current.canSubmit &&
+      handled.current !== current
+    ) {
+      handled.current = current;
+      dispatch({ type: "submission-rejected", code: current.code });
+      if (
+        current.code === "review_required" ||
+        current.code === "selection_unavailable"
+      )
+        void queryClient.invalidateQueries({ queryKey: ["catalog"] });
+      void queryClient.invalidateQueries({ queryKey: ["availability"] });
+      void queryClient.invalidateQueries({ queryKey: ["qualified-staff"] });
+    }
+  }, [current, queryClient]);
+  useEffect(() => {
+    if (
+      state.step === "review" &&
+      !reviewMatches &&
+      !draftLocked &&
+      selectedServices.length === state.serviceIds.length
+    )
+      dispatch({ type: "submission-rejected", code: "review_required" });
+  }, [
+    state.step,
+    reviewMatches,
+    draftLocked,
+    selectedServices.length,
+    state.serviceIds.length,
+  ]);
+
+  async function confirm() {
+    const binding = session.current;
+    if (
+      !binding ||
+      binding.getSnapshot().busy ||
+      !canConfirm ||
+      !state.staffId ||
+      !state.slot ||
+      !state.reviewedServices
+    )
+      return;
+    const agreement: BookingAgreement = {
+      staffId: state.staffId,
+      serviceIds: [...state.serviceIds],
+      startsAt: state.slot.start,
+      reviewedServices: state.reviewedServices.map((service) => ({
+        ...service,
+      })),
+      contact: { ...state.contact },
+    };
+    if (!binding.getSnapshot().booking.current) await binding.startNew();
+    const snapshot = binding.getSnapshot();
+    const selected = snapshot.booking.current;
+    if (
+      !snapshot.associationProblem &&
+      selected &&
+      selected.kind !== "committed" &&
+      selected.canSubmit
+    )
+      await binding.submit(agreement);
+  }
+
+  return (
+    <BookingContext.Provider
+      value={{
+        state,
+        dispatch,
+        catalog,
+        staff,
+        selectedServices,
+        selectedStaff,
+        submission,
+        busy,
+        draftLocked,
+        canConfirm,
+        commands: {
+          initialize: () => act((binding) => binding.initialize()),
+          startNew: () => act((binding) => binding.startNew()),
+          resume: (locator) => act((binding) => binding.resume(locator)),
+          recover: () => act((binding) => binding.recover()),
+          retry: () => act((binding) => binding.retry()),
+          clear: () =>
+            act(async (binding) => {
+              await binding.clear();
+              if (
+                session.current === binding &&
+                !binding.getSnapshot().booking.current
+              )
+                dispatch({ type: "edit", step: "details" });
+            }),
+          confirm: () => command(confirm),
+          openConfirmation: () => {
+            if (current?.kind === "committed" && current.receipt)
+              openConfirmation(current.receipt);
+          },
+        },
+      }}
+    >
+      {children}
+    </BookingContext.Provider>
+  );
 }
