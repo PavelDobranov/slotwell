@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, TriangleAlertIcon } from "lucide-react";
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/_components/avatar";
@@ -16,15 +16,12 @@ import {
   fetchQualifiedStaff,
   type ServiceView,
 } from "@/app/_features/booking/api";
+import { useBooking } from "@/app/_features/booking/context";
 import {
   formatPersistedPrice,
   PersistedDetails,
 } from "@/app/_features/booking/persisted-details";
 import { PersistedTime } from "@/app/_features/booking/persisted-time";
-import {
-  initialPersistedState,
-  persistedReducer,
-} from "@/app/_features/booking/state";
 import { createPersistedSubmission } from "@/app/_features/booking/submission/persisted-submission";
 import type {
   BookingAgreement,
@@ -66,7 +63,7 @@ function openConfirmation(receipt: BookingReceipt) {
 }
 
 export function PersistedBooking() {
-  const [state, dispatch] = useReducer(persistedReducer, initialPersistedState);
+  const { state, dispatch } = useBooking();
   const queryClient = useQueryClient();
   const session = useRef<ReturnType<typeof createPersistedSubmission> | null>(
     null,
@@ -126,6 +123,7 @@ export function PersistedBooking() {
     staff.isFetching,
     staff.isFetchedAfterMount,
     state.serviceIds,
+    dispatch,
   ]);
 
   const business = catalog.data?.business;
@@ -164,6 +162,7 @@ export function PersistedBooking() {
     catalog.isFetching,
     draftLocked,
     state.serviceIds,
+    dispatch,
   ]);
   const consent = selectedServices.map(
     ({ id, name, priceCents, currency, durationMinutes, cleanupMinutes }) => ({
@@ -227,7 +226,7 @@ export function PersistedBooking() {
         (current.kind === "committed" && !current.receipt))
     )
       recoveryHeading.current?.focus();
-  }, [current, queryClient, busy]);
+  }, [current, queryClient, busy, dispatch]);
   useEffect(() => {
     if (
       state.step === "review" &&
@@ -242,6 +241,7 @@ export function PersistedBooking() {
     draftLocked,
     selectedServices.length,
     state.serviceIds.length,
+    dispatch,
   ]);
   async function confirm() {
     const binding = session.current;

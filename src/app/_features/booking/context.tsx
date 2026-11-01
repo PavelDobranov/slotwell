@@ -1,3 +1,13 @@
+"use client";
+
+import {
+  createContext,
+  type Dispatch,
+  type ReactNode,
+  useContext,
+  useReducer,
+} from "react";
+
 // State for the persisted staff-first entry (#61). Deliberately separate from
 // the demo `bookingReducer`: this reducer never recomputes fixture availability.
 // Qualified staff come from the API; the reducer only reconciles the current
@@ -88,6 +98,29 @@ export const initialPersistedState: PersistedState = {
   slotTimingKey: null,
   reviewedServices: null,
 };
+
+type BookingContextValue = {
+  state: PersistedState;
+  dispatch: Dispatch<PersistedAction>;
+};
+
+export const BookingContext = createContext<BookingContextValue | null>(null);
+
+export function useBooking() {
+  const booking = useContext(BookingContext);
+  if (!booking)
+    throw new Error("useBooking must be used within BookingProvider");
+  return booking;
+}
+
+export function BookingProvider({ children }: { children: ReactNode }) {
+  const [state, dispatch] = useReducer(persistedReducer, initialPersistedState);
+  return (
+    <BookingContext.Provider value={{ state, dispatch }}>
+      {children}
+    </BookingContext.Provider>
+  );
+}
 
 const stepOrder: readonly PersistedStep[] = [
   "services",

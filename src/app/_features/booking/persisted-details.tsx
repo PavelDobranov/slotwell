@@ -24,7 +24,7 @@ import type { BusinessView, ServiceView } from "@/app/_features/booking/api";
 import type {
   PersistedAction,
   PersistedState,
-} from "@/app/_features/booking/state";
+} from "@/app/_features/booking/context";
 import { formatDuration } from "@/app/_lib/duration";
 import {
   type ContactErrors,

@@ -1,4 +1,5 @@
 import { PersistedBooking } from "@/app/_features/booking/booking-flow";
+import { BookingProvider } from "@/app/_features/booking/context";
 
 // The persisted, PostgreSQL-backed staff-first entry (#61). Kept on its own
 // route so the in-memory prototype at "/" stays honestly separate and is never
@@ -9,7 +10,9 @@ export default function BookPage() {
       <a href="#book" className="skip-link">
         Към резервацията
       </a>
-      <PersistedBooking />
+      <BookingProvider>
+        <PersistedBooking />
+      </BookingProvider>
     </div>
   );
 }

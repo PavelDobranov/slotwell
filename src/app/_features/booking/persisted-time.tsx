@@ -13,7 +13,7 @@ import {
   availabilitySelectionKey,
   type PersistedAction,
   type PersistedState,
-} from "@/app/_features/booking/state";
+} from "@/app/_features/booking/context";
 import { addCalendarDays } from "@/shared/booking-time";
 
 function dateAt(instant: string, timeZone: string): string {
