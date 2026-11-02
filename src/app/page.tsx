@@ -1,3 +1,4 @@
+import { DemoBookingProvider } from "@/app/_features/demo-booking/context";
 import { BookingWizard } from "@/app/_features/demo-booking/wizard";
 
 export default function Home() {
@@ -6,7 +7,9 @@ export default function Home() {
       <a href="#booking" className="skip-link">
         Към резервацията
       </a>
-      <BookingWizard />
+      <DemoBookingProvider>
+        <BookingWizard />
+      </DemoBookingProvider>
     </div>
   );
 }

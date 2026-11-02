@@ -10,8 +10,8 @@ import {
   CardTitle,
 } from "@/app/_components/card";
 import { Separator } from "@/app/_components/separator";
+import type { ContactDraft } from "@/app/_features/demo-booking/context";
 import { ReservationSummaryCard } from "@/app/_features/demo-booking/reservation-summary-card";
-import type { ContactDraft } from "@/app/_features/demo-booking/state";
 
 export function Review({
   contact,

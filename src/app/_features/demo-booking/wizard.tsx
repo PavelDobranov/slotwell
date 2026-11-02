@@ -11,7 +11,7 @@ import {
   LoaderCircle,
   User,
 } from "lucide-react";
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 import { Button } from "@/app/_components/button";
@@ -21,20 +21,16 @@ import {
 } from "@/app/_features/demo-booking/availability";
 import { BookingHeader } from "@/app/_features/demo-booking/booking-header";
 import { BookingSummary } from "@/app/_features/demo-booking/booking-summary";
+import {
+  selectedTotals,
+  stepOrder,
+  useDemoBooking,
+} from "@/app/_features/demo-booking/context";
 import { DetailsStep } from "@/app/_features/demo-booking/details-step";
-import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
 import { MobileProgress } from "@/app/_features/demo-booking/mobile-progress";
 import { RecoveryNotice } from "@/app/_features/demo-booking/recovery-notice";
 import { ServicesStep } from "@/app/_features/demo-booking/services-step";
-import { createDemoSession } from "@/app/_features/demo-booking/session";
 import { SpecialistStep } from "@/app/_features/demo-booking/specialist-step";
-import {
-  type BookingAction,
-  bookingReducer,
-  initialBookingState,
-  selectedTotals,
-  stepOrder,
-} from "@/app/_features/demo-booking/state";
 import {
   bookingProgress,
   milestoneLabels,
@@ -51,113 +47,25 @@ import { TimeStep } from "@/app/_features/demo-booking/time-step";
 import { cn } from "@/app/_lib/utils";
 
 export function BookingWizard() {
-  const session = useRef<ReturnType<typeof createDemoSession> | null>(null);
-  const submissionLocked = useRef(false);
-  const [pending, setPending] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
-  const [reviewRequested, setReviewRequested] = useState(false);
-  const [pathSwitched, setPathSwitched] = useState(false);
-  const [confirmationError, setConfirmationError] = useState("");
-  const [referenceTime, setReferenceTime] = useState<number | null>(null);
-  const [availabilityTime, setAvailabilityTime] = useState<number | null>(null);
-  // The initial render has no live dates; fixtures are created only after mounting.
-  const salon =
-    referenceTime === null ? null : createDemoSalon(() => referenceTime);
-  const [state, reduce] = useReducer(
-    (
-      current: typeof initialBookingState,
-      { action, now }: { action: BookingAction; now: number },
-    ) =>
-      salon === null || (submissionLocked.current && action.type === "refresh")
-        ? current
-        : bookingReducer(current, action, {
-            salon,
-            now,
-            sessionOccupied: session.current?.occupied,
-          }),
-    initialBookingState,
-  );
-  function dispatch(action: BookingAction) {
-    const now = Date.now();
-    // Any explicit edit/navigation requires a fresh contact review. A clock
-    // refresh keeps review only while the reducer still has valid choices.
-    if (action.type !== "refresh") setReviewRequested(false);
-    if (action.type !== "contact") setConfirmationError("");
-    if (action.type !== "contact" && action.type !== "refresh")
-      setPathSwitched(
-        action.type === "path" &&
-          action.path !== state.path &&
-          (state.start !== null || state.staffId !== null),
-      );
-    setAvailabilityTime(now);
-    reduce({ action, now });
-  }
-  async function confirm() {
-    if (submissionLocked.current || session.current === null) return;
-    submissionLocked.current = true;
-    setPending(true);
-    setConfirmationError("");
-    try {
-      const result = await session.current.confirm(state);
-      if (result === "success") {
-        setConfirmed(true);
-      } else if (result === "retryable") {
-        submissionLocked.current = false;
-        setConfirmationError(
-          "Нещо прекъсна заявката. Резервацията не е направена и нищо не е загубено. Опитай отново.",
-        );
-      } else {
-        submissionLocked.current = false;
-        dispatch({ type: result === "unavailable" ? "conflict" : "refresh" });
-        setConfirmationError(
-          result === "unavailable"
-            ? `${state.start === null ? "Избраният час" : formatBusinessTime(state.start)} вече е зает. Резервацията не е направена. Услугите и данните ти за контакт са запазени. Избери нов час.`
-            : "Изборът вече не е валиден. Резервацията не е направена. Данните ти за контакт са запазени. Провери специалиста и часа отново.",
-        );
-      }
-    } catch {
-      submissionLocked.current = false;
-      setConfirmationError(
-        "Нещо прекъсна заявката. Резервацията не е направена и нищо не е загубено. Опитай отново.",
-      );
-    } finally {
-      setPending(false);
-    }
-  }
+  const {
+    state,
+    salon,
+    availabilityTime,
+    sessionOccupied,
+    pending,
+    confirmed,
+    reviewRequested,
+    pathSwitched,
+    confirmationError,
+    dispatch,
+    setReviewRequested,
+    confirm,
+    newBooking,
+  } = useDemoBooking();
   const heading = useRef<HTMLHeadingElement>(null);
   const lastFocusedControl = useRef<HTMLElement | null>(null);
   const previousStep = useRef(state.step);
   const previousPath = useRef(state.path);
-  useEffect(() => {
-    // Keep the one-shot bootstrap intact across Strict Mode effect replay.
-    if (session.current === null) {
-      const now = Date.now();
-      // Demo/test bootstrap only (e.g. Playwright addInitScript). Accept one enum,
-      // then remove the hook. Never use URLs, storage, or visitor data for scenarios.
-      const bootstrap = window as Window & {
-        __SLOTWELL_DEMO_SCENARIO__?: unknown;
-      };
-      const scenario = bootstrap.__SLOTWELL_DEMO_SCENARIO__;
-      delete bootstrap.__SLOTWELL_DEMO_SCENARIO__;
-      session.current = createDemoSession(
-        createDemoSalon(() => now),
-        () => Date.now(),
-        undefined,
-        scenario === "conflict" || scenario === "retryable"
-          ? scenario
-          : "normal",
-      );
-      setReferenceTime(now);
-      setAvailabilityTime(now);
-    }
-    // Keep fixtures anchored to this session, but refresh displayed availability.
-    const timer = window.setInterval(() => {
-      const now = Date.now();
-      setAvailabilityTime(now);
-      reduce({ action: { type: "refresh" }, now });
-    }, 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
   useEffect(() => {
     if (
       previousStep.current !== state.step ||
@@ -209,7 +117,7 @@ export function BookingWizard() {
     const selectedSlot = availableSlots({
       salon,
       now: availabilityTime,
-      sessionOccupied: session.current?.occupied,
+      sessionOccupied,
       serviceIds: state.serviceIds,
       date,
     }).find(({ start }) => start === state.start);
@@ -380,12 +288,7 @@ export function BookingWizard() {
               <Success
                 salon={salon}
                 state={{ ...state, start: state.start }}
-                onNewBooking={() => {
-                  submissionLocked.current = false;
-                  setConfirmed(false);
-                  setConfirmationError("");
-                  dispatch({ type: "new-booking" });
-                }}
+                onNewBooking={newBooking}
               />
             ) : state.step === "services" ? (
               <fieldset disabled={salon === null} className="min-w-0">
@@ -510,7 +413,7 @@ export function BookingWizard() {
                     availability={{
                       salon,
                       now: availabilityTime,
-                      sessionOccupied: session.current?.occupied,
+                      sessionOccupied,
                       serviceIds: state.serviceIds,
                       staffId:
                         state.path === "staff-first"

@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { euros } from "@/app/_features/demo-booking/format";
 import {
   type BookingPath,
   initialBookingState,
   stepOrder,
-} from "@/app/_features/demo-booking/state";
+} from "@/app/_features/demo-booking/context";
+import { euros } from "@/app/_features/demo-booking/format";
 import { Stepper } from "@/app/_features/demo-booking/stepper";
 
 for (const path of ["staff-first", "time-first"] satisfies BookingPath[]) {

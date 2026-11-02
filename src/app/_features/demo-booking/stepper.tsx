@@ -2,7 +2,7 @@ import {
   type BookingState,
   type BookingStep,
   stepOrder,
-} from "@/app/_features/demo-booking/state";
+} from "@/app/_features/demo-booking/context";
 import { validateContact } from "@/app/_features/demo-booking/validation";
 import { cn } from "@/app/_lib/utils";
 

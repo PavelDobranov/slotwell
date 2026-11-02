@@ -1,5 +1,5 @@
 import { availableSlots } from "@/app/_features/demo-booking/availability";
-import type { BookingState } from "@/app/_features/demo-booking/state";
+import type { BookingState } from "@/app/_features/demo-booking/context";
 import { businessDateAt } from "@/app/_features/demo-booking/time";
 import type {
   Clock,

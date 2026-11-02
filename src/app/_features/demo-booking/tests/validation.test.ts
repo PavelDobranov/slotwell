@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import type { ContactDraft } from "@/app/_features/demo-booking/state";
+import type { ContactDraft } from "@/app/_features/demo-booking/context";
 import { validateContact } from "@/app/_features/demo-booking/validation";
 
 const valid: ContactDraft = {

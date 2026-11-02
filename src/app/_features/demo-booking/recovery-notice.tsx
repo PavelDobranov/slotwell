@@ -1,7 +1,7 @@
 import { Info, TriangleAlert } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
-import type { BookingState } from "@/app/_features/demo-booking/state";
+import type { BookingState } from "@/app/_features/demo-booking/context";
 import {
   businessDateAt,
   formatBusinessDate,

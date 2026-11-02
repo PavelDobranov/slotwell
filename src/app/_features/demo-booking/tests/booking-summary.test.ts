@@ -4,8 +4,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { BookingSummary } from "@/app/_features/demo-booking/booking-summary";
+import { initialBookingState } from "@/app/_features/demo-booking/context";
 import { createDemoSalon } from "@/app/_features/demo-booking/fixtures";
-import { initialBookingState } from "@/app/_features/demo-booking/state";
 
 for (const step of ["services", "time", "staff", "details"] as const) {
   test(`${step}: summary uses the reference content and duration format`, () => {

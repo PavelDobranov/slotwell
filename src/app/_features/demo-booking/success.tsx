@@ -11,13 +11,13 @@ import {
 } from "@/app/_components/card";
 import { Separator } from "@/app/_components/separator";
 import {
+  type BookingState,
+  selectedTotals,
+} from "@/app/_features/demo-booking/context";
+import {
   formatServicePrice,
   formatTotalPrice,
 } from "@/app/_features/demo-booking/format";
-import {
-  type BookingState,
-  selectedTotals,
-} from "@/app/_features/demo-booking/state";
 import {
   businessDateAt,
   formatBusinessDate,

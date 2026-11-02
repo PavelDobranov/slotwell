@@ -1,4 +1,4 @@
-import type { ContactDraft } from "@/app/_features/demo-booking/state";
+import type { ContactDraft } from "@/app/_features/demo-booking/context";
 import { type ContactErrors, parseGuestContact } from "@/shared/guest-contact";
 
 export { type ContactErrors, contactLimits } from "@/shared/guest-contact";

@@ -13,8 +13,8 @@ import {
 } from "@/app/_components/field";
 import { Input } from "@/app/_components/input";
 import { Textarea } from "@/app/_components/textarea";
+import type { ContactDraft } from "@/app/_features/demo-booking/context";
 import { Review } from "@/app/_features/demo-booking/review";
-import type { ContactDraft } from "@/app/_features/demo-booking/state";
 import {
   type ContactErrors,
   contactLimits,

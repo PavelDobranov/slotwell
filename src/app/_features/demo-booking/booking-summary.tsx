@@ -11,14 +11,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/app/_components/sheet";
-import { formatTotalPrice } from "@/app/_features/demo-booking/format";
-import { ReservationSummaryCard } from "@/app/_features/demo-booking/reservation-summary-card";
 import {
   type BookingState,
   type BookingStep,
   selectedTotals,
   stepOrder,
-} from "@/app/_features/demo-booking/state";
+} from "@/app/_features/demo-booking/context";
+import { formatTotalPrice } from "@/app/_features/demo-booking/format";
+import { ReservationSummaryCard } from "@/app/_features/demo-booking/reservation-summary-card";
 import {
   businessDateAt,
   formatBusinessDate,

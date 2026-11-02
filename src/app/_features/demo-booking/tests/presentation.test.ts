@@ -3,7 +3,7 @@ import test from "node:test";
 import {
   type BookingState,
   initialBookingState,
-} from "@/app/_features/demo-booking/state";
+} from "@/app/_features/demo-booking/context";
 import { bookingProgress } from "@/app/_features/demo-booking/stepper";
 
 const complete: BookingState = {
