@@ -9,9 +9,9 @@ import { Skeleton } from "@/app/_components/skeleton";
 import { CatalogApiError } from "@/app/_features/booking/api";
 import { useBooking } from "@/app/_features/booking/context";
 import { PersistedDetails } from "@/app/_features/booking/persisted-details";
-import { PersistedTime } from "@/app/_features/booking/persisted-time";
 import { ServicesStep } from "@/app/_features/booking/services/services-step";
 import { SpecialistStep } from "@/app/_features/booking/specialist/specialist-step";
+import { TimeStep } from "@/app/_features/booking/time-selection/time-step";
 
 function loadErrorMessage(error: unknown): string {
   if (error instanceof CatalogApiError && error.code === "network")
@@ -259,12 +259,7 @@ export function BookingFlow() {
             onConfirm={commands.confirm}
           />
         ) : state.step === "time" && business ? (
-          <PersistedTime
-            state={state}
-            timeZone={business.timeZone}
-            disabled={draftLocked}
-            dispatch={dispatch}
-          />
+          <TimeStep timeZone={business.timeZone} />
         ) : (
           <SpecialistStep />
         )}

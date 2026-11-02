@@ -2,18 +2,17 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import { type Dispatch, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 import { Button } from "@/app/_components/button";
-import { RadioGroup, RadioGroupItem } from "@/app/_components/radio-group";
 import { Skeleton } from "@/app/_components/skeleton";
 import { fetchAvailability } from "@/app/_features/booking/api";
 import {
   availabilitySelectionKey,
-  type PersistedAction,
-  type PersistedState,
+  useBooking,
 } from "@/app/_features/booking/context";
+import { TimeOptions } from "@/app/_features/booking/time-selection/time-options";
 import { addCalendarDays } from "@/shared/booking-time";
 
 function dateAt(instant: string, timeZone: string): string {
@@ -38,17 +37,8 @@ function dateLabel(date: string): string {
   }).format(new Date(`${date}T00:00:00Z`));
 }
 
-export function PersistedTime({
-  state,
-  timeZone,
-  dispatch,
-  disabled = false,
-}: {
-  state: PersistedState;
-  timeZone: string;
-  disabled?: boolean;
-  dispatch: Dispatch<PersistedAction>;
-}) {
+export function TimeStep({ timeZone }: { timeZone: string }) {
+  const { state, dispatch, draftLocked: disabled } = useBooking();
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     heading.current?.focus();
@@ -183,28 +173,17 @@ export function PersistedTime({
           <ChevronRightIcon />
         </Button>
       </div>
-      <RadioGroup
+      <TimeOptions
         disabled={disabled}
-        aria-label="Дати"
+        label="Дати"
+        idPrefix="date"
         value={visibleDate}
-        className="grid grid-cols-2 gap-2 sm:grid-cols-4"
-        onValueChange={(date) => {
-          if (typeof date === "string") dispatch({ type: "date", date });
-        }}
-      >
-        {Array.from({ length: 7 }, (_, index) =>
-          addCalendarDays(page.from, index),
-        ).map((date) => (
-          <label
-            key={date}
-            htmlFor={`date-${date}`}
-            className="flex min-h-14 cursor-pointer items-center gap-2 rounded-card border border-border bg-card p-3 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50 has-data-checked:border-primary has-data-checked:bg-selected"
-          >
-            <RadioGroupItem id={`date-${date}`} value={date} />
-            <span className="text-sm">{dateLabel(date)}</span>
-          </label>
-        ))}
-      </RadioGroup>
+        options={Array.from({ length: 7 }, (_, index) => {
+          const date = addCalendarDays(page.from, index);
+          return { value: date, label: dateLabel(date) };
+        })}
+        onSelect={(date) => dispatch({ type: "date", date })}
+      />
       {query.isFetching || query.isPending ? (
         <output aria-busy="true" className="flex flex-col gap-2">
           <span className="sr-only">Зареждаме свободните часове…</span>
@@ -228,12 +207,16 @@ export function PersistedTime({
           </AlertDescription>
         </Alert>
       ) : (
-        <RadioGroup
+        <TimeOptions
           disabled={disabled}
-          aria-label={`Часове за ${dateLabel(visibleDate)}`}
+          label={`Часове за ${dateLabel(visibleDate)}`}
+          idPrefix="slot"
           value={state.slot?.date === visibleDate ? state.slot.start : null}
-          className="grid grid-cols-2 gap-2 sm:grid-cols-3"
-          onValueChange={(start) => {
+          options={slots.map((slot) => ({
+            value: slot.start,
+            label: range(slot),
+          }))}
+          onSelect={(start) => {
             const slot = slots.find((slot) => slot.start === start);
             if (slot)
               dispatch({
@@ -243,20 +226,7 @@ export function PersistedTime({
                 slot: { ...slot, date: visibleDate, timeZone: zone },
               });
           }}
-        >
-          {slots.map((slot) => (
-            <label
-              key={slot.start}
-              htmlFor={`slot-${slot.start}`}
-              className="flex min-h-14 cursor-pointer items-center gap-2 rounded-card border border-border bg-card p-3 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50 has-data-checked:border-primary has-data-checked:bg-selected"
-            >
-              <RadioGroupItem id={`slot-${slot.start}`} value={slot.start} />
-              <span className="text-sm font-medium whitespace-nowrap tabular-nums">
-                {range(slot)}
-              </span>
-            </label>
-          ))}
-        </RadioGroup>
+        />
       )}
       <Button
         variant="outline"
