@@ -30,6 +30,7 @@ import {
   type SlotView,
   type StaffView,
 } from "@/app/_features/booking/api";
+import { draftPermissions } from "@/app/_features/booking/draft-permissions";
 import { createPersistedSubmission } from "@/app/_features/booking/submission/persisted-submission";
 import type {
   BookingAgreement,
@@ -464,22 +465,13 @@ export function BookingProvider({ children }: { children: ReactNode }) {
   );
   const selectedStaff = staff.data?.find(({ id }) => id === state.staffId);
   const current = submission?.booking.current;
-  const busy = !submission?.ready || submission.busy;
-  const noSelectionProblem =
-    !current &&
-    Boolean(
-      submission?.booking.problem || submission?.booking.retainedIds.length,
-    );
-  const draftLocked =
-    busy ||
-    Boolean(
-      submission?.associationProblem ||
-        noSelectionProblem ||
-        (current &&
-          (current.kind === "committed" ||
-            current.kind === "fenced" ||
-            !current.canSubmit)),
-    );
+  const { busy, draftLocked, reviewMatches, canConfirm } = draftPermissions({
+    state,
+    selectedServices,
+    submission,
+    catalogFetching: catalog.isFetching,
+    catalogError: catalog.isError,
+  });
   useEffect(() => {
     if (catalog.isSuccess && !catalog.isFetching && !draftLocked)
       dispatch({
@@ -495,36 +487,6 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     draftLocked,
     state.serviceIds,
   ]);
-  const consent = selectedServices.map(
-    ({ id, name, priceCents, currency, durationMinutes, cleanupMinutes }) => ({
-      id,
-      name,
-      priceCents,
-      currency,
-      durationMinutes,
-      cleanupMinutes,
-    }),
-  );
-  const reviewMatches =
-    state.reviewedServices !== null &&
-    JSON.stringify(state.reviewedServices) === JSON.stringify(consent) &&
-    selectedServices.length === state.serviceIds.length;
-  const timingCurrent =
-    state.catalogTimingKey ===
-      JSON.stringify(
-        consent.map(({ id, durationMinutes, cleanupMinutes }) => [
-          id,
-          durationMinutes,
-          cleanupMinutes,
-        ]),
-      ) && state.slotTimingKey === state.catalogTimingKey;
-  const canConfirm =
-    !draftLocked &&
-    reviewMatches &&
-    timingCurrent &&
-    !catalog.isFetching &&
-    !catalog.isError;
-
   useEffect(() => {
     if (
       current?.kind === "committed" &&

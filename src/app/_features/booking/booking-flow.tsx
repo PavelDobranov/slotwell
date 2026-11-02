@@ -1,7 +1,6 @@
 "use client";
 
 import { TriangleAlertIcon } from "lucide-react";
-import { useEffect, useRef } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/app/_components/alert";
 import { Button } from "@/app/_components/button";
@@ -11,6 +10,7 @@ import { useBooking } from "@/app/_features/booking/context";
 import { DetailsStep } from "@/app/_features/booking/details/details-step";
 import { ServicesStep } from "@/app/_features/booking/services/services-step";
 import { SpecialistStep } from "@/app/_features/booking/specialist/specialist-step";
+import { BookingRecovery } from "@/app/_features/booking/submission/recovery";
 import { TimeStep } from "@/app/_features/booking/time-selection/time-step";
 
 function loadErrorMessage(error: unknown): string {
@@ -20,29 +20,8 @@ function loadErrorMessage(error: unknown): string {
 }
 
 export function BookingFlow() {
-  const { state, catalog, submission, busy, draftLocked, commands } =
-    useBooking();
+  const { state, catalog, busy, draftLocked } = useBooking();
   const business = catalog.data?.business;
-  const current = submission?.booking.current;
-  const recoveryHeading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => {
-    if (
-      !busy &&
-      current &&
-      (current.kind === "unresolved" ||
-        current.kind === "fenced" ||
-        (current.kind === "pending" && !current.canSubmit) ||
-        (current.kind === "committed" && !current.receipt))
-    )
-      recoveryHeading.current?.focus();
-  }, [current, busy]);
-  const problem = submission?.booking.problem;
-  const needsRecovery =
-    !busy &&
-    current &&
-    (current.kind === "committed" ||
-      current.kind === "fenced" ||
-      !current.canSubmit);
 
   return (
     <main
@@ -77,144 +56,7 @@ export function BookingFlow() {
           ? "Обработваме заявката…"
           : `Текуща стъпка: ${{ services: "Услуги", staff: "Специалист", time: "Дата и час", details: "Данни", review: "Преглед" }[state.step]}`}
       </output>
-      {submission?.associationProblem ||
-      (!submission?.ready && !submission?.busy && submission !== null) ? (
-        <Alert variant="error">
-          <AlertTitle>
-            {submission?.associationProblem
-              ? "Не можем да свържем запазения опит с този раздел."
-              : "Съхранението на опитите не е достъпно."}
-          </AlertTitle>
-          <AlertDescription>
-            Няма да започнем друг опит автоматично. Запазените опити не са
-            изтрити.
-          </AlertDescription>
-          <Button
-            variant="outline"
-            disabled={submission?.busy}
-            onClick={commands.initialize}
-          >
-            Провери съхранението отново
-          </Button>
-        </Alert>
-      ) : null}
-      {problem &&
-        submission?.ready &&
-        !submission.associationProblem &&
-        !needsRecovery && (
-          <Alert variant="warning">
-            <AlertTitle>
-              {problem === "intent_capacity_reached"
-                ? "Достигнат е лимитът от 16 запазени опита."
-                : problem === "intent_not_retained"
-                  ? "Опитът не е намерен в съхранението. Няма да започнем друг автоматично."
-                  : problem === "intent_storage_unavailable"
-                    ? "Съхранението на опитите не е достъпно."
-                    : "Проверете избора и данните отново."}
-            </AlertTitle>
-            {!current && problem === "intent_storage_unavailable" && (
-              <Button
-                variant="outline"
-                disabled={busy}
-                onClick={commands.initialize}
-              >
-                Провери съхранението отново
-              </Button>
-            )}
-          </Alert>
-        )}
-      {!current &&
-        submission?.ready &&
-        !submission.associationProblem &&
-        submission.booking.retainedIds.length > 0 && (
-          <section aria-label="Запазени опити" className="flex flex-col gap-3">
-            <h2 className="text-xl font-semibold">Имате запазени опити</h2>
-            <p>
-              Изберете опит за възстановяване или изрично започнете отделна
-              резервация. Запазените опити не се заменят.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {submission.booking.retainedIds.map((id, index) => (
-                <Button
-                  key={id}
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => commands.resume(id)}
-                >
-                  Възстанови опит {index + 1}
-                </Button>
-              ))}
-            </div>
-            {!problem && (
-              <Button disabled={busy} onClick={commands.startNew}>
-                Започни отделна резервация
-              </Button>
-            )}
-          </section>
-        )}
-      {current && (
-        <section
-          aria-labelledby={needsRecovery ? "recovery-heading" : undefined}
-          className="flex flex-col gap-3"
-          aria-busy={busy}
-        >
-          {needsRecovery && (
-            <Alert variant="info">
-              <AlertTitle>
-                <h2 id="recovery-heading" ref={recoveryHeading} tabIndex={-1}>
-                  {current.kind === "committed"
-                    ? "Резервацията е потвърдена"
-                    : current.kind === "fenced"
-                      ? "Завършете безопасното изчистване"
-                      : current.kind === "pending" && !current.canRetry
-                        ? "Този запазен опит е само за възстановяване"
-                        : "Резултатът още не е известен"}
-                </h2>
-              </AlertTitle>
-              <AlertDescription>
-                {current.kind === "committed"
-                  ? "Възстановете личния линк, ако още не се е отворил."
-                  : "Не започвайте повторна резервация. Проверете резултата или изчистете опита безопасно. Изчистването не отменя потвърдена резервация."}
-              </AlertDescription>
-            </Alert>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {current.kind !== "fenced" && (
-              <Button
-                variant="outline"
-                disabled={busy || submission?.associationProblem}
-                onClick={commands.recover}
-              >
-                Провери резултата
-              </Button>
-            )}
-            {current.kind !== "committed" &&
-              current.canRetry &&
-              !current.canSubmit && (
-                <Button
-                  disabled={busy || submission?.associationProblem}
-                  onClick={commands.retry}
-                >
-                  Повтори същото потвърждение
-                </Button>
-              )}
-            {current.kind !== "committed" && (
-              <Button
-                variant="outline"
-                disabled={busy || submission?.associationProblem}
-                onClick={commands.clear}
-              >
-                Изчисти този опит
-              </Button>
-            )}
-            {current.kind === "committed" && current.receipt && (
-              <Button onClick={commands.openConfirmation}>
-                Отвори потвърждението
-              </Button>
-            )}
-          </div>
-        </section>
-      )}
+      <BookingRecovery />
       {state.notice && (
         <output className="text-sm text-muted-foreground">
           {state.notice}
