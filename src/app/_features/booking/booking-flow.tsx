@@ -8,7 +8,7 @@ import { Button } from "@/app/_components/button";
 import { Skeleton } from "@/app/_components/skeleton";
 import { CatalogApiError } from "@/app/_features/booking/api";
 import { useBooking } from "@/app/_features/booking/context";
-import { PersistedDetails } from "@/app/_features/booking/persisted-details";
+import { DetailsStep } from "@/app/_features/booking/details/details-step";
 import { ServicesStep } from "@/app/_features/booking/services/services-step";
 import { SpecialistStep } from "@/app/_features/booking/specialist/specialist-step";
 import { TimeStep } from "@/app/_features/booking/time-selection/time-step";
@@ -20,18 +20,8 @@ function loadErrorMessage(error: unknown): string {
 }
 
 export function BookingFlow() {
-  const {
-    state,
-    dispatch,
-    catalog,
-    selectedServices,
-    selectedStaff,
-    submission,
-    busy,
-    draftLocked,
-    canConfirm,
-    commands,
-  } = useBooking();
+  const { state, catalog, submission, busy, draftLocked, commands } =
+    useBooking();
   const business = catalog.data?.business;
   const current = submission?.booking.current;
   const recoveryHeading = useRef<HTMLHeadingElement>(null);
@@ -249,15 +239,7 @@ export function BookingFlow() {
           <ServicesStep />
         ) : (state.step === "details" || state.step === "review") &&
           business ? (
-          <PersistedDetails
-            state={state}
-            services={selectedServices}
-            staffName={selectedStaff?.name ?? "Избраният специалист"}
-            business={business}
-            dispatch={dispatch}
-            canConfirm={canConfirm}
-            onConfirm={commands.confirm}
-          />
+          <DetailsStep business={business} />
         ) : state.step === "time" && business ? (
           <TimeStep timeZone={business.timeZone} />
         ) : (

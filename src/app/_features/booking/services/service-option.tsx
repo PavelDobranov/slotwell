@@ -1,6 +1,6 @@
 import { Checkbox } from "@/app/_components/checkbox";
 import type { ServiceView } from "@/app/_features/booking/api";
-import { formatPersistedPrice } from "@/app/_features/booking/persisted-details";
+import { formatPersistedPrice } from "@/app/_features/booking/price";
 import { formatDuration } from "@/app/_lib/duration";
 
 export function ServiceOption({
